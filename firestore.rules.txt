@@ -1,0 +1,72 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentUserExists() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function currentRole() {
+      return currentUserExists()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : null;
+    }
+
+    function isManager() {
+      return currentRole() == "gestor";
+    }
+
+    function isTeacher() {
+      return currentRole() == "professor";
+    }
+
+    function isBootstrapManager(uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && request.auth.token.email == "admin@fitcontrol.com";
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() &&
+        (request.auth.uid == uid || isManager());
+
+      allow create: if
+        (
+          isBootstrapManager(uid)
+          && request.resource.data.role == "gestor"
+        )
+        || isManager();
+
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+
+    match /academyData/{key} {
+      allow read: if isManager() || isTeacher();
+
+      allow create, update: if
+        isManager()
+        || (
+          isTeacher()
+          && key == "fitcontrol_fichas_treino"
+        );
+
+      allow delete: if false;
+    }
+
+    match /studentViews/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if isManager();
+      allow delete: if isManager();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
