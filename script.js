@@ -19,7 +19,23 @@ const STORAGE_KEYS = {
     }
 
     function salvar(chave, dados) {
-      localStorage.setItem(chave, JSON.stringify(dados));
+      const lista = Array.isArray(dados) ? dados : [];
+      const agora = Date.now();
+
+      localStorage.setItem(chave, JSON.stringify(lista));
+      localStorage.setItem(`champion_sync_meta_${chave}`, String(agora));
+
+      // LocalStorage funciona somente como cache offline.
+      // O Firestore é a base compartilhada entre todos os aparelhos.
+      if (typeof window.firebaseCloudSave === "function") {
+        window.firebaseCloudSave(chave, lista, agora).catch((erro) => {
+          console.error("Falha ao sincronizar com Firebase:", erro);
+          window.atualizarStatusFirebase?.(
+            "offline",
+            "Alteração salva neste aparelho. Aguardando reconexão..."
+          );
+        });
+      }
     }
 
     function gerarId() {
@@ -68,6 +84,158 @@ const STORAGE_KEYS = {
         alerta.classList.remove("show");
       }, 3500);
     }
+
+
+
+/* =========================================================
+   PONTE FIREBASE
+   Recebe dados em tempo real do Firestore e atualiza as
+   variáveis já utilizadas pelo sistema, sem quebrar o modo local.
+========================================================= */
+const FIREBASE_STORAGE_VARIABLES = {
+  fitcontrol_alunos: "alunos",
+  fitcontrol_planos: "planos",
+  fitcontrol_matriculas: "matriculas",
+  fitcontrol_checkins: "checkins",
+  fitcontrol_professores: "professores",
+  fitcontrol_fichas_treino: "fichasTreino",
+  fitcontrol_videos_jiujitsu: "videosTreino",
+  fitcontrol_produtos_loja: "produtosLoja",
+  fitcontrol_pedidos_loja: "pedidosLoja",
+  fitcontrol_notificacoes: "notificacoes",
+  champion_team_graduacoes: "graduacoes",
+  champion_team_regras_graduacao: "regrasGraduacao",
+  champion_team_historico_graduacao: "historicoGraduacoes",
+  champion_team_exames_graduacao: "examesGraduacao"
+};
+
+window.CHAMPION_FIREBASE_KEYS = Object.keys(FIREBASE_STORAGE_VARIABLES);
+window.CHAMPION_FIREBASE_READY = false;
+let resolverFirebasePronto;
+
+window.CHAMPION_FIREBASE_READY_PROMISE = new Promise((resolve) => {
+  resolverFirebasePronto = resolve;
+});
+
+window.marcarFirebasePronto = function() {
+  if (window.CHAMPION_FIREBASE_READY) return;
+  window.CHAMPION_FIREBASE_READY = true;
+  resolverFirebasePronto?.(true);
+  window.dispatchEvent(new CustomEvent("champion-firebase-ready"));
+};
+
+window.aguardarFirebasePronto = function(timeoutMs = 20000) {
+  if (window.CHAMPION_FIREBASE_READY) return Promise.resolve(true);
+
+  return Promise.race([
+    window.CHAMPION_FIREBASE_READY_PROMISE,
+    new Promise((_, reject) => {
+      setTimeout(
+        () => reject(new Error("Tempo limite ao carregar o Firebase.")),
+        timeoutMs
+      );
+    })
+  ]);
+};
+
+
+window.atualizarStatusFirebase = function(tipo, mensagem) {
+  const caixa = document.getElementById("firebaseStatus");
+  const texto = document.getElementById("firebaseStatusText");
+  if (!caixa || !texto) return;
+
+  caixa.classList.remove(
+    "firebase-connecting",
+    "firebase-online",
+    "firebase-offline",
+    "firebase-syncing"
+  );
+  caixa.classList.add(`firebase-${tipo}`);
+  texto.textContent = mensagem;
+};
+
+window.obterDadosLocaisFirebase = function(chave) {
+  try {
+    return JSON.parse(localStorage.getItem(chave)) || [];
+  } catch (erro) {
+    console.warn("Não foi possível ler a base local:", chave, erro);
+    return [];
+  }
+};
+
+window.aplicarDadosFirebase = function(chave, dadosRecebidos) {
+  const dados = Array.isArray(dadosRecebidos) ? dadosRecebidos : [];
+
+  // Atualiza o cache local para permitir uso mesmo sem internet.
+  localStorage.setItem(chave, JSON.stringify(dados));
+
+  // As variáveis foram declaradas com let no arquivo principal.
+  // O switch permite atualizá-las dentro do mesmo escopo global.
+  switch (chave) {
+    case "fitcontrol_alunos":
+      alunos = dados;
+      break;
+    case "fitcontrol_planos":
+      planos = dados;
+      break;
+    case "fitcontrol_matriculas":
+      matriculas = dados;
+      break;
+    case "fitcontrol_checkins":
+      checkins = dados;
+      break;
+    case "fitcontrol_professores":
+      professores = dados;
+      break;
+    case "fitcontrol_fichas_treino":
+      fichasTreino = dados;
+      break;
+    case "fitcontrol_videos_jiujitsu":
+      videosTreino = dados;
+      break;
+    case "fitcontrol_produtos_loja":
+      produtosLoja = dados;
+      break;
+    case "fitcontrol_pedidos_loja":
+      pedidosLoja = dados;
+      break;
+    case "fitcontrol_notificacoes":
+      notificacoes = dados;
+      break;
+    case "champion_team_graduacoes":
+      graduacoes = dados;
+      break;
+    case "champion_team_regras_graduacao":
+      regrasGraduacao = dados;
+      break;
+    case "champion_team_historico_graduacao":
+      historicoGraduacoes = dados;
+      break;
+    case "champion_team_exames_graduacao":
+      examesGraduacao = dados;
+      break;
+    default:
+      return;
+  }
+
+  // Recalcula todas as telas depois de receber alterações de outro aparelho.
+  if (typeof atualizarTudo === "function") {
+    atualizarTudo();
+  }
+};
+
+window.addEventListener("online", () => {
+  window.atualizarStatusFirebase?.("syncing", "Internet restabelecida. Sincronizando...");
+  window.firebaseReconectar?.();
+});
+
+window.addEventListener("offline", () => {
+  window.atualizarStatusFirebase?.(
+    "offline",
+    "Sem internet. O sistema continua funcionando neste aparelho."
+  );
+});
+
 
     const textosPaginas = {
       dashboard: ["Visão Geral", "Resumo atual da academia"],
@@ -567,7 +735,95 @@ document.querySelectorAll("[data-go-view]").forEach((botao) => {
 const LOGIN_KEY = "fitcontrol_login_ativo";
 function abrirSistema(){document.getElementById("loginScreen").classList.add("hidden");document.getElementById("appShell").classList.remove("app-locked");atualizarGraficosDashboard()}
 function fecharSistema(){localStorage.removeItem(LOGIN_KEY);sessionStorage.removeItem(LOGIN_KEY);localStorage.removeItem("fitcontrol_tipo_usuario");localStorage.removeItem("fitcontrol_aluno_usuario_id");sessionStorage.removeItem("fitcontrol_aluno_usuario_id");sessionStorage.removeItem("fitcontrol_aluno_logado");alunoLogadoId="";document.body.classList.remove("student-mode");document.getElementById("studentDashboard")?.classList.add("hidden");document.getElementById("studentAccessScreen")?.classList.remove("hidden");document.getElementById("loginScreen").classList.remove("hidden");document.getElementById("appShell").classList.add("app-locked");document.getElementById("loginEmail").value="admin@fitcontrol.com";document.getElementById("loginSenha").value="123456";document.getElementById("loginError").textContent=""}
-document.getElementById("loginForm").addEventListener("submit",event=>{event.preventDefault();const identificador=document.getElementById("loginEmail").value.trim();const senha=document.getElementById("loginSenha").value;const lembrar=document.getElementById("lembrarLogin").checked;const erro=document.getElementById("loginError");const adminValido=identificador.toLowerCase()==="admin@fitcontrol.com"&&senha==="123456";if(adminValido){erro.textContent="";localStorage.setItem("fitcontrol_tipo_usuario","admin");localStorage.removeItem("fitcontrol_aluno_usuario_id");sessionStorage.removeItem("fitcontrol_aluno_usuario_id");if(lembrar)localStorage.setItem(LOGIN_KEY,"true");else sessionStorage.setItem(LOGIN_KEY,"true");abrirSistemaComoAdministrador();mostrarAlerta("Acesso administrativo realizado.");return}const cpf=normalizarCpf(identificador);const aluno=alunos.find(item=>normalizarCpf(item.cpf)===cpf);if(!aluno){erro.textContent="Administrador: confira e-mail e senha. Aluno: CPF não encontrado.";return}if(aluno.status!=="Ativo"){erro.textContent="Seu cadastro está inativo. Procure a recepção.";return}const senhaAluno=String(aluno.senha||normalizarCpf(aluno.cpf).slice(-4));if(senha!==senhaAluno){erro.textContent="Senha do aluno inválida.";return}erro.textContent="";localStorage.setItem("fitcontrol_tipo_usuario","aluno");if(lembrar){localStorage.setItem("fitcontrol_aluno_usuario_id",aluno.id);localStorage.setItem(LOGIN_KEY,"true")}else{sessionStorage.setItem("fitcontrol_aluno_usuario_id",aluno.id);sessionStorage.setItem(LOGIN_KEY,"true")}abrirSistemaComoAluno(aluno);mostrarAlerta(`Bem-vindo, ${aluno.nome}.`)});
+document.getElementById("loginForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const identificador = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value;
+  const lembrar = document.getElementById("lembrarLogin").checked;
+  const erro = document.getElementById("loginError");
+  const botao = event.submitter;
+
+  erro.textContent = "";
+  if (botao) {
+    botao.disabled = true;
+    botao.dataset.textoOriginal = botao.textContent;
+    botao.textContent = "Carregando dados...";
+  }
+
+  try {
+    if (typeof window.aguardarFirebasePronto === "function") {
+      await window.aguardarFirebasePronto(20000);
+    }
+
+    const adminValido =
+      identificador.toLowerCase() === "admin@fitcontrol.com" &&
+      senha === "123456";
+
+    if (adminValido) {
+      localStorage.setItem("fitcontrol_tipo_usuario", "admin");
+      localStorage.removeItem("fitcontrol_aluno_usuario_id");
+      sessionStorage.removeItem("fitcontrol_aluno_usuario_id");
+
+      if (lembrar) localStorage.setItem(LOGIN_KEY, "true");
+      else sessionStorage.setItem(LOGIN_KEY, "true");
+
+      abrirSistemaComoAdministrador();
+      mostrarAlerta("Acesso administrativo realizado.");
+      return;
+    }
+
+    const cpf = normalizarCpf(identificador);
+    const aluno = alunos.find(
+      (item) => normalizarCpf(item.cpf) === cpf
+    );
+
+    if (!aluno) {
+      erro.textContent =
+        "CPF não encontrado na base compartilhada da academia.";
+      return;
+    }
+
+    if (aluno.status !== "Ativo") {
+      erro.textContent =
+        "Seu cadastro está inativo. Procure a recepção.";
+      return;
+    }
+
+    const senhaAluno = String(
+      aluno.senha || normalizarCpf(aluno.cpf).slice(-4)
+    );
+
+    if (senha !== senhaAluno) {
+      erro.textContent = "Senha do aluno inválida.";
+      return;
+    }
+
+    localStorage.setItem("fitcontrol_tipo_usuario", "aluno");
+
+    if (lembrar) {
+      localStorage.setItem("fitcontrol_aluno_usuario_id", aluno.id);
+      localStorage.setItem(LOGIN_KEY, "true");
+    } else {
+      sessionStorage.setItem("fitcontrol_aluno_usuario_id", aluno.id);
+      sessionStorage.setItem(LOGIN_KEY, "true");
+    }
+
+    abrirSistemaComoAluno(aluno);
+    mostrarAlerta(`Bem-vindo, ${aluno.nome}.`);
+  } catch (erroFirebase) {
+    console.error(erroFirebase);
+    erro.textContent =
+      "Não foi possível carregar os dados online. Verifique a internet e tente novamente.";
+  } finally {
+    if (botao) {
+      botao.disabled = false;
+      botao.textContent =
+        botao.dataset.textoOriginal || "Entrar";
+    }
+  }
+});
+
 document.getElementById("togglePassword").addEventListener("click",()=>{const input=document.getElementById("loginSenha");const botao=document.getElementById("togglePassword");const mostrando=input.type==="text";input.type=mostrando?"password":"text";botao.textContent=mostrando?"Mostrar":"Ocultar"});
 document.getElementById("logoutButton").addEventListener("click",fecharSistema);
 function ultimosSeteDias(){const dias=[];for(let i=6;i>=0;i--){const data=new Date();data.setDate(data.getDate()-i);const iso=[data.getFullYear(),String(data.getMonth()+1).padStart(2,"0"),String(data.getDate()).padStart(2,"0")].join("-");dias.push({iso,label:data.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","")})}return dias}
@@ -581,7 +837,18 @@ function abrirSistemaComoAdministrador(){document.body.classList.remove("student
 function abrirSistemaComoAluno(aluno){document.body.classList.add("student-mode");atualizarPerfilCabecalho(aluno.nome,"Aluno da academia",obterIniciaisAluno(aluno.nome));alunoLogadoId=aluno.id;sessionStorage.setItem("fitcontrol_aluno_logado",aluno.id);document.getElementById("studentAccessScreen")?.classList.add("hidden");document.getElementById("studentDashboard")?.classList.remove("hidden");abrirSistema();document.querySelector('.menu button[data-view="areaAluno"]')?.click();renderizarAreaAluno()}
 function restaurarSessaoPorPerfil(){const ativa=localStorage.getItem(LOGIN_KEY)==="true"||sessionStorage.getItem(LOGIN_KEY)==="true";if(!ativa)return;const tipo=localStorage.getItem("fitcontrol_tipo_usuario");const id=localStorage.getItem("fitcontrol_aluno_usuario_id")||sessionStorage.getItem("fitcontrol_aluno_usuario_id");if(tipo==="aluno"&&id){const aluno=alunos.find(a=>String(a.id)===String(id));if(aluno&&aluno.status==="Ativo"){abrirSistemaComoAluno(aluno);return}}abrirSistemaComoAdministrador()}
 
-queueMicrotask(restaurarSessaoPorPerfil);
+async function restaurarSessaoDepoisDoFirebase() {
+  try {
+    if (typeof window.aguardarFirebasePronto === "function") {
+      await window.aguardarFirebasePronto(20000);
+    }
+  } catch (erro) {
+    console.warn("Usando cache local para restaurar a sessão.", erro);
+  }
+  restaurarSessaoPorPerfil();
+}
+
+setTimeout(restaurarSessaoDepoisDoFirebase, 0);
 
 
 // ==========================================================
