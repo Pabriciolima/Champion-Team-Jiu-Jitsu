@@ -4154,3 +4154,213 @@ body {
     width: 100%;
   }
 }
+
+/* =========================================================
+   MODAL PREMIUM DE EXCLUSÃO
+========================================================= */
+body.modal-open {
+  overflow: hidden;
+}
+
+.premium-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: 0.25s ease;
+}
+
+.premium-modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.premium-modal {
+  position: relative;
+  width: min(560px, 100%);
+  overflow: hidden;
+  padding: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(145deg, rgba(255, 51, 79, 0.05), transparent 30%), #11151a;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.62);
+  transform: translateY(20px) scale(0.98);
+  transition: 0.25s ease;
+}
+
+.premium-modal-overlay.show .premium-modal {
+  transform: translateY(0) scale(1);
+}
+
+.premium-modal-accent {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, #ff334f, #8f0d20);
+}
+
+.premium-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #181d23;
+  color: #aeb6bf;
+  font-size: 23px;
+  line-height: 1;
+  transition: 0.2s;
+}
+
+.premium-modal-close:hover {
+  color: #fff;
+  border-color: rgba(255, 51, 79, 0.45);
+  background: rgba(255, 51, 79, 0.12);
+}
+
+.premium-modal-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 51, 79, 0.3);
+  background: rgba(255, 51, 79, 0.1);
+  color: #ff536b;
+  font-size: 26px;
+  box-shadow: 0 0 30px rgba(255, 51, 79, 0.1);
+}
+
+.premium-modal-kicker {
+  color: #ff334f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.premium-modal h3 {
+  margin: 8px 0 10px;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 34px;
+  font-style: italic;
+  text-transform: uppercase;
+}
+
+.premium-modal-description {
+  margin: 0 0 20px;
+  color: #a7b0ba;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.premium-delete-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin: 0 0 22px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.premium-delete-list span {
+  color: #c1c8d0;
+  font-size: 12px;
+}
+
+.premium-confirm-box {
+  padding: 18px;
+  border: 1px solid rgba(255, 51, 79, 0.18);
+  background: rgba(255, 51, 79, 0.035);
+}
+
+.premium-confirm-box label {
+  display: block;
+  margin-bottom: 8px;
+  color: #8e98a3;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.premium-confirm-box strong {
+  display: block;
+  margin-bottom: 11px;
+  color: #fff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 22px;
+  font-style: italic;
+  text-transform: uppercase;
+}
+
+.premium-confirm-box input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0b0e12;
+  color: #fff;
+  outline: none;
+}
+
+.premium-confirm-box input:focus {
+  border-color: #ff334f;
+  box-shadow: 0 0 0 3px rgba(255, 51, 79, 0.1);
+}
+
+.premium-confirm-box small {
+  display: block;
+  margin-top: 9px;
+  color: #7f8994;
+  font-size: 11px;
+}
+
+.premium-confirm-box small.valid {
+  color: #46df8c;
+}
+
+.premium-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.premium-modal-actions .btn {
+  min-width: 150px;
+}
+
+.premium-modal-actions .btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+@media (max-width: 600px) {
+  .premium-modal {
+    padding: 27px 20px 22px;
+  }
+
+  .premium-delete-list {
+    grid-template-columns: 1fr;
+  }
+
+  .premium-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .premium-modal-actions .btn {
+    width: 100%;
+  }
+
+  .premium-modal h3 {
+    font-size: 29px;
+  }
+}

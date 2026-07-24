@@ -1243,7 +1243,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V11</div>
+  <div id="appVersionBadge" class="app-version-badge">V12</div>
   <div id="firebaseStatus" class="firebase-status firebase-connecting" role="status" aria-live="polite">
     <span class="firebase-status-dot"></span>
     <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1253,7 +1253,46 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="script.js?v=11"></script>
+  <script src="script.js?v=12"></script>
+
+
+  <div id="confirmacaoPremiumOverlay" class="premium-modal-overlay" aria-hidden="true">
+    <div class="premium-modal" role="dialog" aria-modal="true" aria-labelledby="confirmacaoPremiumTitulo">
+      <button id="confirmacaoPremiumFechar" class="premium-modal-close" type="button" aria-label="Fechar">×</button>
+
+      <div class="premium-modal-accent"></div>
+
+      <div class="premium-modal-icon">⚠</div>
+
+      <span class="premium-modal-kicker">AÇÃO IRREVERSÍVEL</span>
+      <h3 id="confirmacaoPremiumTitulo">Excluir aluno e histórico</h3>
+
+      <p id="confirmacaoPremiumDescricao" class="premium-modal-description"></p>
+
+      <div class="premium-delete-list">
+        <span>✓ Cadastro do aluno</span>
+        <span>✓ Matrículas</span>
+        <span>✓ Check-ins</span>
+        <span>✓ Treinos</span>
+        <span>✓ Pedidos e notificações</span>
+        <span>✓ Graduação e histórico</span>
+      </div>
+
+      <div class="premium-confirm-box">
+        <label for="confirmacaoPremiumInput">Digite o nome abaixo para confirmar</label>
+        <strong id="confirmacaoPremiumNome"></strong>
+        <input id="confirmacaoPremiumInput" type="text" autocomplete="off" placeholder="Digite o nome completo" />
+        <small id="confirmacaoPremiumFeedback">O botão será liberado quando o nome estiver correto.</small>
+      </div>
+
+      <div class="premium-modal-actions">
+        <button id="confirmacaoPremiumCancelar" class="btn btn-secondary" type="button">Cancelar</button>
+        <button id="confirmacaoPremiumConfirmar" class="btn btn-danger" type="button" disabled>
+          Excluir definitivamente
+        </button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>

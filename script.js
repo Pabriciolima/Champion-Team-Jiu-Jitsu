@@ -1,5 +1,5 @@
 
-window.CHAMPION_APP_VERSION = "11";
+window.CHAMPION_APP_VERSION = "12";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -660,6 +660,112 @@ window.addEventListener("offline", () => {
       );
     }
 
+
+/* =========================================================
+   MODAL PREMIUM DE CONFIRMAÇÃO
+========================================================= */
+let confirmacaoPremiumResolver = null;
+
+function normalizarTextoConfirmacao(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function abrirConfirmacaoPremium({ titulo, descricao, nome }) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("confirmacaoPremiumOverlay");
+    const tituloEl = document.getElementById("confirmacaoPremiumTitulo");
+    const descricaoEl = document.getElementById("confirmacaoPremiumDescricao");
+    const nomeEl = document.getElementById("confirmacaoPremiumNome");
+    const input = document.getElementById("confirmacaoPremiumInput");
+    const feedback = document.getElementById("confirmacaoPremiumFeedback");
+    const confirmar = document.getElementById("confirmacaoPremiumConfirmar");
+
+    confirmacaoPremiumResolver = resolve;
+
+    tituloEl.textContent = titulo;
+    descricaoEl.textContent = descricao;
+    nomeEl.textContent = nome;
+    input.value = "";
+    feedback.textContent = "O botão será liberado quando o nome estiver correto.";
+    feedback.classList.remove("valid");
+    confirmar.disabled = true;
+
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+
+    setTimeout(() => input.focus(), 120);
+  });
+}
+
+function fecharConfirmacaoPremium(resultado = false) {
+  const overlay = document.getElementById("confirmacaoPremiumOverlay");
+  overlay.classList.remove("show");
+  overlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+
+  if (confirmacaoPremiumResolver) {
+    confirmacaoPremiumResolver(resultado);
+    confirmacaoPremiumResolver = null;
+  }
+}
+
+document.getElementById("confirmacaoPremiumInput")?.addEventListener("input", (event) => {
+  const nomeEsperado = document.getElementById("confirmacaoPremiumNome").textContent;
+  const feedback = document.getElementById("confirmacaoPremiumFeedback");
+  const confirmar = document.getElementById("confirmacaoPremiumConfirmar");
+  const valido =
+    normalizarTextoConfirmacao(event.target.value) ===
+    normalizarTextoConfirmacao(nomeEsperado);
+
+  confirmar.disabled = !valido;
+  feedback.textContent = valido
+    ? "Nome confirmado ✓"
+    : "O botão será liberado quando o nome estiver correto.";
+  feedback.classList.toggle("valid", valido);
+});
+
+document.getElementById("confirmacaoPremiumCancelar")?.addEventListener("click", () => {
+  fecharConfirmacaoPremium(false);
+});
+
+document.getElementById("confirmacaoPremiumFechar")?.addEventListener("click", () => {
+  fecharConfirmacaoPremium(false);
+});
+
+document.getElementById("confirmacaoPremiumConfirmar")?.addEventListener("click", () => {
+  if (document.getElementById("confirmacaoPremiumConfirmar").disabled) return;
+  fecharConfirmacaoPremium(true);
+});
+
+document.getElementById("confirmacaoPremiumOverlay")?.addEventListener("click", (event) => {
+  if (event.target.id === "confirmacaoPremiumOverlay") {
+    fecharConfirmacaoPremium(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  const overlay = document.getElementById("confirmacaoPremiumOverlay");
+  if (!overlay?.classList.contains("show")) return;
+
+  if (event.key === "Escape") {
+    fecharConfirmacaoPremium(false);
+  }
+
+  if (
+    event.key === "Enter" &&
+    !document.getElementById("confirmacaoPremiumConfirmar").disabled
+  ) {
+    fecharConfirmacaoPremium(true);
+  }
+});
+
+
     async function excluirHistoricoCompletoAluno(alunoId) {
       const aluno = alunos.find((item) => String(item.id) === String(alunoId));
       if (!aluno) {
@@ -667,20 +773,13 @@ window.addEventListener("offline", () => {
         return;
       }
 
-      const confirmacao = prompt(
-        `ATENÇÃO: esta ação apagará o cadastro e todo o histórico de ${aluno.nome}.\n\n` +
-        "Serão removidos: matrículas, check-ins, treinos, pedidos, notificações, graduação e histórico.\n\n" +
-        `Digite exatamente o nome do aluno para confirmar:\n${aluno.nome}`
-      );
+      const confirmado = await abrirConfirmacaoPremium({
+        titulo: "Excluir aluno e histórico",
+        descricao: `Você está prestes a excluir definitivamente ${aluno.nome}. Esta ação não poderá ser desfeita.`,
+        nome: aluno.nome
+      });
 
-      if (confirmacao === null) return;
-
-      if (confirmacao.trim().toLowerCase() !== aluno.nome.trim().toLowerCase()) {
-        mostrarAlerta("Exclusão cancelada: o nome digitado não confere.", "error");
-        return;
-      }
-
-      if (!confirm("Esta exclusão é definitiva no sistema. Deseja continuar?")) return;
+      if (!confirmado) return;
 
       const authUid = aluno.authUid || "";
 
