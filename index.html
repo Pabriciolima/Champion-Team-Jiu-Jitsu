@@ -36,11 +36,11 @@
         </div>
       </div>
       <div class="login-card">
-        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor entra com e-mail e senha. Professor e aluno entram com nome completo e CPF.</p></div>
+        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor entra com e-mail e senha. Professor e aluno entram com CPF e senha.</p></div>
         <form id="loginForm">
           <div class="field"><label for="loginEmail">E-mail do gestor/professor ou CPF do aluno</label><input id="loginEmail" type="text" value="admin@fitcontrol.com" autocomplete="username" required /></div>
           <div class="field"><label for="loginSenha">Senha</label><div class="password-wrap"><input id="loginSenha" type="password" value="123456" required /><button type="button" id="togglePassword" class="password-toggle">Mostrar</button></div></div>
-          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor: e-mail + senha • Professor/Aluno: nome completo + CPF</span></div>
+          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor: e-mail + senha • Professor/Aluno: CPF + senha</span></div>
           <button class="login-button" type="submit">ENTRAR NA CHAMPION TEAM <span>→</span></button>
           <p id="loginError" class="login-error"></p>
         </form>
@@ -817,7 +817,38 @@
 
           <div class="workout-cards" id="listaFichasTreino"></div>
         </div>
-      </section>
+      
+        <section class="student-password-panel password-panel-professor">
+          <div class="student-password-heading">
+            <div>
+              <span class="student-password-kicker">SEGURANÇA DA CONTA</span>
+              <h3>Alterar senha de acesso</h3>
+              <p>Atualize sua senha pessoal de acesso ao painel do professor.</p>
+            </div>
+            <div class="student-password-icon">🔐</div>
+          </div>
+
+          <form id="formAlterarSenhaProfessor" class="student-password-form">
+            <div class="field">
+              <label for="senhaAtualProfessor">Senha atual</label>
+              <input id="senhaAtualProfessor" type="password" minlength="6" required />
+            </div>
+
+            <div class="field">
+              <label for="novaSenhaProfessor">Nova senha</label>
+              <input id="novaSenhaProfessor" type="password" minlength="6" required />
+            </div>
+
+            <div class="field">
+              <label for="confirmarNovaSenhaProfessor">Confirmar nova senha</label>
+              <input id="confirmarNovaSenhaProfessor" type="password" minlength="6" required />
+            </div>
+
+            <button class="btn btn-primary" type="submit">Atualizar senha</button>
+          </form>
+        </section>
+
+</section>
 
 
 <section id="videos" class="view">
@@ -1022,8 +1053,38 @@
       </div>
     </div>
   </div>
-</section>
 
+        <section class="student-password-panel password-panel-aluno">
+          <div class="student-password-heading">
+            <div>
+              <span class="student-password-kicker">SEGURANÇA DA CONTA</span>
+              <h3>Alterar senha de acesso</h3>
+              <p>Atualize sua senha pessoal de acesso ao painel do aluno.</p>
+            </div>
+            <div class="student-password-icon">🔐</div>
+          </div>
+
+          <form id="formAlterarSenhaAluno" class="student-password-form">
+            <div class="field">
+              <label for="senhaAtualAluno">Senha atual</label>
+              <input id="senhaAtualAluno" type="password" minlength="6" required />
+            </div>
+
+            <div class="field">
+              <label for="novaSenhaAluno">Nova senha</label>
+              <input id="novaSenhaAluno" type="password" minlength="6" required />
+            </div>
+
+            <div class="field">
+              <label for="confirmarNovaSenhaAluno">Confirmar nova senha</label>
+              <input id="confirmarNovaSenhaAluno" type="password" minlength="6" required />
+            </div>
+
+            <button class="btn btn-primary" type="submit">Atualizar senha</button>
+          </form>
+        </section>
+
+</section>
 <section id="notificacoes" class="view">
   <div class="module-hero"><div><span class="module-kicker">CENTRAL DE ALERTAS</span><h3>Vendas, promoções e mensalidades.</h3><p>Avisos para administrador e alunos.</p></div><div class="module-stat"><strong id="totalNotificacoesNaoLidas">0</strong><span>NÃO LIDAS</span></div></div>
   <div class="notification-layout">
@@ -1243,7 +1304,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V12</div>
+  <div id="appVersionBadge" class="app-version-badge">V15</div>
   <div id="firebaseStatus" class="firebase-status firebase-connecting" role="status" aria-live="polite">
     <span class="firebase-status-dot"></span>
     <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1253,7 +1314,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="script.js?v=12"></script>
+  <script src="script.js?v=15"></script>
 
 
   <div id="confirmacaoPremiumOverlay" class="premium-modal-overlay" aria-hidden="true">

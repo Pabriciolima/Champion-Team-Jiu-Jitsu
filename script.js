@@ -1,5 +1,5 @@
 
-window.CHAMPION_APP_VERSION = "12";
+window.CHAMPION_APP_VERSION = "15";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -75,6 +75,10 @@ const STORAGE_KEYS = {
       return crypto.randomUUID
         ? crypto.randomUUID()
         : Date.now().toString() + Math.random().toString(16).slice(2);
+    }
+
+    function senhaPadraoCpf(cpf) {
+      return normalizarCpf(cpf).slice(0, 6);
     }
 
     function normalizarCpf(valor) {
@@ -339,7 +343,7 @@ window.addEventListener("offline", () => {
         email: document.getElementById("alunoEmail").value.trim(),
         nascimento: document.getElementById("alunoNascimento").value,
         status: document.getElementById("alunoStatus").value,
-        senha: cpf
+        senha: senhaPadraoCpf(cpf)
       };
 
       if (!id) {
@@ -349,7 +353,7 @@ window.addEventListener("offline", () => {
           nome: dados.nome,
           cpf: dados.cpf,
           email: dados.email,
-          password: dados.cpf
+          password: senhaPadraoCpf(dados.cpf)
         });
         if (!conta?.uid) {
           mostrarAlerta("Não foi possível criar o acesso Firebase do aluno.", "error");
@@ -367,7 +371,7 @@ window.addEventListener("offline", () => {
             nome: dados.nome,
             cpf: dados.cpf,
             email: dados.email,
-            password: dados.cpf
+            password: senhaPadraoCpf(dados.cpf)
           });
           if (!conta?.uid) {
             mostrarAlerta("Não foi possível criar o acesso do aluno.", "error");
@@ -386,6 +390,22 @@ window.addEventListener("offline", () => {
       }
 
       salvar(STORAGE_KEYS.alunos, alunos);
+
+      if (dados.authUid && typeof window.firebaseAtualizarPerfilAcesso === "function") {
+        try {
+          await window.firebaseAtualizarPerfilAcesso({
+            authUid: dados.authUid,
+            role: "aluno",
+            profileId: dados.id,
+            nome: dados.nome,
+            email: dados.email,
+            cpf: dados.cpf
+          });
+        } catch (erroPerfil) {
+          console.error("Não foi possível atualizar o perfil do aluno:", erroPerfil);
+        }
+      }
+
       limparFormularioAluno();
       atualizarTudo();
     });
@@ -1700,7 +1720,7 @@ document.getElementById("formProfessor")?.addEventListener("submit", async (even
         nome: dados.nome,
         cpf: dados.cpf,
         email: dados.email,
-        password: dados.cpf
+        password: senhaPadraoCpf(dados.cpf)
       });
 
       if (!conta?.uid) {
@@ -1731,6 +1751,22 @@ document.getElementById("formProfessor")?.addEventListener("submit", async (even
     }
 
     salvarProfessores();
+
+    if (dados.authUid && typeof window.firebaseAtualizarPerfilAcesso === "function") {
+      try {
+        await window.firebaseAtualizarPerfilAcesso({
+          authUid: dados.authUid,
+          role: "professor",
+          profileId: dados.id,
+          nome: dados.nome,
+          email: dados.email,
+          cpf: dados.cpf
+        });
+      } catch (erroPerfil) {
+        console.error("Não foi possível atualizar o perfil do professor:", erroPerfil);
+      }
+    }
+
     limparFormularioProfessor();
     atualizarModulosTreino();
   } catch (erro) {
@@ -4329,6 +4365,78 @@ document.getElementById("exameGraduacaoData") && (document.getElementById("exame
 renderizarTudoGraduacoes();
 
 
+
+
+
+
+function configurarFormularioAlterarSenha({
+  formId,
+  senhaAtualId,
+  novaSenhaId,
+  confirmarSenhaId
+}) {
+  document.getElementById(formId)?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const atual = document.getElementById(senhaAtualId).value;
+    const nova = document.getElementById(novaSenhaId).value;
+    const confirmar = document.getElementById(confirmarSenhaId).value;
+    const botao = event.submitter;
+
+    if (nova.length < 6) {
+      mostrarAlerta("A nova senha precisa ter pelo menos 6 caracteres.", "error");
+      return;
+    }
+
+    if (nova !== confirmar) {
+      mostrarAlerta("A confirmação da nova senha não confere.", "error");
+      return;
+    }
+
+    if (atual === nova) {
+      mostrarAlerta("A nova senha deve ser diferente da senha atual.", "error");
+      return;
+    }
+
+    try {
+      if (botao) {
+        botao.disabled = true;
+        botao.textContent = "Atualizando...";
+      }
+
+      await window.firebaseAlterarSenhaUsuario?.(atual, nova);
+
+      event.target.reset();
+      mostrarAlerta("Senha atualizada com sucesso.");
+    } catch (erro) {
+      mostrarAlerta(
+        erro.message || "Não foi possível atualizar a senha.",
+        "error"
+      );
+    } finally {
+      if (botao) {
+        botao.disabled = false;
+        botao.textContent = "Atualizar senha";
+      }
+    }
+  });
+}
+
+configurarFormularioAlterarSenha({
+  formId: "formAlterarSenhaAluno",
+  senhaAtualId: "senhaAtualAluno",
+  novaSenhaId: "novaSenhaAluno",
+  confirmarSenhaId: "confirmarNovaSenhaAluno"
+});
+
+configurarFormularioAlterarSenha({
+  formId: "formAlterarSenhaProfessor",
+  senhaAtualId: "senhaAtualProfessor",
+  novaSenhaId: "novaSenhaProfessor",
+  confirmarSenhaId: "confirmarNovaSenhaProfessor"
+});
+
+
 /* =========================================================
    FIREBASE INTEGRADO — 3 PERFIS
 ========================================================= */
@@ -4407,18 +4515,33 @@ renderizarTudoGraduacoes();
 
   async function loadManagerProfessor(){
     status("syncing","Carregando a base compartilhada...");
-    for(const key of keys){
-      const ref=docRef(key), snap=await ref.get();
+
+    const carregarChave=async(key)=>{
+      const ref=docRef(key);
+      const snap=await ref.get();
+
       if(!snap.exists){
         const local=window.obterDadosLocaisFirebase?.(key)||[];
-        await ref.set({itens:local,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+        await ref.set({
+          itens:local,
+          updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
         apply(key,local);
-      }else apply(key,snap.data()?.itens||[]);
+      }else{
+        apply(key,snap.data()?.itens||[]);
+      }
+
       unsub.push(ref.onSnapshot(s=>{
         if(!s.exists || s.metadata.hasPendingWrites)return;
         apply(key,s.data()?.itens||[]);
       }));
-    }
+    };
+
+    /*
+      Antes cada módulo era carregado um após o outro.
+      Agora todos são buscados em paralelo, reduzindo bastante o login.
+    */
+    await Promise.all(keys.map(carregarChave));
   }
 
   async function loadStudent(uid){
@@ -4503,15 +4626,48 @@ renderizarTudoGraduacoes();
     try{
       const cred=await secondary.auth().createUserWithEmailAndPassword(loginEmail,senhaAcesso);
       await db.collection(USERS).doc(cred.user.uid).set({
-        role,profileId,nome,nomeNormalizado:normalizarNomeLogin(nome),
-        email:loginEmail,cpf:String(cpf||"").replace(/\D/g,""),
-        ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp(),
+        role,
+        profileId,
+        nome,
+        nomeNormalizado:normalizarNomeLogin(nome),
+        email:loginEmail,
+        contactEmail:String(email||"").trim().toLowerCase(),
+        cpf:String(cpf||"").replace(/\D/g,""),
+        ativo:true,
+        criadoEm:firebase.firestore.FieldValue.serverTimestamp(),
         criadoPor:auth.currentUser.uid
       });
       return {uid:cred.user.uid,email:loginEmail};
     }catch(e){throw new Error(errMsg(e));}finally{await secondary.delete();}
   };
 
+
+  window.firebaseAtualizarPerfilAcesso=async({
+    authUid,
+    role,
+    profileId,
+    nome,
+    email,
+    cpf
+  })=>{
+    if(currentProfile?.role!=="gestor"){
+      throw new Error("Somente o gestor pode atualizar acessos.");
+    }
+
+    if(!authUid)return;
+
+    await db.collection(USERS).doc(authUid).set({
+      role,
+      profileId,
+      nome,
+      nomeNormalizado:normalizarNomeLogin(nome),
+      contactEmail:String(email||"").trim().toLowerCase(),
+      cpf:String(cpf||"").replace(/\D/g,""),
+      ativo:true,
+      atualizadoEm:firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoPor:auth.currentUser.uid
+    },{merge:true});
+  };
 
   window.firebaseMigrarProfessor=async({emailAntigo,senhaAntiga,cpf,nome,profileId})=>{
     if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode migrar acessos.");
@@ -4524,12 +4680,14 @@ renderizarTudoGraduacoes();
       );
       const novoEmail=cpfEmail(cpf,"professor");
       await cred.user.updateEmail(novoEmail);
-      await cred.user.updatePassword(String(cpf).replace(/\D/g,""));
+      await cred.user.updatePassword(String(cpf).replace(/\D/g,"").slice(0,6));
       await db.collection(USERS).doc(cred.user.uid).set({
         role:"professor",profileId,nome,
         nomeNormalizado:normalizarNomeLogin(nome),
         cpf:String(cpf).replace(/\D/g,""),
-        email:novoEmail,ativo:true,
+        email:novoEmail,
+        contactEmail:String(emailAntigo||"").trim().toLowerCase(),
+        ativo:true,
         atualizadoEm:firebase.firestore.FieldValue.serverTimestamp()
       },{merge:true});
       return {uid:cred.user.uid,email:novoEmail};
@@ -4553,9 +4711,14 @@ renderizarTudoGraduacoes();
         const senhaDigitada=String(password||"").trim();
         const gestorPorEmail=identificador.includes("@");
 
-        status("syncing","Autenticando acesso...");
+        if(!identificador){
+          throw new Error("Informe o e-mail do gestor ou o CPF.");
+        }
+
+        status("syncing","Autenticando...");
 
         let cred=null;
+        let ultimoErro=null;
 
         if(gestorPorEmail){
           cred=await auth.signInWithEmailAndPassword(
@@ -4563,34 +4726,22 @@ renderizarTudoGraduacoes();
             senhaDigitada
           );
         }else{
-          const cpf=senhaDigitada.replace(/\D/g,"");
-
-          if(!identificador){
-            throw new Error("Informe o nome completo cadastrado.");
-          }
+          const cpf=identificador.replace(/\D/g,"");
 
           if(cpf.length!==11){
-            throw new Error("A senha deve ser o CPF completo com 11 números.");
+            throw new Error("Informe um CPF válido com 11 números.");
           }
 
-          /*
-            IMPORTANTE:
-            O Firebase Authentication exige e-mail.
-            O nome nunca é enviado ao Firebase como e-mail.
-            O sistema usa um e-mail interno formado pelo CPF.
-          */
           const acessosPossiveis=[
-            {role:"aluno",email:cpfEmail(cpf,"aluno")},
-            {role:"professor",email:cpfEmail(cpf,"professor")}
+            cpfEmail(cpf,"aluno"),
+            cpfEmail(cpf,"professor")
           ];
 
-          let ultimoErro=null;
-
-          for(const acesso of acessosPossiveis){
+          for(const emailInterno of acessosPossiveis){
             try{
               cred=await auth.signInWithEmailAndPassword(
-                acesso.email,
-                cpf
+                emailInterno,
+                senhaDigitada
               );
               break;
             }catch(erroTentativa){
@@ -4602,10 +4753,11 @@ renderizarTudoGraduacoes();
             if(
               ultimoErro?.code==="auth/user-not-found" ||
               ultimoErro?.code==="auth/invalid-credential" ||
-              ultimoErro?.code==="auth/invalid-login-credentials"
+              ultimoErro?.code==="auth/invalid-login-credentials" ||
+              ultimoErro?.code==="auth/wrong-password"
             ){
               throw new Error(
-                "O acesso deste aluno/professor ainda não foi criado no Firebase. Entre como gestor, abra o cadastro e salve novamente."
+                "CPF ou senha inválidos. A senha inicial são os 6 primeiros dígitos do CPF."
               );
             }
 
@@ -4614,19 +4766,6 @@ renderizarTudoGraduacoes();
         }
 
         currentProfile=await profileFor(cred.user);
-
-        if(!gestorPorEmail){
-          const nomeInformado=normalizarNomeLogin(identificador);
-          const nomeCadastrado=normalizarNomeLogin(currentProfile.nome);
-
-          if(nomeInformado!==nomeCadastrado){
-            await auth.signOut();
-            currentProfile=null;
-            throw new Error(
-              "O nome informado não corresponde ao CPF deste cadastro."
-            );
-          }
-        }
 
         unsub.splice(0).forEach(fn=>fn());
         cache.clear();
@@ -4670,6 +4809,37 @@ renderizarTudoGraduacoes();
     return loginPromise;
   };
 
+  window.firebaseAlterarSenhaUsuario=async(senhaAtual,novaSenha)=>{
+    const usuario=auth.currentUser;
+
+    if(!usuario){
+      throw new Error("Faça login novamente para alterar a senha.");
+    }
+
+    if(!["aluno","professor"].includes(currentProfile?.role)){
+      throw new Error("Apenas alunos e professores podem alterar a própria senha.");
+    }
+
+    const credencial=firebase.auth.EmailAuthProvider.credential(
+      usuario.email,
+      senhaAtual
+    );
+
+    try{
+      await usuario.reauthenticateWithCredential(credencial);
+      await usuario.updatePassword(novaSenha);
+
+      await db.collection(USERS).doc(usuario.uid).set({
+        senhaAlterada:true,
+        senhaAlteradaEm:firebase.firestore.FieldValue.serverTimestamp()
+      },{merge:true});
+
+      return true;
+    }catch(erro){
+      throw new Error(errMsg(erro));
+    }
+  };
+
   window.firebaseLogout=async()=>{unsub.splice(0).forEach(fn=>fn());cache.clear();currentProfile=null;ready=false;if(auth)await auth.signOut();};
   window.firebaseReconectar=async()=>{if(auth?.currentUser){currentProfile=await profileFor(auth.currentUser);if(currentProfile.role==="aluno")await loadStudent(auth.currentUser.uid);else await loadManagerProfessor();status("online","Firebase reconectado");}};
 
@@ -4680,11 +4850,24 @@ renderizarTudoGraduacoes();
       try{
         loadingUid=user.uid;
         currentProfile=await profileFor(user);
-        unsub.splice(0).forEach(fn=>fn());cache.clear();lastCloudJson.clear();
-        if(currentProfile.role==="aluno")await loadStudent(user.uid);else await loadManagerProfessor();
-        window.CHAMPION_FIREBASE_READY=true;window.marcarFirebasePronto?.();
+        unsub.splice(0).forEach(fn=>fn());
+        cache.clear();
+        lastCloudJson.clear();
+
+        if(currentProfile.role==="aluno"){
+          await loadStudent(user.uid);
+        }else{
+          await loadManagerProfessor();
+        }
+
+        window.CHAMPION_FIREBASE_READY=true;
+        window.marcarFirebasePronto?.();
         status("online","Firebase conectado · dados sincronizados");
-        window.dispatchEvent(new CustomEvent("champion-auth-restored",{detail:{user,perfil:currentProfile}}));
+        window.dispatchEvent(
+          new CustomEvent("champion-auth-restored",{
+            detail:{user,perfil:currentProfile}
+          })
+        );
       }catch(e){status("error",errMsg(e));console.error(e);}
     });
   }catch(e){status("error",errMsg(e));console.error(e);}
