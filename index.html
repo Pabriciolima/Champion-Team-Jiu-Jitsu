@@ -36,11 +36,11 @@
         </div>
       </div>
       <div class="login-card">
-        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor entra com e-mail e senha. Professor e aluno entram com CPF e senha.</p></div>
+        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor e aluno entram com e-mail e senha. Professor entra com CPF e senha.</p></div>
         <form id="loginForm">
           <div class="field"><label for="loginEmail">E-mail do gestor/professor ou CPF do aluno</label><input id="loginEmail" type="text" value="admin@fitcontrol.com" autocomplete="username" required /></div>
           <div class="field"><label for="loginSenha">Senha</label><div class="password-wrap"><input id="loginSenha" type="password" value="123456" required /><button type="button" id="togglePassword" class="password-toggle">Mostrar</button></div></div>
-          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor: e-mail + senha • Professor/Aluno: CPF + senha</span></div>
+          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor/Aluno: e-mail + senha • Professor: CPF + senha</span></div>
           <button class="login-button" type="submit">ENTRAR NA CHAMPION TEAM <span>→</span></button>
           <p id="loginError" class="login-error"></p>
         </form>
@@ -71,6 +71,7 @@
         <button data-view="planos"><span class="menu-icon">🎯</span><span>Planos</span></button>
         <button data-view="matriculas"><span class="menu-icon">🔥</span><span>Matrículas</span></button>
         <button data-view="professores"><span class="menu-icon">🧑‍🏫</span><span>Professores</span></button>
+        <button data-view="acessos"><span class="menu-icon">🔐</span><span>Login e senhas</span></button>
         <button data-view="treinos"><span class="menu-icon">🥋</span><span>Treinos de jiu-jitsu</span></button>
         <button data-view="videos"><span class="menu-icon">🎥</span><span>Vídeos</span></button>
         <button data-view="loja"><span class="menu-icon">🛒</span><span>Gestão da loja</span></button>
@@ -620,6 +621,132 @@
               <tbody id="tabelaProfessores"></tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      
+      <section id="acessos" class="view">
+        <div class="access-hero">
+          <div>
+            <span class="access-kicker">CONTROLE ADMINISTRATIVO</span>
+            <h3>Login e senhas</h3>
+            <p>Cadastre, edite, bloqueie e redefina os acessos de gestores, professores e alunos.</p>
+          </div>
+          <div class="access-hero-badge">
+            <strong id="accessTotalUsers">0</strong>
+            <span>ACESSOS CADASTRADOS</span>
+          </div>
+        </div>
+
+        <div class="access-layout">
+          <article class="panel access-form-panel">
+            <div class="panel-header">
+              <div>
+                <h3 id="accessFormTitle">Novo acesso</h3>
+                <p>O login do Firebase Authentication será administrado por esta tela.</p>
+              </div>
+              <button id="accessCancelEdit" class="btn btn-secondary" type="button" hidden>Cancelar edição</button>
+            </div>
+
+            <form id="accessForm">
+              <input id="accessUid" type="hidden" />
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="accessRole">Tipo de acesso</label>
+                  <select id="accessRole" required>
+                    <option value="aluno">Aluno</option>
+                    <option value="professor">Professor</option>
+                    <option value="gestor">Gestor</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="accessProfileId">Pessoa vinculada</label>
+                  <select id="accessProfileId">
+                    <option value="">Selecione</option>
+                  </select>
+                  <small>Escolha o aluno ou professor já cadastrado.</small>
+                </div>
+
+                <div class="field full">
+                  <label for="accessName">Nome de exibição</label>
+                  <input id="accessName" required placeholder="Nome completo" />
+                </div>
+
+                <div class="field full">
+                  <label for="accessEmail">Login (e-mail)</label>
+                  <input id="accessEmail" type="email" required placeholder="usuario@email.com" />
+                  <small>O Firebase Authentication utiliza e-mail como identificador seguro.</small>
+                </div>
+
+                <div class="field">
+                  <label for="accessPassword">Senha</label>
+                  <input id="accessPassword" type="password" minlength="6" placeholder="Mínimo de 6 caracteres" />
+                  <small id="accessPasswordHelp">Obrigatória ao criar. Na edição, deixe em branco para manter.</small>
+                </div>
+
+                <div class="field">
+                  <label for="accessStatus">Situação</label>
+                  <select id="accessStatus">
+                    <option value="ativo">Ativo</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="access-password-actions">
+                <button id="accessGeneratePassword" class="btn btn-secondary" type="button">Gerar senha provisória</button>
+                <button id="accessTogglePassword" class="btn btn-secondary" type="button">Mostrar senha</button>
+              </div>
+
+              <div class="actions">
+                <button id="accessSaveButton" class="btn btn-primary" type="submit">Criar acesso</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>Acessos cadastrados</h3>
+                <p>Contas existentes no Firebase Authentication.</p>
+              </div>
+              <button id="accessRefreshButton" class="btn btn-secondary" type="button">Atualizar lista</button>
+            </div>
+
+            <div class="access-toolbar">
+              <input id="accessSearch" type="search" placeholder="Buscar por nome ou e-mail" />
+              <select id="accessRoleFilter">
+                <option value="">Todos os perfis</option>
+                <option value="gestor">Gestores</option>
+                <option value="professor">Professores</option>
+                <option value="aluno">Alunos</option>
+              </select>
+            </div>
+
+            <div id="accessLoading" class="access-loading" hidden>
+              <span></span> Carregando acessos...
+            </div>
+
+            <div class="table-wrap">
+              <table class="access-table">
+                <thead>
+                  <tr>
+                    <th>Usuário</th>
+                    <th>Perfil</th>
+                    <th>Login</th>
+                    <th>Status</th>
+                    <th>Último acesso</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="accessTableBody">
+                  <tr><td colspan="6"><div class="empty-state">Abra esta área para carregar os acessos.</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -1306,7 +1433,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V17</div>
+  <div id="appVersionBadge" class="app-version-badge">V19</div>
   <div id="firebaseStatus" class="firebase-status firebase-connecting" role="status" aria-live="polite">
     <span class="firebase-status-dot"></span>
     <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1352,11 +1479,10 @@
       </div>
     </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="script.js?v=17"></script>
-  </div>
-
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+  <script src="script.js?v=19"></script>
 </body>
 </html>

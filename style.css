@@ -3357,3 +3357,182 @@ body[data-role="gestor"] .password-panel-professor{
   color:#7e8994;
   font-size:10px;
 }
+
+
+/* =========================================================
+   LOGIN RÁPIDO E ESTADO DE CARREGAMENTO — V18
+========================================================= */
+#loginForm .login-button:disabled{
+  opacity:.78;
+  cursor:wait;
+}
+
+.firebase-status{
+  min-width:230px;
+}
+
+.firebase-status.firebase-error{
+  max-width:min(520px,calc(100vw - 24px));
+}
+
+
+/* =========================================================
+   CENTRAL DE ACESSOS — V19
+========================================================= */
+.access-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:24px;
+  margin-bottom:20px;
+  padding:28px 30px;
+  border:1px solid var(--border);
+  background:
+    linear-gradient(120deg,rgba(255,51,79,.11),transparent 45%),
+    #12161b;
+  box-shadow:var(--shadow);
+}
+.access-kicker{
+  color:var(--red);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:2px;
+}
+.access-hero h3{
+  margin:7px 0 5px;
+  font-family:"Barlow Condensed",sans-serif;
+  font-size:38px;
+  font-style:italic;
+  text-transform:uppercase;
+}
+.access-hero p{
+  margin:0;
+  color:var(--muted);
+}
+.access-hero-badge{
+  min-width:150px;
+  padding:18px;
+  border:1px solid rgba(255,51,79,.24);
+  background:rgba(255,51,79,.06);
+  text-align:center;
+}
+.access-hero-badge strong{
+  display:block;
+  color:#fff;
+  font-size:30px;
+}
+.access-hero-badge span{
+  color:var(--red);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1px;
+}
+.access-layout{
+  display:grid;
+  grid-template-columns:minmax(330px,.72fr) minmax(620px,1.28fr);
+  gap:18px;
+  align-items:start;
+}
+.access-form-panel{
+  position:sticky;
+  top:20px;
+}
+.access-password-actions{
+  display:flex;
+  gap:8px;
+  margin-top:12px;
+}
+.access-toolbar{
+  display:grid;
+  grid-template-columns:1fr 190px;
+  gap:10px;
+  margin-bottom:14px;
+}
+.access-toolbar input,
+.access-toolbar select{
+  width:100%;
+  padding:12px 13px;
+  border:1px solid var(--border);
+  background:#0c1014;
+  color:#fff;
+}
+.access-loading{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin:10px 0;
+  padding:10px 12px;
+  border:1px solid rgba(0,168,255,.18);
+  background:rgba(0,168,255,.06);
+  color:#b7dfff;
+  font-size:12px;
+}
+.access-loading span{
+  width:10px;
+  height:10px;
+  border:2px solid rgba(255,255,255,.2);
+  border-top-color:#43aefc;
+  border-radius:50%;
+  animation:accessSpin .7s linear infinite;
+}
+@keyframes accessSpin{to{transform:rotate(360deg)}}
+.access-table{
+  min-width:880px;
+}
+.access-user-cell{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.access-user-cell>div{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.access-user-cell small{
+  color:var(--muted);
+  font-size:9px;
+}
+.access-avatar{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  background:var(--red);
+  color:#fff;
+  font-family:"Barlow Condensed",sans-serif;
+  font-weight:900;
+}
+.access-role,
+.access-state{
+  display:inline-flex;
+  padding:6px 8px;
+  border:1px solid var(--border);
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+.access-role-gestor{color:#ffca62;border-color:rgba(255,202,98,.28);background:rgba(255,202,98,.06)}
+.access-role-professor{color:#73b7ff;border-color:rgba(115,183,255,.28);background:rgba(115,183,255,.06)}
+.access-role-aluno{color:#67e59d;border-color:rgba(103,229,157,.28);background:rgba(103,229,157,.06)}
+.access-state.active{color:#67e59d;border-color:rgba(103,229,157,.25)}
+.access-state.blocked{color:#ff6678;border-color:rgba(255,102,120,.25)}
+.access-row-actions{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+}
+.access-error{
+  color:#ff7585;
+  border-color:rgba(255,51,79,.24);
+}
+@media(max-width:1180px){
+  .access-layout{grid-template-columns:1fr}
+  .access-form-panel{position:static}
+}
+@media(max-width:650px){
+  .access-hero{align-items:flex-start;flex-direction:column}
+  .access-toolbar{grid-template-columns:1fr}
+  .access-password-actions{flex-direction:column}
+  .access-password-actions .btn{width:100%}
+}
