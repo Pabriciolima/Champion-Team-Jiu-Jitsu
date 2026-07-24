@@ -271,7 +271,7 @@ window.addEventListener("offline", () => {
       });
     });
 
-    document.getElementById("formAluno").addEventListener("submit", (event) => {
+    document.getElementById("formAluno").addEventListener("submit", async (event) => {
       event.preventDefault();
 
       const id = document.getElementById("alunoId").value;
@@ -288,6 +288,7 @@ window.addEventListener("offline", () => {
         return;
       }
 
+      const senhaInformada = document.getElementById("alunoSenha")?.value.trim();
       const dados = {
         id: id || gerarId(),
         nome: document.getElementById("alunoNome").value.trim(),
@@ -296,8 +297,26 @@ window.addEventListener("offline", () => {
         email: document.getElementById("alunoEmail").value.trim(),
         nascimento: document.getElementById("alunoNascimento").value,
         status: document.getElementById("alunoStatus").value,
-        senha: document.getElementById("alunoSenha")?.value.trim() || cpf.slice(-4)
+        senha: senhaInformada || cpf.slice(-4)
       };
+
+      if (!id) {
+        const conta = await window.firebaseCriarUsuario?.({
+          role: "aluno",
+          profileId: dados.id,
+          nome: dados.nome,
+          cpf: dados.cpf,
+          email: dados.email,
+          password: dados.senha
+        });
+        if (!conta?.uid) {
+          mostrarAlerta("Não foi possível criar o acesso Firebase do aluno.", "error");
+          return;
+        }
+        dados.authUid = conta.uid;
+      } else {
+        dados.authUid = alunos.find(a => a.id === id)?.authUid || "";
+      }
 
       if (id) {
         alunos = alunos.map((aluno) => aluno.id === id ? dados : aluno);
@@ -744,7 +763,25 @@ document.querySelectorAll("[data-go-view]").forEach((botao) => {
 
 const LOGIN_KEY = "fitcontrol_login_ativo";
 function abrirSistema(){document.getElementById("loginScreen").classList.add("hidden");document.getElementById("appShell").classList.remove("app-locked");atualizarGraficosDashboard()}
-function fecharSistema(){localStorage.removeItem(LOGIN_KEY);sessionStorage.removeItem(LOGIN_KEY);localStorage.removeItem("fitcontrol_tipo_usuario");localStorage.removeItem("fitcontrol_aluno_usuario_id");sessionStorage.removeItem("fitcontrol_aluno_usuario_id");sessionStorage.removeItem("fitcontrol_aluno_logado");alunoLogadoId="";document.body.classList.remove("student-mode");document.getElementById("studentDashboard")?.classList.add("hidden");document.getElementById("studentAccessScreen")?.classList.remove("hidden");document.getElementById("loginScreen").classList.remove("hidden");document.getElementById("appShell").classList.add("app-locked");document.getElementById("loginEmail").value="admin@fitcontrol.com";document.getElementById("loginSenha").value="123456";document.getElementById("loginError").textContent=""}
+async function fecharSistema(){
+  await window.firebaseLogout?.();
+  localStorage.removeItem(LOGIN_KEY);
+  sessionStorage.removeItem(LOGIN_KEY);
+  localStorage.removeItem("fitcontrol_tipo_usuario");
+  localStorage.removeItem("fitcontrol_aluno_usuario_id");
+  localStorage.removeItem("champion_auth_uid");
+  localStorage.removeItem("champion_perfil");
+  sessionStorage.removeItem("fitcontrol_aluno_usuario_id");
+  sessionStorage.removeItem("fitcontrol_aluno_logado");
+  alunoLogadoId="";
+  document.body.classList.remove("student-mode","professor-mode");
+  document.getElementById("studentDashboard")?.classList.add("hidden");
+  document.getElementById("studentAccessScreen")?.classList.remove("hidden");
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("appShell").classList.add("app-locked");
+  document.getElementById("loginSenha").value="";
+  document.getElementById("loginError").textContent="";
+}
 document.getElementById("loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -758,78 +795,59 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
   if (botao) {
     botao.disabled = true;
     botao.dataset.textoOriginal = botao.textContent;
-    botao.textContent = "Carregando dados...";
+    botao.textContent = "ENTRANDO...";
   }
 
   try {
-    if (typeof window.aguardarFirebasePronto === "function") {
-      await window.aguardarFirebasePronto(20000);
+    if (typeof window.firebaseLogin !== "function") {
+      throw new Error("O Firebase ainda não carregou. Atualize a página.");
     }
 
-    const adminValido =
-      identificador.toLowerCase() === "admin@fitcontrol.com" &&
-      senha === "123456";
+    const sessao = await window.firebaseLogin(identificador, senha);
+    const perfil = sessao.perfil;
 
-    if (adminValido) {
-      localStorage.setItem("fitcontrol_tipo_usuario", "admin");
-      localStorage.removeItem("fitcontrol_aluno_usuario_id");
-      sessionStorage.removeItem("fitcontrol_aluno_usuario_id");
+    localStorage.setItem("fitcontrol_tipo_usuario", perfil.role);
+    localStorage.setItem("champion_auth_uid", sessao.user.uid);
+    localStorage.setItem("champion_perfil", JSON.stringify(perfil));
 
-      if (lembrar) localStorage.setItem(LOGIN_KEY, "true");
-      else sessionStorage.setItem(LOGIN_KEY, "true");
+    if (lembrar) localStorage.setItem(LOGIN_KEY, "true");
+    else sessionStorage.setItem(LOGIN_KEY, "true");
 
+    if (perfil.role === "gestor") {
       abrirSistemaComoAdministrador();
-      mostrarAlerta("Acesso administrativo realizado.");
+      aplicarPermissoesPerfil("gestor");
+      mostrarAlerta("Acesso do gestor realizado.");
       return;
     }
 
-    const cpf = normalizarCpf(identificador);
-    const aluno = alunos.find(
-      (item) => normalizarCpf(item.cpf) === cpf
-    );
-
-    if (!aluno) {
-      erro.textContent =
-        "CPF não encontrado na base compartilhada da academia.";
+    if (perfil.role === "professor") {
+      const professor = professores.find(p => String(p.id) === String(perfil.profileId)) || { nome: perfil.nome || sessao.user.email };
+      abrirSistemaComoProfessor(professor);
+      aplicarPermissoesPerfil("professor");
+      mostrarAlerta(`Bem-vindo, ${professor.nome}.`);
       return;
     }
 
-    if (aluno.status !== "Ativo") {
-      erro.textContent =
-        "Seu cadastro está inativo. Procure a recepção.";
-      return;
-    }
+    if (perfil.role === "aluno") {
+      const aluno = alunos.find(a => String(a.id) === String(perfil.profileId));
+      if (!aluno) throw new Error("Cadastro do aluno não foi encontrado na base online.");
+      if (aluno.status !== "Ativo") throw new Error("Seu cadastro está inativo. Procure a recepção.");
 
-    const senhaAluno = String(
-      aluno.senha || normalizarCpf(aluno.cpf).slice(-4)
-    );
-
-    if (senha !== senhaAluno) {
-      erro.textContent = "Senha do aluno inválida.";
-      return;
-    }
-
-    localStorage.setItem("fitcontrol_tipo_usuario", "aluno");
-
-    if (lembrar) {
       localStorage.setItem("fitcontrol_aluno_usuario_id", aluno.id);
-      localStorage.setItem(LOGIN_KEY, "true");
-    } else {
-      sessionStorage.setItem("fitcontrol_aluno_usuario_id", aluno.id);
-      sessionStorage.setItem(LOGIN_KEY, "true");
+      abrirSistemaComoAluno(aluno);
+      aplicarPermissoesPerfil("aluno");
+      mostrarAlerta(`Bem-vindo, ${aluno.nome}.`);
+      return;
     }
 
-    abrirSistemaComoAluno(aluno);
-    mostrarAlerta(`Bem-vindo, ${aluno.nome}.`);
-  } catch (erroFirebase) {
-    console.error(erroFirebase);
-    erro.textContent =
-      "Não foi possível carregar os dados online. Verifique a internet e tente novamente.";
+    throw new Error("Perfil sem permissão de acesso.");
+  } catch (falha) {
+    console.error("Erro de login:", falha);
+    erro.textContent = falha?.message || "Não foi possível entrar.";
   } finally {
     if (botao) {
       botao.disabled = false;
-      botao.textContent =
-        botao.dataset.textoOriginal || "Entrar";
+      botao.textContent = botao.dataset.textoOriginal || "ENTRAR NA CHAMPION TEAM →";
     }
   }
 });
@@ -844,21 +862,59 @@ const atualizarTudoBase=atualizarTudo;atualizarTudo=function(){atualizarTudoBase
 
 function atualizarPerfilCabecalho(nome,funcao,avatar){const n=document.getElementById("currentUserName"),f=document.getElementById("currentUserRole"),a=document.getElementById("currentUserAvatar");if(n)n.textContent=nome;if(f)f.textContent=funcao;if(a)a.textContent=avatar}
 function abrirSistemaComoAdministrador(){document.body.classList.remove("student-mode");atualizarPerfilCabecalho("Administrador","Gestor da academia","AD");abrirSistema();document.querySelector('.menu button[data-view="dashboard"]')?.click()}
-function abrirSistemaComoAluno(aluno){document.body.classList.add("student-mode");atualizarPerfilCabecalho(aluno.nome,"Aluno da academia",obterIniciaisAluno(aluno.nome));alunoLogadoId=aluno.id;sessionStorage.setItem("fitcontrol_aluno_logado",aluno.id);document.getElementById("studentAccessScreen")?.classList.add("hidden");document.getElementById("studentDashboard")?.classList.remove("hidden");abrirSistema();document.querySelector('.menu button[data-view="areaAluno"]')?.click();renderizarAreaAluno()}
-function restaurarSessaoPorPerfil(){const ativa=localStorage.getItem(LOGIN_KEY)==="true"||sessionStorage.getItem(LOGIN_KEY)==="true";if(!ativa)return;const tipo=localStorage.getItem("fitcontrol_tipo_usuario");const id=localStorage.getItem("fitcontrol_aluno_usuario_id")||sessionStorage.getItem("fitcontrol_aluno_usuario_id");if(tipo==="aluno"&&id){const aluno=alunos.find(a=>String(a.id)===String(id));if(aluno&&aluno.status==="Ativo"){abrirSistemaComoAluno(aluno);return}}abrirSistemaComoAdministrador()}
-
-async function restaurarSessaoDepoisDoFirebase() {
-  try {
-    if (typeof window.aguardarFirebasePronto === "function") {
-      await window.aguardarFirebasePronto(20000);
-    }
-  } catch (erro) {
-    console.warn("Usando cache local para restaurar a sessão.", erro);
-  }
-  restaurarSessaoPorPerfil();
+function abrirSistemaComoProfessor(professor){
+  document.body.classList.remove("student-mode");
+  document.body.classList.add("professor-mode");
+  atualizarPerfilCabecalho(professor.nome || "Professor","Professor da academia",obterIniciaisAluno(professor.nome || "PR"));
+  abrirSistema();
+  document.querySelector('.menu button[data-view="treinos"]')?.click();
 }
 
-setTimeout(restaurarSessaoDepoisDoFirebase, 0);
+function aplicarPermissoesPerfil(role){
+  const permitidas = {
+    gestor: null,
+    professor: ["dashboard","treinos"],
+    aluno: ["areaAluno"]
+  };
+
+  document.querySelectorAll(".menu button[data-view]").forEach(botao => {
+    const lista = permitidas[role];
+    botao.hidden = Array.isArray(lista) && !lista.includes(botao.dataset.view);
+  });
+
+  document.body.dataset.role = role;
+}
+
+function abrirSistemaComoAluno(aluno){document.body.classList.add("student-mode");atualizarPerfilCabecalho(aluno.nome,"Aluno da academia",obterIniciaisAluno(aluno.nome));alunoLogadoId=aluno.id;sessionStorage.setItem("fitcontrol_aluno_logado",aluno.id);document.getElementById("studentAccessScreen")?.classList.add("hidden");document.getElementById("studentDashboard")?.classList.remove("hidden");abrirSistema();document.querySelector('.menu button[data-view="areaAluno"]')?.click();renderizarAreaAluno()}
+function restaurarSessaoPorPerfil(){
+  // A restauração real é controlada pelo Firebase Authentication.
+}
+
+window.addEventListener("champion-auth-restored", (event) => {
+  const { user, perfil } = event.detail || {};
+  if (!user || !perfil) return;
+
+  localStorage.setItem("fitcontrol_tipo_usuario", perfil.role);
+  localStorage.setItem("champion_auth_uid", user.uid);
+  localStorage.setItem("champion_perfil", JSON.stringify(perfil));
+
+  if (perfil.role === "gestor") {
+    abrirSistemaComoAdministrador();
+    aplicarPermissoesPerfil("gestor");
+  } else if (perfil.role === "professor") {
+    const professor = professores.find(p => String(p.id) === String(perfil.profileId)) || { nome: perfil.nome || user.email };
+    abrirSistemaComoProfessor(professor);
+    aplicarPermissoesPerfil("professor");
+  } else if (perfil.role === "aluno") {
+    const aluno = alunos.find(a => String(a.id) === String(perfil.profileId));
+    if (aluno) {
+      abrirSistemaComoAluno(aluno);
+      aplicarPermissoesPerfil("aluno");
+    }
+  }
+});
+
+
 
 
 // ==========================================================
@@ -1285,7 +1341,7 @@ function formatarStatusClasse(status) {
 // --------------------------
 // PROFESSORES
 // --------------------------
-document.getElementById("formProfessor")?.addEventListener("submit", (event) => {
+document.getElementById("formProfessor")?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const id = document.getElementById("professorId").value;
@@ -1302,6 +1358,7 @@ document.getElementById("formProfessor")?.addEventListener("submit", (event) => 
     return;
   }
 
+  const senhaProfessor = document.getElementById("professorSenha")?.value.trim();
   const dados = {
     id: id || gerarId(),
     nome: document.getElementById("professorNome").value.trim(),
@@ -1313,6 +1370,24 @@ document.getElementById("formProfessor")?.addEventListener("submit", (event) => 
     turno: document.getElementById("professorTurno").value,
     admissao: document.getElementById("professorAdmissao").value
   };
+
+  if (!id) {
+    if (!dados.email || !senhaProfessor || senhaProfessor.length < 6) {
+      mostrarAlerta("Informe e-mail e senha com pelo menos 6 caracteres.", "error");
+      return;
+    }
+    const conta = await window.firebaseCriarUsuario?.({
+      role: "professor", profileId: dados.id, nome: dados.nome,
+      email: dados.email, password: senhaProfessor
+    });
+    if (!conta?.uid) {
+      mostrarAlerta("Não foi possível criar o acesso do professor.", "error");
+      return;
+    }
+    dados.authUid = conta.uid;
+  } else {
+    dados.authUid = professores.find(p => p.id === id)?.authUid || "";
+  }
 
   if (id) {
     professores = professores.map((professor) =>
@@ -1350,6 +1425,7 @@ function editarProfessor(id) {
   document.getElementById("professorEmail").value = professor.email || "";
   document.getElementById("professorTurno").value = professor.turno || "Manhã";
   document.getElementById("professorAdmissao").value = professor.admissao || "";
+  if (document.getElementById("professorSenha")) document.getElementById("professorSenha").value = "";
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }

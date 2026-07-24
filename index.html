@@ -35,9 +35,9 @@
       <div class="login-card">
         <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Administrador entra com e-mail. Aluno entra com CPF e senha.</p></div>
         <form id="loginForm">
-          <div class="field"><label for="loginEmail">E-mail do administrador ou CPF do aluno</label><input id="loginEmail" type="text" value="admin@fitcontrol.com" autocomplete="username" required /></div>
+          <div class="field"><label for="loginEmail">E-mail do gestor/professor ou CPF do aluno</label><input id="loginEmail" type="text" value="admin@fitcontrol.com" autocomplete="username" required /></div>
           <div class="field"><label for="loginSenha">Senha</label><div class="password-wrap"><input id="loginSenha" type="password" value="123456" required /><button type="button" id="togglePassword" class="password-toggle">Mostrar</button></div></div>
-          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Admin: e-mail • Aluno: CPF</span></div>
+          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor/Professor: e-mail • Aluno: CPF</span></div>
           <button class="login-button" type="submit">ENTRAR NA CHAMPION TEAM <span>→</span></button>
           <p id="loginError" class="login-error"></p>
         </form>
@@ -546,6 +546,12 @@
               <div class="field">
                 <label for="professorEmail">E-mail</label>
                 <input id="professorEmail" type="email" placeholder="professor@email.com" />
+              </div>
+
+              <div class="field">
+                <label for="professorSenha">Senha de acesso</label>
+                <input id="professorSenha" type="password" minlength="6" placeholder="Mínimo de 6 caracteres" />
+                <small>Obrigatória no primeiro cadastro.</small>
               </div>
 
               <div class="field">
@@ -1235,10 +1241,11 @@
     <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
   </div>
 
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="firebase.js?v=5"></script>
+  <script src="firebase.js?v=6"></script>
 
 </body>
 </html>
