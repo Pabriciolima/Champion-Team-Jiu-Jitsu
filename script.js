@@ -314,7 +314,7 @@ window.addEventListener("offline", () => {
         email: document.getElementById("alunoEmail").value.trim(),
         nascimento: document.getElementById("alunoNascimento").value,
         status: document.getElementById("alunoStatus").value,
-        senha: senhaInformada || cpf.slice(-4)
+        senha: cpf
       };
 
       if (!id) {
@@ -324,7 +324,7 @@ window.addEventListener("offline", () => {
           nome: dados.nome,
           cpf: dados.cpf,
           email: dados.email,
-          password: dados.senha
+          password: dados.cpf
         });
         if (!conta?.uid) {
           mostrarAlerta("Não foi possível criar o acesso Firebase do aluno.", "error");
@@ -332,7 +332,24 @@ window.addEventListener("offline", () => {
         }
         dados.authUid = conta.uid;
       } else {
-        dados.authUid = alunos.find(a => a.id === id)?.authUid || "";
+        const anterior = alunos.find(a => a.id === id);
+        dados.authUid = anterior?.authUid || "";
+
+        if (!dados.authUid) {
+          const conta = await window.firebaseCriarUsuario?.({
+            role: "aluno",
+            profileId: dados.id,
+            nome: dados.nome,
+            cpf: dados.cpf,
+            email: dados.email,
+            password: dados.cpf
+          });
+          if (!conta?.uid) {
+            mostrarAlerta("Não foi possível criar o acesso do aluno.", "error");
+            return;
+          }
+          dados.authUid = conta.uid;
+        }
       }
 
       if (id) {
@@ -1365,68 +1382,102 @@ document.getElementById("formProfessor")?.addEventListener("submit", async (even
 
   const id = document.getElementById("professorId").value;
   const cref = document.getElementById("professorCref").value.trim().toUpperCase();
+  const cpf = normalizarCpf(document.getElementById("professorCpf").value);
+  const senhaAntiga = document.getElementById("professorSenha")?.value.trim();
 
-  const duplicado = professores.find(
+  if (cpf.length !== 11) {
+    mostrarAlerta("Informe um CPF válido para o professor.", "error");
+    return;
+  }
+
+  const duplicadoCref = professores.find(
     (professor) =>
-      professor.cref.toUpperCase() === cref &&
+      String(professor.cref || "").toUpperCase() === cref &&
       professor.id !== id
   );
 
-  if (duplicado) {
+  if (duplicadoCref) {
     mostrarAlerta("Já existe um professor cadastrado com este CREF.", "error");
     return;
   }
 
-  const senhaProfessor = document.getElementById("professorSenha")?.value.trim();
+  const duplicadoCpf = professores.find(
+    (professor) =>
+      normalizarCpf(professor.cpf) === cpf &&
+      professor.id !== id
+  );
+
+  if (duplicadoCpf) {
+    mostrarAlerta("Já existe um professor cadastrado com este CPF.", "error");
+    return;
+  }
+
+  const anterior = professores.find(p => p.id === id);
+
   const dados = {
     id: id || gerarId(),
     nome: document.getElementById("professorNome").value.trim(),
+    cpf,
     cref,
     especialidade: document.getElementById("professorEspecialidade").value,
     status: document.getElementById("professorStatus").value,
     telefone: document.getElementById("professorTelefone").value.trim(),
     email: document.getElementById("professorEmail").value.trim(),
     turno: document.getElementById("professorTurno").value,
-    admissao: document.getElementById("professorAdmissao").value
+    admissao: document.getElementById("professorAdmissao").value,
+    authUid: anterior?.authUid || ""
   };
 
-  if (!id) {
-    if (!dados.email || !senhaProfessor || senhaProfessor.length < 6) {
-      mostrarAlerta("Informe e-mail e senha com pelo menos 6 caracteres.", "error");
-      return;
+  try {
+    if (!dados.authUid) {
+      const conta = await window.firebaseCriarUsuario?.({
+        role: "professor",
+        profileId: dados.id,
+        nome: dados.nome,
+        cpf: dados.cpf,
+        email: dados.email,
+        password: dados.cpf
+      });
+
+      if (!conta?.uid) {
+        mostrarAlerta("Não foi possível criar o acesso do professor.", "error");
+        return;
+      }
+
+      dados.authUid = conta.uid;
+    } else if (senhaAntiga && anterior?.email) {
+      await window.firebaseMigrarProfessor?.({
+        authUid: dados.authUid,
+        emailAntigo: anterior.email,
+        senhaAntiga,
+        cpf: dados.cpf,
+        nome: dados.nome,
+        profileId: dados.id
+      });
     }
-    const conta = await window.firebaseCriarUsuario?.({
-      role: "professor", profileId: dados.id, nome: dados.nome,
-      email: dados.email, password: senhaProfessor
-    });
-    if (!conta?.uid) {
-      mostrarAlerta("Não foi possível criar o acesso do professor.", "error");
-      return;
+
+    if (id) {
+      professores = professores.map((professor) =>
+        professor.id === id ? dados : professor
+      );
+      mostrarAlerta("Professor atualizado com sucesso.");
+    } else {
+      professores.push(dados);
+      mostrarAlerta("Professor cadastrado. Login: nome + CPF.");
     }
-    dados.authUid = conta.uid;
-  } else {
-    dados.authUid = professores.find(p => p.id === id)?.authUid || "";
+
+    salvarProfessores();
+    limparFormularioProfessor();
+    atualizarModulosTreino();
+  } catch (erro) {
+    mostrarAlerta(erro.message || "Não foi possível salvar o professor.", "error");
   }
-
-  if (id) {
-    professores = professores.map((professor) =>
-      professor.id === id ? dados : professor
-    );
-
-    mostrarAlerta("Professor atualizado com sucesso.");
-  } else {
-    professores.push(dados);
-    mostrarAlerta("Professor cadastrado com sucesso.");
-  }
-
-  salvarProfessores();
-  limparFormularioProfessor();
-  atualizarModulosTreino();
 });
 
 function limparFormularioProfessor() {
   document.getElementById("formProfessor")?.reset();
   document.getElementById("professorId").value = "";
+  if (document.getElementById("professorCpf")) document.getElementById("professorCpf").value = "";
   document.getElementById("professorStatus").value = "Ativo";
   document.getElementById("professorTurno").value = "Manhã";
 }
@@ -1437,6 +1488,7 @@ function editarProfessor(id) {
 
   document.getElementById("professorId").value = professor.id;
   document.getElementById("professorNome").value = professor.nome;
+  if (document.getElementById("professorCpf")) document.getElementById("professorCpf").value = professor.cpf || "";
   document.getElementById("professorCref").value = professor.cref;
   document.getElementById("professorEspecialidade").value = professor.especialidade;
   document.getElementById("professorStatus").value = professor.status;
@@ -4038,7 +4090,17 @@ renderizarTudoGraduacoes();
   let loadingUid=null;
 
   const status=(tipo,msg)=>window.atualizarStatusFirebase?.(tipo,msg);
-  const cpfEmail=cpf=>`${String(cpf||"").replace(/\D/g,"")}@aluno.championteam.app`;
+  const cpfEmail=(cpf,role="aluno")=>{
+    const numeros=String(cpf||"").replace(/\D/g,"");
+    const dominio=role==="professor"?"professor":"aluno";
+    return `${numeros}@${dominio}.championteam.app`;
+  };
+  const normalizarNomeLogin=valor=>String(valor||"")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g," ");
   const errMsg=e=>({
     "auth/invalid-credential":"E-mail ou senha inválidos.",
     "auth/invalid-login-credentials":"E-mail ou senha inválidos.",
@@ -4166,14 +4228,52 @@ renderizarTudoGraduacoes();
 
   window.firebaseCriarUsuario=async({role,profileId,nome,email,cpf,password})=>{
     if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode criar acessos.");
-    const loginEmail=role==="aluno"?cpfEmail(cpf):String(email||"").trim().toLowerCase();
+    const loginEmail=(role==="aluno"||role==="professor")
+      ? cpfEmail(cpf,role)
+      : String(email||"").trim().toLowerCase();
+    const senhaAcesso=(role==="aluno"||role==="professor")
+      ? String(cpf||"").replace(/\D/g,"")
+      : String(password||"");
     const secondaryName="creator-"+Date.now();
     const secondary=firebase.initializeApp(firebaseConfig,secondaryName);
     try{
-      const cred=await secondary.auth().createUserWithEmailAndPassword(loginEmail,password);
-      await db.collection(USERS).doc(cred.user.uid).set({role,profileId,nome,email:loginEmail,ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp(),criadoPor:auth.currentUser.uid});
+      const cred=await secondary.auth().createUserWithEmailAndPassword(loginEmail,senhaAcesso);
+      await db.collection(USERS).doc(cred.user.uid).set({
+        role,profileId,nome,nomeNormalizado:normalizarNomeLogin(nome),
+        email:loginEmail,cpf:String(cpf||"").replace(/\D/g,""),
+        ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp(),
+        criadoPor:auth.currentUser.uid
+      });
       return {uid:cred.user.uid,email:loginEmail};
     }catch(e){throw new Error(errMsg(e));}finally{await secondary.delete();}
+  };
+
+
+  window.firebaseMigrarProfessor=async({emailAntigo,senhaAntiga,cpf,nome,profileId})=>{
+    if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode migrar acessos.");
+    const secondaryName="migrator-"+Date.now();
+    const secondary=firebase.initializeApp(firebaseConfig,secondaryName);
+    try{
+      const cred=await secondary.auth().signInWithEmailAndPassword(
+        String(emailAntigo||"").trim().toLowerCase(),
+        senhaAntiga
+      );
+      const novoEmail=cpfEmail(cpf,"professor");
+      await cred.user.updateEmail(novoEmail);
+      await cred.user.updatePassword(String(cpf).replace(/\D/g,""));
+      await db.collection(USERS).doc(cred.user.uid).set({
+        role:"professor",profileId,nome,
+        nomeNormalizado:normalizarNomeLogin(nome),
+        cpf:String(cpf).replace(/\D/g,""),
+        email:novoEmail,ativo:true,
+        atualizadoEm:firebase.firestore.FieldValue.serverTimestamp()
+      },{merge:true});
+      return {uid:cred.user.uid,email:novoEmail};
+    }catch(e){
+      throw new Error("Não foi possível migrar o acesso antigo: "+errMsg(e));
+    }finally{
+      await secondary.delete();
+    }
   };
 
   window.firebaseLogin=(identifier,password)=>{
@@ -4182,18 +4282,82 @@ renderizarTudoGraduacoes();
       window.__CHAMPION_LOGIN_EM_ANDAMENTO__=true;
       try{
         if(!app)init();
-        const loginEmail=identifier.includes("@")?identifier.trim().toLowerCase():cpfEmail(identifier);
+
+        const identificador=String(identifier||"").trim();
+        const senha=String(password||"").trim();
+        const loginPorEmail=identificador.includes("@");
+
         status("syncing","Autenticando...");
-        const cred=await auth.signInWithEmailAndPassword(loginEmail,password);
+
+        let cred=null;
+        let ultimoErro=null;
+
+        if(loginPorEmail){
+          cred=await auth.signInWithEmailAndPassword(
+            identificador.toLowerCase(),
+            senha
+          );
+        }else{
+          const cpf=senha.replace(/\D/g,"");
+          if(cpf.length!==11){
+            throw new Error("Para aluno ou professor, informe o CPF completo na senha.");
+          }
+
+          const tentativas=[
+            cpfEmail(cpf,"aluno"),
+            cpfEmail(cpf,"professor")
+          ];
+
+          for(const emailTentativa of tentativas){
+            try{
+              cred=await auth.signInWithEmailAndPassword(emailTentativa,cpf);
+              break;
+            }catch(erroTentativa){
+              ultimoErro=erroTentativa;
+            }
+          }
+
+          if(!cred)throw ultimoErro||new Error("Acesso não encontrado.");
+        }
+
         currentProfile=await profileFor(cred.user);
-        unsub.splice(0).forEach(fn=>fn());cache.clear();lastCloudJson.clear();
+
+        if(!loginPorEmail){
+          const nomeInformado=normalizarNomeLogin(identificador);
+          const nomePerfil=normalizarNomeLogin(currentProfile.nome);
+
+          if(nomeInformado!==nomePerfil){
+            await auth.signOut();
+            currentProfile=null;
+            throw new Error("Nome e CPF não correspondem ao mesmo cadastro.");
+          }
+        }
+
+        unsub.splice(0).forEach(fn=>fn());
+        cache.clear();
+        lastCloudJson.clear();
         loadingUid=cred.user.uid;
-        if(currentProfile.role==="aluno")await loadStudent(cred.user.uid);else await loadManagerProfessor();
-        ready=true;window.CHAMPION_FIREBASE_READY=true;window.marcarFirebasePronto?.();
+
+        if(currentProfile.role==="aluno"){
+          await loadStudent(cred.user.uid);
+        }else{
+          await loadManagerProfessor();
+        }
+
+        ready=true;
+        window.CHAMPION_FIREBASE_READY=true;
+        window.marcarFirebasePronto?.();
         status("online","Firebase conectado · dados sincronizados");
+
         return {user:cred.user,perfil:currentProfile};
-      }catch(e){status("error",errMsg(e));throw new Error(errMsg(e));}
-      finally{
+      }catch(e){
+        const mensagem=e?.message&&
+          !String(e.message).startsWith("Firebase:")
+            ? e.message
+            : errMsg(e);
+        status("error",mensagem);
+        throw new Error(mensagem);
+      }finally{
         window.__CHAMPION_LOGIN_EM_ANDAMENTO__=false;
         loginPromise=null;
       }

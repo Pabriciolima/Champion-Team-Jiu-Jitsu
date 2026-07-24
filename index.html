@@ -33,11 +33,11 @@
         </div>
       </div>
       <div class="login-card">
-        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Administrador entra com e-mail. Aluno entra com CPF e senha.</p></div>
+        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor entra com e-mail. Professores e alunos entram com nome e CPF.</p></div>
         <form id="loginForm">
           <div class="field"><label for="loginEmail">E-mail do gestor/professor ou CPF do aluno</label><input id="loginEmail" type="text" value="admin@fitcontrol.com" autocomplete="username" required /></div>
           <div class="field"><label for="loginSenha">Senha</label><div class="password-wrap"><input id="loginSenha" type="password" value="123456" required /><button type="button" id="togglePassword" class="password-toggle">Mostrar</button></div></div>
-          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor/Professor: e-mail • Aluno: CPF</span></div>
+          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor: e-mail • Professor/Aluno: nome + CPF</span></div>
           <button class="login-button" type="submit">ENTRAR NA CHAMPION TEAM <span>→</span></button>
           <p id="loginError" class="login-error"></p>
         </form>
@@ -511,6 +511,12 @@
               </div>
 
               <div class="field">
+                <label for="professorCpf">CPF de acesso</label>
+                <input id="professorCpf" inputmode="numeric" maxlength="14" required placeholder="000.000.000-00" />
+                <small>O professor entrará com o nome e o CPF.</small>
+              </div>
+
+              <div class="field">
                 <label for="professorCref">CREF</label>
                 <input id="professorCref" required placeholder="Ex.: 012345-G/PA" />
               </div>
@@ -549,9 +555,9 @@
               </div>
 
               <div class="field">
-                <label for="professorSenha">Senha de acesso</label>
-                <input id="professorSenha" type="password" minlength="6" placeholder="Mínimo de 6 caracteres" />
-                <small>Obrigatória no primeiro cadastro.</small>
+                <label for="professorSenha">Senha antiga (somente migração)</label>
+                <input id="professorSenha" type="password" minlength="6" placeholder="Preencha apenas se já existia acesso por e-mail" />
+                <small>Novos acessos usam o CPF completo como senha.</small>
               </div>
 
               <div class="field">

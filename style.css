@@ -4098,3 +4098,7 @@ body {
   font-size: 12px;
   line-height: 1.45;
 }
+
+#professorCpf {
+  letter-spacing: 0.4px;
+}
