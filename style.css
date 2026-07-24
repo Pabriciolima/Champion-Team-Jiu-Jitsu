@@ -4091,3 +4091,10 @@ body {
   background: rgba(57, 10, 15, 0.97);
   color: #ffe7e9;
 }
+
+.firebase-login-help {
+  margin-top: 10px;
+  color: #ff6b75;
+  font-size: 12px;
+  line-height: 1.45;
+}

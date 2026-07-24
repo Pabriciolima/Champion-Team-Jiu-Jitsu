@@ -800,7 +800,9 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
 
   try {
     if (typeof window.firebaseLogin !== "function") {
-      throw new Error("O Firebase ainda não carregou. Atualize a página.");
+      throw new Error(
+        "O Firebase não foi carregado. Faça um novo deploy com o script.js atualizado e limpe o cache."
+      );
     }
 
     const sessao = await window.firebaseLogin(identificador, senha);
@@ -3992,3 +3994,159 @@ document.getElementById("graduacaoDataFaixa") && (document.getElementById("gradu
 document.getElementById("graduacaoUltimoAvanco") && (document.getElementById("graduacaoUltimoAvanco").value = hojeIso());
 document.getElementById("exameGraduacaoData") && (document.getElementById("exameGraduacaoData").value = hojeIso());
 renderizarTudoGraduacoes();
+
+
+/* =========================================================
+   FIREBASE INTEGRADO — 3 PERFIS
+========================================================= */
+(function(){
+  "use strict";
+  if (window.__CHAMPION_FIREBASE_BOOTSTRAPPED__) return;
+  window.__CHAMPION_FIREBASE_BOOTSTRAPPED__ = true;
+  const firebaseConfig={
+    apiKey:"AIzaSyBxaunouh9vyEoseDrfgZkpdL1gswlk5wc",
+    authDomain:"champion-team-jiu-jitsu.firebaseapp.com",
+    projectId:"champion-team-jiu-jitsu",
+    storageBucket:"champion-team-jiu-jitsu.firebasestorage.app",
+    messagingSenderId:"172574452967",
+    appId:"1:172574452967:web:cd64c1a576229f7fb5c642"
+  };
+  const DATA="academyData", USERS="users", STUDENT_VIEWS="studentViews";
+  const keys=window.CHAMPION_FIREBASE_KEYS||[];
+  const cache=new Map(), unsub=[];
+  let app,auth,db,currentProfile=null,ready=false;
+
+  const status=(tipo,msg)=>window.atualizarStatusFirebase?.(tipo,msg);
+  const cpfEmail=cpf=>`${String(cpf||"").replace(/\D/g,"")}@aluno.championteam.app`;
+  const errMsg=e=>({
+    "auth/invalid-credential":"E-mail ou senha inválidos.",
+    "auth/invalid-login-credentials":"E-mail ou senha inválidos.",
+    "auth/user-disabled":"Este acesso foi desativado.",
+    "auth/network-request-failed":"Falha de internet ao acessar o Firebase.",
+    "auth/too-many-requests":"Muitas tentativas. Aguarde alguns minutos.",
+    "auth/user-not-found":"Usuário não cadastrado.",
+    "auth/wrong-password":"Senha inválida.",
+    "auth/email-already-in-use":"Já existe uma conta com este e-mail ou CPF.",
+    "auth/weak-password":"A senha precisa ter pelo menos 6 caracteres.",
+    "auth/operation-not-allowed":"Ative E-mail/Senha no Firebase Authentication.",
+    "permission-denied":"As regras do Firestore bloquearam esta operação."
+  }[e?.code]||e?.message||"Falha no Firebase.");
+
+  function init(){
+    if(!window.firebase) throw new Error("SDK do Firebase não carregou.");
+    app=firebase.apps.length?firebase.app():firebase.initializeApp(firebaseConfig);
+    auth=firebase.auth(); db=firebase.firestore();
+  }
+  function docRef(key){return db.collection(DATA).doc(key.replace(/[^a-zA-Z0-9_-]/g,"_"));}
+  function apply(key,data){cache.set(key,Array.isArray(data)?data:[]);window.aplicarDadosFirebase?.(key,cache.get(key));}
+
+  async function profileFor(user){
+    let snap=await db.collection(USERS).doc(user.uid).get();
+    if(!snap.exists && user.email==="admin@fitcontrol.com"){
+      const p={role:"gestor",nome:"Gestor Champion Team",email:user.email,ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp()};
+      await db.collection(USERS).doc(user.uid).set(p);
+      snap=await db.collection(USERS).doc(user.uid).get();
+    }
+    if(!snap.exists) throw new Error("Perfil de acesso não configurado pelo gestor.");
+    const p=snap.data(); if(p.ativo===false) throw new Error("Acesso desativado."); return p;
+  }
+
+  async function loadManagerProfessor(){
+    status("syncing","Carregando a base compartilhada...");
+    for(const key of keys){
+      const ref=docRef(key), snap=await ref.get();
+      if(!snap.exists){
+        const local=window.obterDadosLocaisFirebase?.(key)||[];
+        await ref.set({itens:local,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+        apply(key,local);
+      }else apply(key,snap.data()?.itens||[]);
+      unsub.push(ref.onSnapshot(s=>{if(s.exists)apply(key,s.data()?.itens||[]);}));
+    }
+  }
+
+  async function loadStudent(uid){
+    status("syncing","Carregando seu painel...");
+    const ref=db.collection(STUDENT_VIEWS).doc(uid), snap=await ref.get();
+    if(!snap.exists) throw new Error("O gestor ainda não sincronizou o painel deste aluno.");
+    const data=snap.data()?.data||{};
+    keys.forEach(k=>apply(k,data[k]||[]));
+    unsub.push(ref.onSnapshot(s=>{if(!s.exists)return;const d=s.data()?.data||{};keys.forEach(k=>apply(k,d[k]||[]));}));
+  }
+
+  function buildStudentView(student){
+    const id=student.id;
+    const get=k=>cache.get(k)||window.obterDadosLocaisFirebase?.(k)||[];
+    return {
+      fitcontrol_alunos:[student],
+      fitcontrol_planos:get("fitcontrol_planos").filter(x=>x.status!=="Inativo"),
+      fitcontrol_matriculas:get("fitcontrol_matriculas").filter(x=>String(x.alunoId)===String(id)),
+      fitcontrol_checkins:get("fitcontrol_checkins").filter(x=>String(x.alunoId)===String(id)),
+      fitcontrol_professores:get("fitcontrol_professores").filter(x=>x.status!=="Inativo"),
+      fitcontrol_fichas_treino:get("fitcontrol_fichas_treino").filter(x=>String(x.alunoId)===String(id)),
+      fitcontrol_videos_jiujitsu:get("fitcontrol_videos_jiujitsu").filter(x=>x.status!=="Inativo"),
+      fitcontrol_produtos_loja:get("fitcontrol_produtos_loja").filter(x=>x.status!=="Inativo"),
+      fitcontrol_pedidos_loja:get("fitcontrol_pedidos_loja").filter(x=>String(x.alunoId)===String(id)),
+      fitcontrol_notificacoes:get("fitcontrol_notificacoes").filter(n=>n.publico==="Todos os alunos"||(n.publico==="Aluno específico"&&String(n.alunoId)===String(id))),
+      champion_team_graduacoes:get("champion_team_graduacoes").filter(x=>String(x.alunoId)===String(id)),
+      champion_team_regras_graduacao:get("champion_team_regras_graduacao"),
+      champion_team_historico_graduacao:get("champion_team_historico_graduacao").filter(x=>String(x.alunoId)===String(id)),
+      champion_team_exames_graduacao:get("champion_team_exames_graduacao").filter(x=>(x.participantes||[]).map(String).includes(String(id)))
+    };
+  }
+
+  async function rebuildStudentViews(){
+    if(currentProfile?.role!=="gestor")return;
+    const students=cache.get("fitcontrol_alunos")||[];
+    const batch=db.batch(); let count=0;
+    for(const s of students){if(!s.authUid)continue;batch.set(db.collection(STUDENT_VIEWS).doc(s.authUid),{profileId:s.id,data:buildStudentView(s),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});count++;}
+    if(count)await batch.commit();
+  }
+
+  window.firebaseCloudSave=async(key,data)=>{
+    if(!auth?.currentUser||!currentProfile)throw new Error("Sessão Firebase ausente.");
+    if(currentProfile.role==="aluno")throw new Error("Aluno não pode alterar a base administrativa.");
+    if(currentProfile.role==="professor"&&key!=="fitcontrol_fichas_treino")throw new Error("Professor só pode alterar fichas de treino.");
+    status("syncing","Salvando na nuvem...");
+    cache.set(key,Array.isArray(data)?data:[]);
+    await docRef(key).set({itens:cache.get(key),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
+    if(currentProfile.role==="gestor")await rebuildStudentViews();
+    status("online","Firebase conectado · dados sincronizados");
+  };
+
+  window.firebaseCriarUsuario=async({role,profileId,nome,email,cpf,password})=>{
+    if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode criar acessos.");
+    const loginEmail=role==="aluno"?cpfEmail(cpf):String(email||"").trim().toLowerCase();
+    const secondaryName="creator-"+Date.now();
+    const secondary=firebase.initializeApp(firebaseConfig,secondaryName);
+    try{
+      const cred=await secondary.auth().createUserWithEmailAndPassword(loginEmail,password);
+      await db.collection(USERS).doc(cred.user.uid).set({role,profileId,nome,email:loginEmail,ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp(),criadoPor:auth.currentUser.uid});
+      return {uid:cred.user.uid,email:loginEmail};
+    }catch(e){throw new Error(errMsg(e));}finally{await secondary.delete();}
+  };
+
+  window.firebaseLogin=async(identifier,password)=>{
+    try{
+      if(!app)init();
+      const loginEmail=identifier.includes("@")?identifier.trim().toLowerCase():cpfEmail(identifier);
+      status("syncing","Autenticando...");
+      const cred=await auth.signInWithEmailAndPassword(loginEmail,password);
+      currentProfile=await profileFor(cred.user);
+      unsub.splice(0).forEach(fn=>fn()); cache.clear();
+      if(currentProfile.role==="aluno")await loadStudent(cred.user.uid);else await loadManagerProfessor();
+      ready=true; window.CHAMPION_FIREBASE_READY=true; window.marcarFirebasePronto?.();
+      status("online","Firebase conectado · dados sincronizados");
+      return {user:cred.user,perfil:currentProfile};
+    }catch(e){status("error",errMsg(e));throw new Error(errMsg(e));}
+  };
+
+  window.firebaseLogout=async()=>{unsub.splice(0).forEach(fn=>fn());cache.clear();currentProfile=null;ready=false;if(auth)await auth.signOut();};
+  window.firebaseReconectar=async()=>{if(auth?.currentUser){currentProfile=await profileFor(auth.currentUser);if(currentProfile.role==="aluno")await loadStudent(auth.currentUser.uid);else await loadManagerProfessor();status("online","Firebase reconectado");}};
+
+  try{init();window.CHAMPION_FIREBASE_SDK_LOADED=true;status("online","Firebase pronto para login");
+    auth.onAuthStateChanged(async user=>{
+      if(!user)return;
+      try{currentProfile=await profileFor(user);if(currentProfile.role==="aluno")await loadStudent(user.uid);else await loadManagerProfessor();window.CHAMPION_FIREBASE_READY=true;window.marcarFirebasePronto?.();status("online","Firebase conectado · dados sincronizados");window.dispatchEvent(new CustomEvent("champion-auth-restored",{detail:{user,perfil:currentProfile}}));}catch(e){console.error(e);}
+    });
+  }catch(e){status("error",errMsg(e));console.error(e);}
+})();
