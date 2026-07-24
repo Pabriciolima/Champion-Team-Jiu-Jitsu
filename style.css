@@ -4102,3 +4102,55 @@ body {
 #professorCpf {
   letter-spacing: 0.4px;
 }
+
+.app-version-badge {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 99998;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(10, 12, 15, 0.88);
+  color: #7f8994;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.matricula-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 320px;
+}
+.matricula-actions .btn {
+  padding: 8px 10px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.btn.btn-warning {
+  color: #ffd36a;
+  border-color: rgba(255, 174, 0, 0.35);
+  background: rgba(255, 174, 0, 0.08);
+}
+.btn.btn-warning:hover {
+  background: rgba(255, 174, 0, 0.17);
+}
+.btn.btn-success {
+  color: #5df09c;
+  border-color: rgba(39, 209, 127, 0.35);
+  background: rgba(39, 209, 127, 0.08);
+}
+.btn.btn-success:hover {
+  background: rgba(39, 209, 127, 0.17);
+}
+@media (max-width: 760px) {
+  .matricula-actions {
+    min-width: 220px;
+    flex-direction: column;
+  }
+  .matricula-actions .btn {
+    width: 100%;
+  }
+}

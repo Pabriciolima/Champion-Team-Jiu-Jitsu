@@ -1,3 +1,28 @@
+
+window.CHAMPION_APP_VERSION = "11";
+
+(async function limparVersaoAntigaChampionTeam() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const registros = await navigator.serviceWorker.getRegistrations();
+      for (const registro of registros) {
+        await registro.unregister();
+      }
+    }
+
+    if ("caches" in window) {
+      const nomes = await caches.keys();
+      await Promise.all(
+        nomes
+          .filter((nome) => nome.toLowerCase().includes("champion"))
+          .map((nome) => caches.delete(nome))
+      );
+    }
+  } catch (erro) {
+    console.info("Limpeza de cache não necessária:", erro);
+  }
+})();
+
 const STORAGE_KEYS = {
       alunos: "fitcontrol_alunos",
       planos: "fitcontrol_planos",
@@ -380,18 +405,8 @@ window.addEventListener("offline", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function excluirAluno(id) {
-      if (matriculas.some((matricula) => matricula.alunoId === id)) {
-        mostrarAlerta("Remova primeiro a matrícula vinculada a este aluno.", "error");
-        return;
-      }
-
-      if (!confirm("Deseja realmente excluir este aluno?")) return;
-
-      alunos = alunos.filter((aluno) => aluno.id !== id);
-      salvar(STORAGE_KEYS.alunos, alunos);
-      atualizarTudo();
-      mostrarAlerta("Aluno removido.");
+    async function excluirAluno(id) {
+      await excluirHistoricoCompletoAluno(id);
     }
 
     function limparFormularioAluno() {
@@ -567,30 +582,170 @@ window.addEventListener("offline", () => {
     });
 
     function cancelarMatricula(id) {
-      if (!confirm("Deseja cancelar esta matrícula?")) return;
+      const matricula = matriculas.find((item) => item.id === id);
+      if (!matricula) return;
 
-      matriculas = matriculas.map((matricula) =>
-        matricula.id === id ? { ...matricula, status: "Cancelada" } : matricula
+      const aluno = alunos.find((item) => item.id === matricula.alunoId);
+      if (!confirm(`Cancelar a matrícula de ${aluno?.nome || "este aluno"}? O histórico será mantido.`)) return;
+
+      matriculas = matriculas.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: "Cancelada",
+              canceladaEm: new Date().toISOString(),
+              motivoCancelamento: "Cancelada pelo gestor"
+            }
+          : item
       );
 
       salvar(STORAGE_KEYS.matriculas, matriculas);
       atualizarTudo();
-      mostrarAlerta("Matrícula cancelada.");
+      mostrarAlerta("Matrícula cancelada. O histórico foi mantido.");
+    }
+
+    function editarMatricula(id) {
+      const matricula = matriculas.find((item) => item.id === id);
+      if (!matricula) return;
+
+      const plano = planos.find((item) => item.id === matricula.planoId);
+      const aluno = alunos.find((item) => item.id === matricula.alunoId);
+
+      const novoInicio = prompt(
+        `Data de início da matrícula de ${aluno?.nome || "aluno"} (AAAA-MM-DD):`,
+        matricula.inicio
+      );
+      if (novoInicio === null) return;
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(novoInicio)) {
+        mostrarAlerta("Informe a data no formato AAAA-MM-DD.", "error");
+        return;
+      }
+
+      const novoPagamento = prompt(
+        "Forma de pagamento:",
+        matricula.pagamento || "PIX"
+      );
+      if (novoPagamento === null) return;
+
+      const reativar = matricula.status !== "Ativo"
+        ? confirm("Deseja reativar esta matrícula agora?")
+        : true;
+
+      const novoStatus = reativar ? "Ativo" : matricula.status;
+      const novoVencimento = plano
+        ? adicionarMeses(novoInicio, plano.duracao)
+        : matricula.vencimento;
+
+      matriculas = matriculas.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              inicio: novoInicio,
+              vencimento: novoVencimento,
+              pagamento: novoPagamento.trim() || item.pagamento,
+              status: novoStatus,
+              reativadaEm: reativar ? new Date().toISOString() : item.reativadaEm
+            }
+          : item
+      );
+
+      salvar(STORAGE_KEYS.matriculas, matriculas);
+      atualizarTudo();
+
+      mostrarAlerta(
+        reativar
+          ? "Matrícula editada e reativada."
+          : "Matrícula editada."
+      );
+    }
+
+    async function excluirHistoricoCompletoAluno(alunoId) {
+      const aluno = alunos.find((item) => String(item.id) === String(alunoId));
+      if (!aluno) {
+        mostrarAlerta("Aluno não encontrado.", "error");
+        return;
+      }
+
+      const confirmacao = prompt(
+        `ATENÇÃO: esta ação apagará o cadastro e todo o histórico de ${aluno.nome}.\n\n` +
+        "Serão removidos: matrículas, check-ins, treinos, pedidos, notificações, graduação e histórico.\n\n" +
+        `Digite exatamente o nome do aluno para confirmar:\n${aluno.nome}`
+      );
+
+      if (confirmacao === null) return;
+
+      if (confirmacao.trim().toLowerCase() !== aluno.nome.trim().toLowerCase()) {
+        mostrarAlerta("Exclusão cancelada: o nome digitado não confere.", "error");
+        return;
+      }
+
+      if (!confirm("Esta exclusão é definitiva no sistema. Deseja continuar?")) return;
+
+      const authUid = aluno.authUid || "";
+
+      matriculas = matriculas.filter((item) => String(item.alunoId) !== String(alunoId));
+      checkins = checkins.filter((item) => String(item.alunoId) !== String(alunoId));
+      fichasTreino = fichasTreino.filter((item) => String(item.alunoId) !== String(alunoId));
+      pedidosLoja = pedidosLoja.filter((item) => String(item.alunoId) !== String(alunoId));
+      notificacoes = notificacoes.filter((item) => String(item.alunoId || "") !== String(alunoId));
+      graduacoes = graduacoes.filter((item) => String(item.alunoId) !== String(alunoId));
+      historicoGraduacoes = historicoGraduacoes.filter((item) => String(item.alunoId) !== String(alunoId));
+      examesGraduacao = examesGraduacao.map((exame) => ({
+        ...exame,
+        participantes: (exame.participantes || []).filter(
+          (id) => String(id) !== String(alunoId)
+        )
+      }));
+
+      alunos = alunos.filter((item) => String(item.id) !== String(alunoId));
+
+      salvar(STORAGE_KEYS.matriculas, matriculas);
+      salvar(STORAGE_KEYS.checkins, checkins);
+      salvar(FICHAS_STORAGE_KEY, fichasTreino);
+      salvar(PEDIDOS_STORAGE_KEY, pedidosLoja);
+      salvar(NOTIFICACOES_STORAGE_KEY, notificacoes);
+      salvar(GRADUATION_KEYS.graduacoes, graduacoes);
+      salvar(GRADUATION_KEYS.historico, historicoGraduacoes);
+      salvar(GRADUATION_KEYS.exames, examesGraduacao);
+      salvar(STORAGE_KEYS.alunos, alunos);
+
+      if (authUid && typeof window.firebaseExcluirPerfilAluno === "function") {
+        try {
+          await window.firebaseExcluirPerfilAluno(authUid);
+        } catch (erro) {
+          console.error("Falha ao remover perfil Firebase:", erro);
+          mostrarAlerta(
+            "Histórico removido, mas o perfil de acesso Firebase precisará ser revisado.",
+            "error"
+          );
+          atualizarTudo();
+          return;
+        }
+      }
+
+      atualizarTudo();
+      mostrarAlerta("Aluno e todo o histórico foram excluídos.");
     }
 
     function atualizarStatusMatriculas() {
       const hoje = hojeIso();
+      let houveAlteracao = false;
 
-      matriculas = matriculas.map((matricula) => {
+      const atualizadas = matriculas.map((matricula) => {
         if (matricula.status === "Cancelada") return matricula;
 
-        return {
-          ...matricula,
-          status: matricula.vencimento < hoje ? "Vencido" : "Ativo"
-        };
+        const novoStatus = matricula.vencimento < hoje ? "Vencido" : "Ativo";
+        if (novoStatus === matricula.status) return matricula;
+
+        houveAlteracao = true;
+        return { ...matricula, status: novoStatus };
       });
 
-      salvar(STORAGE_KEYS.matriculas, matriculas);
+      if (houveAlteracao) {
+        matriculas = atualizadas;
+        salvar(STORAGE_KEYS.matriculas, matriculas);
+      }
     }
 
     function renderizarSelectsMatricula() {
@@ -629,9 +784,17 @@ window.addEventListener("offline", () => {
             <td>${formatarData(matricula.vencimento)}</td>
             <td><span class="status ${matricula.status.toLowerCase()}">${matricula.status}</span></td>
             <td>
-              ${matricula.status === "Ativo"
-                ? `<button class="btn btn-danger" onclick="cancelarMatricula('${matricula.id}')">Cancelar</button>`
-                : "-"}
+              <div class="matricula-actions">
+                <button class="btn btn-secondary" onclick="editarMatricula('${matricula.id}')">
+                  ${matricula.status === "Cancelada" ? "Editar / Reativar" : "Editar"}
+                </button>
+                ${matricula.status !== "Cancelada"
+                  ? `<button class="btn btn-warning" onclick="cancelarMatricula('${matricula.id}')">Cancelar matrícula</button>`
+                  : `<button class="btn btn-success" onclick="editarMatricula('${matricula.id}')">Reativar</button>`}
+                <button class="btn btn-danger" onclick="excluirHistoricoCompletoAluno('${matricula.alunoId}')">
+                  Excluir aluno e histórico
+                </button>
+              </div>
             </td>
           </tr>
         `;
@@ -784,6 +947,8 @@ window.addEventListener("offline", () => {
     window.editarPlano = editarPlano;
     window.excluirPlano = excluirPlano;
     window.cancelarMatricula = cancelarMatricula;
+    window.editarMatricula = editarMatricula;
+    window.excluirHistoricoCompletoAluno = excluirHistoricoCompletoAluno;
 
 
 document.querySelectorAll("[data-go-view]").forEach((botao) => {
@@ -4278,58 +4443,89 @@ renderizarTudoGraduacoes();
 
   window.firebaseLogin=(identifier,password)=>{
     if(loginPromise)return loginPromise;
+
     loginPromise=(async()=>{
       window.__CHAMPION_LOGIN_EM_ANDAMENTO__=true;
+
       try{
         if(!app)init();
 
         const identificador=String(identifier||"").trim();
-        const senha=String(password||"").trim();
-        const loginPorEmail=identificador.includes("@");
+        const senhaDigitada=String(password||"").trim();
+        const gestorPorEmail=identificador.includes("@");
 
-        status("syncing","Autenticando...");
+        status("syncing","Autenticando acesso...");
 
         let cred=null;
-        let ultimoErro=null;
 
-        if(loginPorEmail){
+        if(gestorPorEmail){
           cred=await auth.signInWithEmailAndPassword(
             identificador.toLowerCase(),
-            senha
+            senhaDigitada
           );
         }else{
-          const cpf=senha.replace(/\D/g,"");
-          if(cpf.length!==11){
-            throw new Error("Para aluno ou professor, informe o CPF completo na senha.");
+          const cpf=senhaDigitada.replace(/\D/g,"");
+
+          if(!identificador){
+            throw new Error("Informe o nome completo cadastrado.");
           }
 
-          const tentativas=[
-            cpfEmail(cpf,"aluno"),
-            cpfEmail(cpf,"professor")
+          if(cpf.length!==11){
+            throw new Error("A senha deve ser o CPF completo com 11 números.");
+          }
+
+          /*
+            IMPORTANTE:
+            O Firebase Authentication exige e-mail.
+            O nome nunca é enviado ao Firebase como e-mail.
+            O sistema usa um e-mail interno formado pelo CPF.
+          */
+          const acessosPossiveis=[
+            {role:"aluno",email:cpfEmail(cpf,"aluno")},
+            {role:"professor",email:cpfEmail(cpf,"professor")}
           ];
 
-          for(const emailTentativa of tentativas){
+          let ultimoErro=null;
+
+          for(const acesso of acessosPossiveis){
             try{
-              cred=await auth.signInWithEmailAndPassword(emailTentativa,cpf);
+              cred=await auth.signInWithEmailAndPassword(
+                acesso.email,
+                cpf
+              );
               break;
             }catch(erroTentativa){
               ultimoErro=erroTentativa;
             }
           }
 
-          if(!cred)throw ultimoErro||new Error("Acesso não encontrado.");
+          if(!cred){
+            if(
+              ultimoErro?.code==="auth/user-not-found" ||
+              ultimoErro?.code==="auth/invalid-credential" ||
+              ultimoErro?.code==="auth/invalid-login-credentials"
+            ){
+              throw new Error(
+                "O acesso deste aluno/professor ainda não foi criado no Firebase. Entre como gestor, abra o cadastro e salve novamente."
+              );
+            }
+
+            throw ultimoErro||new Error("Acesso não encontrado.");
+          }
         }
 
         currentProfile=await profileFor(cred.user);
 
-        if(!loginPorEmail){
+        if(!gestorPorEmail){
           const nomeInformado=normalizarNomeLogin(identificador);
-          const nomePerfil=normalizarNomeLogin(currentProfile.nome);
+          const nomeCadastrado=normalizarNomeLogin(currentProfile.nome);
 
-          if(nomeInformado!==nomePerfil){
+          if(nomeInformado!==nomeCadastrado){
             await auth.signOut();
             currentProfile=null;
-            throw new Error("Nome e CPF não correspondem ao mesmo cadastro.");
+            throw new Error(
+              "O nome informado não corresponde ao CPF deste cadastro."
+            );
           }
         }
 
@@ -4347,14 +4543,23 @@ renderizarTudoGraduacoes();
         ready=true;
         window.CHAMPION_FIREBASE_READY=true;
         window.marcarFirebasePronto?.();
-        status("online","Firebase conectado · dados sincronizados");
 
-        return {user:cred.user,perfil:currentProfile};
-      }catch(e){
-        const mensagem=e?.message&&
-          !String(e.message).startsWith("Firebase:")
-            ? e.message
-            : errMsg(e);
+        status(
+          "online",
+          `Firebase conectado · versão ${window.CHAMPION_APP_VERSION}`
+        );
+
+        return {
+          user:cred.user,
+          perfil:currentProfile
+        };
+      }catch(erro){
+        const mensagem=
+          erro?.message &&
+          !String(erro.message).startsWith("Firebase:")
+            ? erro.message
+            : errMsg(erro);
+
         status("error",mensagem);
         throw new Error(mensagem);
       }finally{
@@ -4362,13 +4567,14 @@ renderizarTudoGraduacoes();
         loginPromise=null;
       }
     })();
+
     return loginPromise;
   };
 
   window.firebaseLogout=async()=>{unsub.splice(0).forEach(fn=>fn());cache.clear();currentProfile=null;ready=false;if(auth)await auth.signOut();};
   window.firebaseReconectar=async()=>{if(auth?.currentUser){currentProfile=await profileFor(auth.currentUser);if(currentProfile.role==="aluno")await loadStudent(auth.currentUser.uid);else await loadManagerProfessor();status("online","Firebase reconectado");}};
 
-  try{init();window.CHAMPION_FIREBASE_SDK_LOADED=true;status("online","Firebase pronto para login");
+  try{init();window.CHAMPION_FIREBASE_SDK_LOADED=true;status("online",`Firebase pronto para login · versão ${window.CHAMPION_APP_VERSION}`);
     auth.onAuthStateChanged(async user=>{
       if(!user)return;
       if(window.__CHAMPION_LOGIN_EM_ANDAMENTO__ || loadingUid===user.uid)return;

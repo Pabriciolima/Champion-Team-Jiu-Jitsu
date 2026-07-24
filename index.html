@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Champion Team Jiu-Jitsu</title>
 
     <link rel="stylesheet" href="style.css" />
@@ -33,11 +36,11 @@
         </div>
       </div>
       <div class="login-card">
-        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor entra com e-mail. Professores e alunos entram com nome e CPF.</p></div>
+        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor entra com e-mail e senha. Professor e aluno entram com nome completo e CPF.</p></div>
         <form id="loginForm">
           <div class="field"><label for="loginEmail">E-mail do gestor/professor ou CPF do aluno</label><input id="loginEmail" type="text" value="admin@fitcontrol.com" autocomplete="username" required /></div>
           <div class="field"><label for="loginSenha">Senha</label><div class="password-wrap"><input id="loginSenha" type="password" value="123456" required /><button type="button" id="togglePassword" class="password-toggle">Mostrar</button></div></div>
-          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor: e-mail • Professor/Aluno: nome + CPF</span></div>
+          <div class="login-options"><label class="remember"><input id="lembrarLogin" type="checkbox" checked /><span>Lembrar acesso</span></label><span class="demo-access">Gestor: e-mail + senha • Professor/Aluno: nome completo + CPF</span></div>
           <button class="login-button" type="submit">ENTRAR NA CHAMPION TEAM <span>→</span></button>
           <p id="loginError" class="login-error"></p>
         </form>
@@ -1240,6 +1243,7 @@
   </div>
 
 
+  <div id="appVersionBadge" class="app-version-badge">V11</div>
   <div id="firebaseStatus" class="firebase-status firebase-connecting" role="status" aria-live="polite">
     <span class="firebase-status-dot"></span>
     <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1249,7 +1253,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="script.js?v=8"></script>
+  <script src="script.js?v=11"></script>
 
 </body>
 </html>
