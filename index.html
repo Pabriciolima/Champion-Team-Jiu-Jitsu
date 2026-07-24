@@ -218,6 +218,13 @@
                 <label for="alunoEmail">E-mail</label>
                 <input id="alunoEmail" type="email" />
               </div>
+              <div class="field access-summary-field">
+                <label>Acesso do aluno</label>
+                <div class="auto-password-info">
+                  <strong>Login: e-mail cadastrado</strong>
+                  <small>Senha inicial: 6 primeiros números do CPF.</small>
+                </div>
+              </div>
 
               <div class="field">
                 <label for="alunoNascimento">Nascimento</label>
@@ -230,11 +237,6 @@
                   <option value="Ativo">Ativo</option>
                   <option value="Inativo">Inativo</option>
                 </select>
-              </div> 
-              <div class="field">
-                <label for="alunoSenha">Senha de acesso</label>
-                <input id="alunoSenha" type="password" minlength="4" placeholder="Mínimo de 4 caracteres" />
-                <small class="field-help">Se ficar vazio, serão usados os 4 últimos números do CPF.</small>
               </div>
             </div>
 
@@ -1304,7 +1306,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V16</div>
+  <div id="appVersionBadge" class="app-version-badge">V17</div>
   <div id="firebaseStatus" class="firebase-status firebase-connecting" role="status" aria-live="polite">
     <span class="firebase-status-dot"></span>
     <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1353,7 +1355,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="script.js?v=16"></script>
+  <script src="script.js?v=17"></script>
   </div>
 
 </body>
