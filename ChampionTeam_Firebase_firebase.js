@@ -1,317 +1,340 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  onSnapshot,
-  serverTimestamp,
-  enableIndexedDbPersistence
-} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-import {
-  getAuth,
-  signInAnonymously,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+/*
+  CHAMPION TEAM — FIREBASE COMPAT
+  Esta versão usa os scripts compatíveis carregados no index.html.
+  Ela evita falhas silenciosas de importação do SDK modular.
+*/
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBxaunouh9vyEoseDrfgZkpdL1gswlk5wc",
-  authDomain: "champion-team-jiu-jitsu.firebaseapp.com",
-  projectId: "champion-team-jiu-jitsu",
-  storageBucket: "champion-team-jiu-jitsu.firebasestorage.app",
-  messagingSenderId: "172574452967",
-  appId: "1:172574452967:web:cd64c1a576229f7fb5c642"
-};
+(function iniciarChampionFirebase() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyBxaunouh9vyEoseDrfgZkpdL1gswlk5wc",
+    authDomain: "champion-team-jiu-jitsu.firebaseapp.com",
+    projectId: "champion-team-jiu-jitsu",
+    storageBucket: "champion-team-jiu-jitsu.firebasestorage.app",
+    messagingSenderId: "172574452967",
+    appId: "1:172574452967:web:cd64c1a576229f7fb5c642"
+  };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+  const COLLECTION_NAME = "championTeamData";
+  const chaves = window.CHAMPION_FIREBASE_KEYS || [];
+  const listeners = new Map();
+  const pendencias = new Map();
 
-const COLLECTION_NAME = "championTeamData";
-const chaves = window.CHAMPION_FIREBASE_KEYS || [];
-const canceladores = new Map();
-const pendencias = new Map();
+  let authPronto = false;
+  let sincronizacaoInicialConcluida = false;
 
-let autenticado = false;
-let inicializado = false;
-
-function refDaChave(chave) {
-  return doc(
-    db,
-    COLLECTION_NAME,
-    String(chave).replace(/[^a-zA-Z0-9_-]/g, "_")
-  );
-}
-
-function metaLocal(chave) {
-  return Number(
-    localStorage.getItem(`champion_sync_meta_${chave}`) || 0
-  );
-}
-
-function salvarMetaLocal(chave, valor) {
-  localStorage.setItem(
-    `champion_sync_meta_${chave}`,
-    String(Number(valor) || Date.now())
-  );
-}
-
-function assinatura(item, indice) {
-  if (item && typeof item === "object" && item.id != null) {
-    return `id:${item.id}`;
+  function status(tipo, mensagem) {
+    window.atualizarStatusFirebase?.(tipo, mensagem);
   }
 
-  try {
-    return `json:${JSON.stringify(item)}`;
-  } catch {
-    return `indice:${indice}`;
+  function falhar(mensagem, erro) {
+    console.error(mensagem, erro || "");
+    status("error", mensagem);
   }
-}
 
-function mesclar(remoto, local, localMaisNovo) {
-  const mapa = new Map();
-
-  (Array.isArray(remoto) ? remoto : []).forEach((item, indice) => {
-    mapa.set(assinatura(item, indice), item);
-  });
-
-  (Array.isArray(local) ? local : []).forEach((item, indice) => {
-    const chave = assinatura(item, indice);
-    if (!mapa.has(chave) || localMaisNovo) {
-      mapa.set(chave, item);
+  function verificarSdk() {
+    if (!window.firebase) {
+      throw new Error(
+        "O SDK do Firebase não carregou. Verifique a internet ou o bloqueio do navegador."
+      );
     }
-  });
 
-  return [...mapa.values()];
-}
-
-function status(tipo, texto) {
-  window.atualizarStatusFirebase?.(tipo, texto);
-}
-
-async function gravar(chave, dados, atualizadoEmMs = Date.now()) {
-  const lista = Array.isArray(dados) ? dados : [];
-
-  if (!autenticado || !auth.currentUser) {
-    pendencias.set(chave, { dados: lista, atualizadoEmMs });
-    return;
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
   }
 
-  status("syncing", "Salvando alterações no Firebase...");
+  function firestore() {
+    return firebase.firestore();
+  }
 
-  await setDoc(
-    refDaChave(chave),
-    {
-      chaveOriginal: chave,
-      itens: lista,
-      atualizadoEm: serverTimestamp(),
-      atualizadoEmMs: Number(atualizadoEmMs) || Date.now(),
-      atualizadoPor: auth.currentUser.uid,
-      versao: 2
-    },
-    { merge: true }
-  );
+  function auth() {
+    return firebase.auth();
+  }
 
-  salvarMetaLocal(chave, atualizadoEmMs);
-  status("online", "Firebase conectado · dados sincronizados");
-}
+  function documento(chave) {
+    return firestore()
+      .collection(COLLECTION_NAME)
+      .doc(String(chave).replace(/[^a-zA-Z0-9_-]/g, "_"));
+  }
 
-window.firebaseCloudSave = gravar;
+  function metaLocal(chave) {
+    return Number(
+      localStorage.getItem(`champion_sync_meta_${chave}`) || 0
+    );
+  }
 
-async function sincronizarChave(chave) {
-  const ref = refDaChave(chave);
-  const snap = await getDoc(ref);
+  function salvarMetaLocal(chave, valor) {
+    localStorage.setItem(
+      `champion_sync_meta_${chave}`,
+      String(Number(valor) || Date.now())
+    );
+  }
 
-  const local = window.obterDadosLocaisFirebase?.(chave) || [];
-  const localTimestamp = metaLocal(chave);
+  function assinatura(item, indice) {
+    if (item && typeof item === "object" && item.id != null) {
+      return `id:${String(item.id)}`;
+    }
 
-  if (!snap.exists()) {
-    const agora = localTimestamp || Date.now();
+    try {
+      return `json:${JSON.stringify(item)}`;
+    } catch {
+      return `indice:${indice}`;
+    }
+  }
 
-    await setDoc(ref, {
-      chaveOriginal: chave,
-      itens: local,
-      atualizadoEm: serverTimestamp(),
-      atualizadoEmMs: agora,
-      atualizadoPor: auth.currentUser.uid,
-      versao: 2
+  function mesclarListas(remoto, local, preferirLocal) {
+    const mapa = new Map();
+
+    (Array.isArray(remoto) ? remoto : []).forEach((item, indice) => {
+      mapa.set(assinatura(item, indice), item);
     });
 
-    salvarMetaLocal(chave, agora);
-    window.aplicarDadosFirebase?.(chave, local);
-  } else {
-    const docData = snap.data() || {};
-    const remoto = Array.isArray(docData.itens)
-      ? docData.itens
-      : [];
-    const remotoTimestamp = Number(docData.atualizadoEmMs || 0);
+    (Array.isArray(local) ? local : []).forEach((item, indice) => {
+      const chave = assinatura(item, indice);
 
-    let final = remoto;
-    let enviar = false;
+      if (!mapa.has(chave) || preferirLocal) {
+        mapa.set(chave, item);
+      }
+    });
 
-    if (!remoto.length && local.length) {
-      // Impede que um celular vazio apague o computador principal.
-      final = local;
-      enviar = true;
-    } else if (remoto.length && !local.length) {
-      // Celular novo recebe a base integral do Firestore.
-      final = remoto;
-    } else if (remoto.length && local.length) {
-      const localMaisNovo = localTimestamp > remotoTimestamp;
-      final = mesclar(remoto, local, localMaisNovo);
-      enviar =
-        localMaisNovo ||
-        JSON.stringify(final) !== JSON.stringify(remoto);
+    return [...mapa.values()];
+  }
+
+  async function autenticar() {
+    if (auth().currentUser) {
+      authPronto = true;
+      return auth().currentUser;
     }
 
-    window.aplicarDadosFirebase?.(chave, final);
+    const resultado = await auth().signInAnonymously();
+    authPronto = true;
+    return resultado.user;
+  }
 
-    if (enviar) {
-      await gravar(
-        chave,
-        final,
-        Math.max(localTimestamp, remotoTimestamp, Date.now())
-      );
+  async function gravar(chave, dados, atualizadoEmMs = Date.now()) {
+    const lista = Array.isArray(dados) ? dados : [];
+
+    if (!authPronto || !auth().currentUser) {
+      pendencias.set(chave, {
+        dados: lista,
+        atualizadoEmMs
+      });
+      return;
+    }
+
+    status("syncing", "Salvando alterações no Firebase...");
+
+    await documento(chave).set(
+      {
+        chaveOriginal: chave,
+        itens: lista,
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+        atualizadoEmMs: Number(atualizadoEmMs) || Date.now(),
+        atualizadoPor: auth().currentUser.uid,
+        versao: 3
+      },
+      { merge: true }
+    );
+
+    salvarMetaLocal(chave, atualizadoEmMs);
+    status("online", "Firebase conectado · dados sincronizados");
+  }
+
+  window.firebaseCloudSave = gravar;
+
+  async function sincronizarChave(chave) {
+    const ref = documento(chave);
+    const snapshot = await ref.get();
+
+    const local = window.obterDadosLocaisFirebase?.(chave) || [];
+    const localTs = metaLocal(chave);
+
+    if (!snapshot.exists) {
+      const agora = localTs || Date.now();
+
+      await ref.set({
+        chaveOriginal: chave,
+        itens: local,
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+        atualizadoEmMs: agora,
+        atualizadoPor: auth().currentUser.uid,
+        versao: 3
+      });
+
+      salvarMetaLocal(chave, agora);
+      window.aplicarDadosFirebase?.(chave, local);
     } else {
-      salvarMetaLocal(
-        chave,
-        remotoTimestamp || localTimestamp || Date.now()
-      );
-    }
-  }
-
-  canceladores.get(chave)?.();
-
-  const cancelar = onSnapshot(
-    ref,
-    (snapshot) => {
-      if (!snapshot.exists()) return;
-
-      const dados = snapshot.data() || {};
-      const lista = Array.isArray(dados.itens)
-        ? dados.itens
+      const dadosDoc = snapshot.data() || {};
+      const remoto = Array.isArray(dadosDoc.itens)
+        ? dadosDoc.itens
         : [];
+      const remotoTs = Number(dadosDoc.atualizadoEmMs || 0);
 
-      window.aplicarDadosFirebase?.(chave, lista);
-      salvarMetaLocal(
-        chave,
-        Number(dados.atualizadoEmMs || Date.now())
-      );
+      let final = remoto;
+      let precisaEnviar = false;
 
-      status("online", "Firebase conectado · dados sincronizados");
-    },
-    (erro) => {
-      console.error(`Erro ao ouvir ${chave}:`, erro);
-      status(
-        "offline",
-        "Sem acesso à base. Verifique as regras do Firestore."
-      );
+      if (!remoto.length && local.length) {
+        final = local;
+        precisaEnviar = true;
+      } else if (remoto.length && !local.length) {
+        final = remoto;
+      } else if (remoto.length && local.length) {
+        const localMaisNovo = localTs > remotoTs;
+        final = mesclarListas(remoto, local, localMaisNovo);
+
+        precisaEnviar =
+          localMaisNovo ||
+          JSON.stringify(final) !== JSON.stringify(remoto);
+      }
+
+      window.aplicarDadosFirebase?.(chave, final);
+
+      if (precisaEnviar) {
+        await gravar(
+          chave,
+          final,
+          Math.max(localTs, remotoTs, Date.now())
+        );
+      } else {
+        salvarMetaLocal(chave, remotoTs || localTs || Date.now());
+      }
     }
-  );
 
-  canceladores.set(chave, cancelar);
-}
+    if (listeners.has(chave)) {
+      listeners.get(chave)();
+    }
 
-async function autenticar() {
-  if (auth.currentUser) {
-    autenticado = true;
-    return;
-  }
+    const cancelar = ref.onSnapshot(
+      (snap) => {
+        if (!snap.exists) return;
 
-  await signInAnonymously(auth);
+        const dadosDoc = snap.data() || {};
+        const remoto = Array.isArray(dadosDoc.itens)
+          ? dadosDoc.itens
+          : [];
 
-  await new Promise((resolve, reject) => {
-    const parar = onAuthStateChanged(
-      auth,
-      (usuario) => {
-        if (!usuario) return;
-        parar();
-        autenticado = true;
-        resolve();
+        window.aplicarDadosFirebase?.(chave, remoto);
+        salvarMetaLocal(
+          chave,
+          Number(dadosDoc.atualizadoEmMs || Date.now())
+        );
+
+        status("online", "Firebase conectado · dados sincronizados");
       },
       (erro) => {
-        parar();
-        reject(erro);
+        console.error(`Erro ao sincronizar ${chave}:`, erro);
+
+        if (erro?.code === "permission-denied") {
+          falhar(
+            "Acesso negado pelo Firestore. Publique as regras fornecidas.",
+            erro
+          );
+          return;
+        }
+
+        falhar(
+          "Firebase desconectado. Verifique a internet e tente novamente.",
+          erro
+        );
       }
     );
-  });
-}
 
-async function iniciar() {
-  if (inicializado) {
-    window.marcarFirebasePronto?.();
-    return;
+    listeners.set(chave, cancelar);
   }
 
-  status(
-    "syncing",
-    "Carregando a base compartilhada da academia..."
-  );
-
-  try {
-    await enableIndexedDbPersistence(db);
-  } catch (erro) {
-    console.info(
-      "Cache offline já ativo ou indisponível:",
-      erro?.code || erro
-    );
-  }
-
-  await autenticar();
-
-  const ordem = [
-    "fitcontrol_alunos",
-    ...chaves.filter((chave) => chave !== "fitcontrol_alunos")
-  ];
-
-  for (const chave of ordem) {
-    await sincronizarChave(chave);
-  }
-
-  for (const [chave, item] of pendencias.entries()) {
-    await gravar(chave, item.dados, item.atualizadoEmMs);
-  }
-  pendencias.clear();
-
-  inicializado = true;
-  window.marcarFirebasePronto?.();
-
-  status("online", "Firebase conectado · dados sincronizados");
-}
-
-window.firebaseReconectar = async function() {
-  if (!navigator.onLine) return;
-
-  try {
-    await autenticar();
-
-    for (const [chave, item] of pendencias.entries()) {
-      await gravar(chave, item.dados, item.atualizadoEmMs);
-    }
+  async function enviarPendencias() {
+    const lista = [...pendencias.entries()];
     pendencias.clear();
 
-    status("online", "Firebase reconectado · dados sincronizados");
-  } catch (erro) {
-    console.error("Falha ao reconectar:", erro);
-    status("offline", "Não foi possível reconectar ao Firebase.");
-  }
-};
-
-iniciar().catch((erro) => {
-  console.error("Erro ao iniciar Firebase:", erro);
-
-  let mensagem = "Falha ao conectar ao Firebase.";
-
-  if (erro?.code === "auth/operation-not-allowed") {
-    mensagem =
-      "Ative o provedor Anônimo no Firebase Authentication.";
-  } else if (
-    erro?.code === "permission-denied" ||
-    erro?.code === "firestore/permission-denied"
-  ) {
-    mensagem =
-      "Publique as regras fornecidas no Firestore.";
+    for (const [chave, item] of lista) {
+      await gravar(chave, item.dados, item.atualizadoEmMs);
+    }
   }
 
-  status("offline", mensagem);
-});
+  async function iniciar() {
+    status("syncing", "Carregando dados da academia...");
+
+    verificarSdk();
+
+    try {
+      await firestore().enablePersistence({
+        synchronizeTabs: true
+      });
+    } catch (erro) {
+      console.info(
+        "Cache offline indisponível ou já ativo:",
+        erro?.code || erro
+      );
+    }
+
+    await autenticar();
+
+    const ordem = [
+      "fitcontrol_alunos",
+      ...chaves.filter((chave) => chave !== "fitcontrol_alunos")
+    ];
+
+    for (const chave of ordem) {
+      await sincronizarChave(chave);
+    }
+
+    await enviarPendencias();
+
+    sincronizacaoInicialConcluida = true;
+    window.marcarFirebasePronto?.();
+
+    status("online", "Firebase conectado · dados sincronizados");
+  }
+
+  window.firebaseReconectar = async function() {
+    if (!navigator.onLine) return;
+
+    try {
+      verificarSdk();
+      await autenticar();
+      await enviarPendencias();
+
+      status("online", "Firebase reconectado · dados sincronizados");
+    } catch (erro) {
+      falhar("Não foi possível reconectar ao Firebase.", erro);
+    }
+  };
+
+  const timeout = setTimeout(() => {
+    if (!sincronizacaoInicialConcluida) {
+      falhar(
+        "O Firebase não respondeu. Confira Authentication, Firestore e regras."
+      );
+    }
+  }, 15000);
+
+  iniciar()
+    .then(() => clearTimeout(timeout))
+    .catch((erro) => {
+      clearTimeout(timeout);
+
+      if (erro?.code === "auth/operation-not-allowed") {
+        falhar(
+          "Ative o login Anônimo no Firebase Authentication.",
+          erro
+        );
+        return;
+      }
+
+      if (
+        erro?.code === "permission-denied" ||
+        erro?.code === "firestore/permission-denied"
+      ) {
+        falhar(
+          "Publique as regras fornecidas no Firestore.",
+          erro
+        );
+        return;
+      }
+
+      falhar(
+        "Falha ao conectar ao Firebase. Verifique internet e configuração.",
+        erro
+      );
+    });
+})();

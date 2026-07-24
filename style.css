@@ -4063,3 +4063,14 @@ body {
     border-radius: 14px;
   }
 }
+
+.firebase-status.firebase-error {
+  border-color: rgba(255, 89, 100, 0.35);
+  background: rgba(52, 12, 16, 0.96);
+  color: #ffd9dc;
+  border-radius: 14px;
+}
+.firebase-status.firebase-error .firebase-status-dot {
+  background: #ff5964;
+  box-shadow: 0 0 0 4px rgba(255, 89, 100, 0.14);
+}

@@ -148,7 +148,8 @@ window.atualizarStatusFirebase = function(tipo, mensagem) {
     "firebase-connecting",
     "firebase-online",
     "firebase-offline",
-    "firebase-syncing"
+    "firebase-syncing",
+    "firebase-error"
   );
   caixa.classList.add(`firebase-${tipo}`);
   texto.textContent = mensagem;
