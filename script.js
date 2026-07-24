@@ -21,18 +21,26 @@ const STORAGE_KEYS = {
     function salvar(chave, dados) {
       const lista = Array.isArray(dados) ? dados : [];
       const agora = Date.now();
+      const serializado = JSON.stringify(lista);
+      const anterior = localStorage.getItem(chave);
 
-      localStorage.setItem(chave, JSON.stringify(lista));
+      localStorage.setItem(chave, serializado);
+
+      // Dados recebidos do Firestore não podem ser enviados de volta.
+      // Isso elimina o ciclo: onSnapshot → atualizarTudo → salvar → onSnapshot.
+      if (window.__CHAMPION_APLICANDO_FIREBASE__) return;
+
+      // Não grava novamente quando nada realmente mudou.
+      if (anterior === serializado) return;
+
       localStorage.setItem(`champion_sync_meta_${chave}`, String(agora));
 
-      // LocalStorage funciona somente como cache offline.
-      // O Firestore é a base compartilhada entre todos os aparelhos.
       if (typeof window.firebaseCloudSave === "function") {
         window.firebaseCloudSave(chave, lista, agora).catch((erro) => {
           console.error("Falha ao sincronizar com Firebase:", erro);
           window.atualizarStatusFirebase?.(
             "offline",
-            "Alteração salva neste aparelho. Aguardando reconexão..."
+            "Alteração mantida no aparelho. Tentaremos sincronizar novamente."
           );
         });
       }
@@ -175,9 +183,13 @@ window.obterDadosLocaisFirebase = function(chave) {
 
 window.aplicarDadosFirebase = function(chave, dadosRecebidos) {
   const dados = Array.isArray(dadosRecebidos) ? dadosRecebidos : [];
+  const serializado = JSON.stringify(dados);
 
-  // Atualiza o cache local para permitir uso mesmo sem internet.
-  localStorage.setItem(chave, JSON.stringify(dados));
+  // Evita renderização e gravação repetidas para o mesmo conteúdo.
+  if (localStorage.getItem(chave) === serializado) return;
+
+  window.__CHAMPION_APLICANDO_FIREBASE__ = true;
+  localStorage.setItem(chave, serializado);
 
   // As variáveis foram declaradas com let no arquivo principal.
   // O switch permite atualizá-las dentro do mesmo escopo global.
@@ -232,6 +244,11 @@ window.aplicarDadosFirebase = function(chave, dadosRecebidos) {
   if (typeof atualizarTudo === "function") {
     atualizarTudo();
   }
+
+  clearTimeout(window.__CHAMPION_APLICANDO_FIREBASE_TIMER__);
+  window.__CHAMPION_APLICANDO_FIREBASE_TIMER__ = setTimeout(() => {
+    window.__CHAMPION_APLICANDO_FIREBASE__ = false;
+  }, 600);
 };
 
 window.addEventListener("online", () => {
@@ -4014,7 +4031,11 @@ renderizarTudoGraduacoes();
   const DATA="academyData", USERS="users", STUDENT_VIEWS="studentViews";
   const keys=window.CHAMPION_FIREBASE_KEYS||[];
   const cache=new Map(), unsub=[];
+  const saveTimers=new Map();
+  const lastCloudJson=new Map();
   let app,auth,db,currentProfile=null,ready=false;
+  let loginPromise=null;
+  let loadingUid=null;
 
   const status=(tipo,msg)=>window.atualizarStatusFirebase?.(tipo,msg);
   const cpfEmail=cpf=>`${String(cpf||"").replace(/\D/g,"")}@aluno.championteam.app`;
@@ -4038,7 +4059,14 @@ renderizarTudoGraduacoes();
     auth=firebase.auth(); db=firebase.firestore();
   }
   function docRef(key){return db.collection(DATA).doc(key.replace(/[^a-zA-Z0-9_-]/g,"_"));}
-  function apply(key,data){cache.set(key,Array.isArray(data)?data:[]);window.aplicarDadosFirebase?.(key,cache.get(key));}
+  function apply(key,data){
+    const lista=Array.isArray(data)?data:[];
+    const json=JSON.stringify(lista);
+    if(lastCloudJson.get(key)===json && JSON.stringify(cache.get(key)||[])===json)return;
+    lastCloudJson.set(key,json);
+    cache.set(key,lista);
+    window.aplicarDadosFirebase?.(key,lista);
+  }
 
   async function profileFor(user){
     let snap=await db.collection(USERS).doc(user.uid).get();
@@ -4060,7 +4088,10 @@ renderizarTudoGraduacoes();
         await ref.set({itens:local,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
         apply(key,local);
       }else apply(key,snap.data()?.itens||[]);
-      unsub.push(ref.onSnapshot(s=>{if(s.exists)apply(key,s.data()?.itens||[]);}));
+      unsub.push(ref.onSnapshot(s=>{
+        if(!s.exists || s.metadata.hasPendingWrites)return;
+        apply(key,s.data()?.itens||[]);
+      }));
     }
   }
 
@@ -4102,15 +4133,35 @@ renderizarTudoGraduacoes();
     if(count)await batch.commit();
   }
 
-  window.firebaseCloudSave=async(key,data)=>{
-    if(!auth?.currentUser||!currentProfile)throw new Error("Sessão Firebase ausente.");
-    if(currentProfile.role==="aluno")throw new Error("Aluno não pode alterar a base administrativa.");
-    if(currentProfile.role==="professor"&&key!=="fitcontrol_fichas_treino")throw new Error("Professor só pode alterar fichas de treino.");
-    status("syncing","Salvando na nuvem...");
-    cache.set(key,Array.isArray(data)?data:[]);
-    await docRef(key).set({itens:cache.get(key),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.uid},{merge:true});
-    if(currentProfile.role==="gestor")await rebuildStudentViews();
-    status("online","Firebase conectado · dados sincronizados");
+  window.firebaseCloudSave=(key,data)=>{
+    if(!auth?.currentUser||!currentProfile)return Promise.reject(new Error("Sessão Firebase ausente."));
+    if(currentProfile.role==="aluno")return Promise.reject(new Error("Aluno não pode alterar a base administrativa."));
+    if(currentProfile.role==="professor"&&key!=="fitcontrol_fichas_treino")return Promise.reject(new Error("Professor só pode alterar fichas de treino."));
+
+    const lista=Array.isArray(data)?data:[];
+    const json=JSON.stringify(lista);
+    if(lastCloudJson.get(key)===json)return Promise.resolve();
+
+    clearTimeout(saveTimers.get(key));
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(async()=>{
+        try{
+          status("syncing","Salvando na nuvem...");
+          cache.set(key,lista);
+          await docRef(key).set({
+            itens:lista,
+            updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy:auth.currentUser.uid
+          },{merge:true});
+          lastCloudJson.set(key,json);
+          if(currentProfile.role==="gestor")await rebuildStudentViews();
+          status("online","Firebase conectado · dados sincronizados");
+          resolve();
+        }catch(e){reject(e);}
+        finally{saveTimers.delete(key);}
+      },350);
+      saveTimers.set(key,timer);
+    });
   };
 
   window.firebaseCriarUsuario=async({role,profileId,nome,email,cpf,password})=>{
@@ -4125,19 +4176,29 @@ renderizarTudoGraduacoes();
     }catch(e){throw new Error(errMsg(e));}finally{await secondary.delete();}
   };
 
-  window.firebaseLogin=async(identifier,password)=>{
-    try{
-      if(!app)init();
-      const loginEmail=identifier.includes("@")?identifier.trim().toLowerCase():cpfEmail(identifier);
-      status("syncing","Autenticando...");
-      const cred=await auth.signInWithEmailAndPassword(loginEmail,password);
-      currentProfile=await profileFor(cred.user);
-      unsub.splice(0).forEach(fn=>fn()); cache.clear();
-      if(currentProfile.role==="aluno")await loadStudent(cred.user.uid);else await loadManagerProfessor();
-      ready=true; window.CHAMPION_FIREBASE_READY=true; window.marcarFirebasePronto?.();
-      status("online","Firebase conectado · dados sincronizados");
-      return {user:cred.user,perfil:currentProfile};
-    }catch(e){status("error",errMsg(e));throw new Error(errMsg(e));}
+  window.firebaseLogin=(identifier,password)=>{
+    if(loginPromise)return loginPromise;
+    loginPromise=(async()=>{
+      window.__CHAMPION_LOGIN_EM_ANDAMENTO__=true;
+      try{
+        if(!app)init();
+        const loginEmail=identifier.includes("@")?identifier.trim().toLowerCase():cpfEmail(identifier);
+        status("syncing","Autenticando...");
+        const cred=await auth.signInWithEmailAndPassword(loginEmail,password);
+        currentProfile=await profileFor(cred.user);
+        unsub.splice(0).forEach(fn=>fn());cache.clear();lastCloudJson.clear();
+        loadingUid=cred.user.uid;
+        if(currentProfile.role==="aluno")await loadStudent(cred.user.uid);else await loadManagerProfessor();
+        ready=true;window.CHAMPION_FIREBASE_READY=true;window.marcarFirebasePronto?.();
+        status("online","Firebase conectado · dados sincronizados");
+        return {user:cred.user,perfil:currentProfile};
+      }catch(e){status("error",errMsg(e));throw new Error(errMsg(e));}
+      finally{
+        window.__CHAMPION_LOGIN_EM_ANDAMENTO__=false;
+        loginPromise=null;
+      }
+    })();
+    return loginPromise;
   };
 
   window.firebaseLogout=async()=>{unsub.splice(0).forEach(fn=>fn());cache.clear();currentProfile=null;ready=false;if(auth)await auth.signOut();};
@@ -4146,7 +4207,16 @@ renderizarTudoGraduacoes();
   try{init();window.CHAMPION_FIREBASE_SDK_LOADED=true;status("online","Firebase pronto para login");
     auth.onAuthStateChanged(async user=>{
       if(!user)return;
-      try{currentProfile=await profileFor(user);if(currentProfile.role==="aluno")await loadStudent(user.uid);else await loadManagerProfessor();window.CHAMPION_FIREBASE_READY=true;window.marcarFirebasePronto?.();status("online","Firebase conectado · dados sincronizados");window.dispatchEvent(new CustomEvent("champion-auth-restored",{detail:{user,perfil:currentProfile}}));}catch(e){console.error(e);}
+      if(window.__CHAMPION_LOGIN_EM_ANDAMENTO__ || loadingUid===user.uid)return;
+      try{
+        loadingUid=user.uid;
+        currentProfile=await profileFor(user);
+        unsub.splice(0).forEach(fn=>fn());cache.clear();lastCloudJson.clear();
+        if(currentProfile.role==="aluno")await loadStudent(user.uid);else await loadManagerProfessor();
+        window.CHAMPION_FIREBASE_READY=true;window.marcarFirebasePronto?.();
+        status("online","Firebase conectado · dados sincronizados");
+        window.dispatchEvent(new CustomEvent("champion-auth-restored",{detail:{user,perfil:currentProfile}}));
+      }catch(e){status("error",errMsg(e));console.error(e);}
     });
   }catch(e){status("error",errMsg(e));console.error(e);}
 })();
