@@ -4074,3 +4074,20 @@ body {
   background: #ff5964;
   box-shadow: 0 0 0 4px rgba(255, 89, 100, 0.14);
 }
+
+.firebase-retry-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #fff;
+  color: #151519;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.firebase-status.firebase-error {
+  max-width: min(620px, calc(100vw - 36px));
+  border-color: rgba(255, 89, 100, 0.45);
+  background: rgba(57, 10, 15, 0.97);
+  color: #ffe7e9;
+}

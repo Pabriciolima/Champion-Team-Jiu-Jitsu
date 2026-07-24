@@ -1,11 +1,12 @@
 /*
-  CHAMPION TEAM — FIREBASE COMPAT
-  Esta versão usa os scripts compatíveis carregados no index.html.
-  Ela evita falhas silenciosas de importação do SDK modular.
+  CHAMPION TEAM — FIREBASE V5
+  Base compartilhada entre computador e celular.
+  LocalStorage é apenas cache offline.
 */
+(function () {
+  "use strict";
 
-(function iniciarChampionFirebase() {
-  const firebaseConfig = {
+  const config = {
     apiKey: "AIzaSyBxaunouh9vyEoseDrfgZkpdL1gswlk5wc",
     authDomain: "champion-team-jiu-jitsu.firebaseapp.com",
     projectId: "champion-team-jiu-jitsu",
@@ -14,67 +15,82 @@
     appId: "1:172574452967:web:cd64c1a576229f7fb5c642"
   };
 
-  const COLLECTION_NAME = "championTeamData";
-  const chaves = window.CHAMPION_FIREBASE_KEYS || [];
-  const listeners = new Map();
-  const pendencias = new Map();
+  const COLLECTION = "championTeamData";
+  const chaves = Array.isArray(window.CHAMPION_FIREBASE_KEYS)
+    ? window.CHAMPION_FIREBASE_KEYS
+    : [];
 
-  let authPronto = false;
-  let sincronizacaoInicialConcluida = false;
+  let db = null;
+  let auth = null;
+  let iniciado = false;
+  let conectado = false;
+  const listeners = new Map();
+  const fila = new Map();
 
   function status(tipo, mensagem) {
     window.atualizarStatusFirebase?.(tipo, mensagem);
   }
 
-  function falhar(mensagem, erro) {
-    console.error(mensagem, erro || "");
-    status("error", mensagem);
+  function erroLegivel(erro) {
+    const codigo = erro?.code || "erro-desconhecido";
+
+    const mensagens = {
+      "auth/operation-not-allowed":
+        "Login Anônimo desativado. Ative em Authentication > Método de login.",
+      "auth/unauthorized-domain":
+        "Domínio do Vercel não autorizado no Firebase Authentication.",
+      "permission-denied":
+        "Firestore bloqueou o acesso. Publique o arquivo firestore.rules.txt.",
+      "firestore/permission-denied":
+        "Firestore bloqueou o acesso. Publique o arquivo firestore.rules.txt.",
+      "unavailable":
+        "Firestore indisponível. Verifique a internet e tente novamente.",
+      "failed-precondition":
+        "O Firestore ainda não está pronto ou há outra aba usando o cache."
+    };
+
+    return `${mensagens[codigo] || erro?.message || "Falha ao conectar."} [${codigo}]`;
+  }
+
+  function falhar(erro) {
+    console.error("Firebase Champion Team:", erro);
+    status("error", erroLegivel(erro));
   }
 
   function verificarSdk() {
     if (!window.firebase) {
-      throw new Error(
-        "O SDK do Firebase não carregou. Verifique a internet ou o bloqueio do navegador."
+      throw Object.assign(
+        new Error("SDK do Firebase não carregou."),
+        { code: "sdk-nao-carregado" }
       );
     }
-
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
   }
 
-  function firestore() {
-    return firebase.firestore();
-  }
-
-  function auth() {
-    return firebase.auth();
-  }
-
-  function documento(chave) {
-    return firestore()
-      .collection(COLLECTION_NAME)
-      .doc(String(chave).replace(/[^a-zA-Z0-9_-]/g, "_"));
-  }
-
-  function metaLocal(chave) {
-    return Number(
-      localStorage.getItem(`champion_sync_meta_${chave}`) || 0
+  function ref(chave) {
+    return db.collection(COLLECTION).doc(
+      String(chave).replace(/[^a-zA-Z0-9_-]/g, "_")
     );
   }
 
-  function salvarMetaLocal(chave, valor) {
+  function lerLocal(chave) {
+    return window.obterDadosLocaisFirebase?.(chave) || [];
+  }
+
+  function metaLocal(chave) {
+    return Number(localStorage.getItem(`champion_sync_meta_${chave}`) || 0);
+  }
+
+  function gravarMeta(chave, valor) {
     localStorage.setItem(
       `champion_sync_meta_${chave}`,
       String(Number(valor) || Date.now())
     );
   }
 
-  function assinatura(item, indice) {
+  function chaveItem(item, indice) {
     if (item && typeof item === "object" && item.id != null) {
       return `id:${String(item.id)}`;
     }
-
     try {
       return `json:${JSON.stringify(item)}`;
     } catch {
@@ -82,16 +98,15 @@
     }
   }
 
-  function mesclarListas(remoto, local, preferirLocal) {
+  function mesclar(remoto, local, preferirLocal) {
     const mapa = new Map();
 
-    (Array.isArray(remoto) ? remoto : []).forEach((item, indice) => {
-      mapa.set(assinatura(item, indice), item);
+    (Array.isArray(remoto) ? remoto : []).forEach((item, i) => {
+      mapa.set(chaveItem(item, i), item);
     });
 
-    (Array.isArray(local) ? local : []).forEach((item, indice) => {
-      const chave = assinatura(item, indice);
-
+    (Array.isArray(local) ? local : []).forEach((item, i) => {
+      const chave = chaveItem(item, i);
       if (!mapa.has(chave) || preferirLocal) {
         mapa.set(chave, item);
       }
@@ -100,241 +115,219 @@
     return [...mapa.values()];
   }
 
-  async function autenticar() {
-    if (auth().currentUser) {
-      authPronto = true;
-      return auth().currentUser;
-    }
+  async function garantirAutenticacao() {
+    if (auth.currentUser) return auth.currentUser;
 
-    const resultado = await auth().signInAnonymously();
-    authPronto = true;
-    return resultado.user;
+    const credencial = await auth.signInAnonymously();
+    return credencial.user;
   }
 
-  async function gravar(chave, dados, atualizadoEmMs = Date.now()) {
+  async function testeDeEscrita() {
+    const usuario = auth.currentUser;
+    if (!usuario) {
+      throw Object.assign(
+        new Error("Usuário Firebase não autenticado."),
+        { code: "auth/usuario-ausente" }
+      );
+    }
+
+    await db.collection(COLLECTION).doc("_conexao").set(
+      {
+        sistema: "Champion Team",
+        conectado: true,
+        ultimaConexao: firebase.firestore.FieldValue.serverTimestamp(),
+        ultimaConexaoMs: Date.now(),
+        uid: usuario.uid,
+        dominio: location.hostname,
+        versao: 5
+      },
+      { merge: true }
+    );
+  }
+
+  async function gravarNuvem(chave, dados, atualizadoEmMs = Date.now()) {
     const lista = Array.isArray(dados) ? dados : [];
 
-    if (!authPronto || !auth().currentUser) {
-      pendencias.set(chave, {
-        dados: lista,
-        atualizadoEmMs
-      });
+    if (!conectado || !auth?.currentUser) {
+      fila.set(chave, { dados: lista, atualizadoEmMs });
       return;
     }
 
-    status("syncing", "Salvando alterações no Firebase...");
+    status("syncing", "Salvando no Firestore...");
 
-    await documento(chave).set(
+    await ref(chave).set(
       {
         chaveOriginal: chave,
         itens: lista,
         atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
         atualizadoEmMs: Number(atualizadoEmMs) || Date.now(),
-        atualizadoPor: auth().currentUser.uid,
-        versao: 3
+        atualizadoPor: auth.currentUser.uid,
+        versao: 5
       },
       { merge: true }
     );
 
-    salvarMetaLocal(chave, atualizadoEmMs);
+    gravarMeta(chave, atualizadoEmMs);
     status("online", "Firebase conectado · dados sincronizados");
   }
 
-  window.firebaseCloudSave = gravar;
+  window.firebaseCloudSave = gravarNuvem;
 
-  async function sincronizarChave(chave) {
-    const ref = documento(chave);
-    const snapshot = await ref.get();
+  async function sincronizar(chave) {
+    const documento = ref(chave);
+    const snapshot = await documento.get();
 
-    const local = window.obterDadosLocaisFirebase?.(chave) || [];
+    const local = lerLocal(chave);
     const localTs = metaLocal(chave);
 
     if (!snapshot.exists) {
       const agora = localTs || Date.now();
 
-      await ref.set({
+      await documento.set({
         chaveOriginal: chave,
         itens: local,
         atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
         atualizadoEmMs: agora,
-        atualizadoPor: auth().currentUser.uid,
-        versao: 3
+        atualizadoPor: auth.currentUser.uid,
+        versao: 5
       });
 
-      salvarMetaLocal(chave, agora);
+      gravarMeta(chave, agora);
       window.aplicarDadosFirebase?.(chave, local);
     } else {
       const dadosDoc = snapshot.data() || {};
-      const remoto = Array.isArray(dadosDoc.itens)
-        ? dadosDoc.itens
-        : [];
+      const remoto = Array.isArray(dadosDoc.itens) ? dadosDoc.itens : [];
       const remotoTs = Number(dadosDoc.atualizadoEmMs || 0);
 
       let final = remoto;
-      let precisaEnviar = false;
+      let enviar = false;
 
-      if (!remoto.length && local.length) {
+      if (remoto.length === 0 && local.length > 0) {
         final = local;
-        precisaEnviar = true;
-      } else if (remoto.length && !local.length) {
+        enviar = true;
+      } else if (remoto.length > 0 && local.length === 0) {
         final = remoto;
-      } else if (remoto.length && local.length) {
+      } else if (remoto.length > 0 && local.length > 0) {
         const localMaisNovo = localTs > remotoTs;
-        final = mesclarListas(remoto, local, localMaisNovo);
-
-        precisaEnviar =
+        final = mesclar(remoto, local, localMaisNovo);
+        enviar =
           localMaisNovo ||
           JSON.stringify(final) !== JSON.stringify(remoto);
       }
 
       window.aplicarDadosFirebase?.(chave, final);
 
-      if (precisaEnviar) {
-        await gravar(
+      if (enviar) {
+        await gravarNuvem(
           chave,
           final,
           Math.max(localTs, remotoTs, Date.now())
         );
       } else {
-        salvarMetaLocal(chave, remotoTs || localTs || Date.now());
+        gravarMeta(chave, remotoTs || localTs || Date.now());
       }
     }
 
-    if (listeners.has(chave)) {
-      listeners.get(chave)();
-    }
+    listeners.get(chave)?.();
 
-    const cancelar = ref.onSnapshot(
-      (snap) => {
-        if (!snap.exists) return;
+    listeners.set(
+      chave,
+      documento.onSnapshot(
+        snapshotAtual => {
+          if (!snapshotAtual.exists) return;
 
-        const dadosDoc = snap.data() || {};
-        const remoto = Array.isArray(dadosDoc.itens)
-          ? dadosDoc.itens
-          : [];
+          const dados = snapshotAtual.data() || {};
+          const remoto = Array.isArray(dados.itens) ? dados.itens : [];
 
-        window.aplicarDadosFirebase?.(chave, remoto);
-        salvarMetaLocal(
-          chave,
-          Number(dadosDoc.atualizadoEmMs || Date.now())
-        );
-
-        status("online", "Firebase conectado · dados sincronizados");
-      },
-      (erro) => {
-        console.error(`Erro ao sincronizar ${chave}:`, erro);
-
-        if (erro?.code === "permission-denied") {
-          falhar(
-            "Acesso negado pelo Firestore. Publique as regras fornecidas.",
-            erro
+          window.aplicarDadosFirebase?.(chave, remoto);
+          gravarMeta(
+            chave,
+            Number(dados.atualizadoEmMs || Date.now())
           );
-          return;
-        }
 
-        falhar(
-          "Firebase desconectado. Verifique a internet e tente novamente.",
-          erro
-        );
-      }
+          status("online", "Firebase conectado · dados sincronizados");
+        },
+        falhar
+      )
     );
-
-    listeners.set(chave, cancelar);
   }
 
-  async function enviarPendencias() {
-    const lista = [...pendencias.entries()];
-    pendencias.clear();
+  async function enviarFila() {
+    const itens = [...fila.entries()];
+    fila.clear();
 
-    for (const [chave, item] of lista) {
-      await gravar(chave, item.dados, item.atualizadoEmMs);
+    for (const [chave, item] of itens) {
+      await gravarNuvem(chave, item.dados, item.atualizadoEmMs);
     }
   }
 
   async function iniciar() {
-    status("syncing", "Carregando dados da academia...");
+    if (iniciado) return;
+    iniciado = true;
+
+    status("syncing", "Autenticando no Firebase...");
 
     verificarSdk();
 
-    try {
-      await firestore().enablePersistence({
-        synchronizeTabs: true
-      });
-    } catch (erro) {
-      console.info(
-        "Cache offline indisponível ou já ativo:",
-        erro?.code || erro
-      );
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
     }
 
-    await autenticar();
+    db = firebase.firestore();
+    auth = firebase.auth();
+
+    await garantirAutenticacao();
+    conectado = true;
+
+    status("syncing", "Testando escrita no Firestore...");
+    await testeDeEscrita();
 
     const ordem = [
       "fitcontrol_alunos",
-      ...chaves.filter((chave) => chave !== "fitcontrol_alunos")
+      ...chaves.filter(chave => chave !== "fitcontrol_alunos")
     ];
 
+    status("syncing", "Enviando a base da academia...");
+
     for (const chave of ordem) {
-      await sincronizarChave(chave);
+      await sincronizar(chave);
     }
 
-    await enviarPendencias();
+    await enviarFila();
 
-    sincronizacaoInicialConcluida = true;
     window.marcarFirebasePronto?.();
-
     status("online", "Firebase conectado · dados sincronizados");
   }
 
-  window.firebaseReconectar = async function() {
-    if (!navigator.onLine) return;
+  window.firebaseReconectar = async function () {
+    iniciado = false;
+    conectado = false;
 
     try {
-      verificarSdk();
-      await autenticar();
-      await enviarPendencias();
-
-      status("online", "Firebase reconectado · dados sincronizados");
+      await iniciar();
     } catch (erro) {
-      falhar("Não foi possível reconectar ao Firebase.", erro);
+      iniciado = false;
+      falhar(erro);
     }
   };
 
-  const timeout = setTimeout(() => {
-    if (!sincronizacaoInicialConcluida) {
+  const limite = setTimeout(() => {
+    if (!window.CHAMPION_FIREBASE_READY) {
       falhar(
-        "O Firebase não respondeu. Confira Authentication, Firestore e regras."
+        Object.assign(
+          new Error("A conexão excedeu 20 segundos."),
+          { code: "timeout-conexao" }
+        )
       );
     }
-  }, 15000);
+  }, 20000);
 
   iniciar()
-    .then(() => clearTimeout(timeout))
-    .catch((erro) => {
-      clearTimeout(timeout);
-
-      if (erro?.code === "auth/operation-not-allowed") {
-        falhar(
-          "Ative o login Anônimo no Firebase Authentication.",
-          erro
-        );
-        return;
-      }
-
-      if (
-        erro?.code === "permission-denied" ||
-        erro?.code === "firestore/permission-denied"
-      ) {
-        falhar(
-          "Publique as regras fornecidas no Firestore.",
-          erro
-        );
-        return;
-      }
-
-      falhar(
-        "Falha ao conectar ao Firebase. Verifique internet e configuração.",
-        erro
-      );
+    .then(() => clearTimeout(limite))
+    .catch(erro => {
+      clearTimeout(limite);
+      iniciado = false;
+      conectado = false;
+      falhar(erro);
     });
 })();

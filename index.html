@@ -1232,11 +1232,13 @@
 
   <div id="firebaseStatus" class="firebase-status firebase-connecting" role="status" aria-live="polite">
     <span class="firebase-status-dot"></span>
-    <span id="firebaseStatusText">Conectando ao Firebase...</span>
+    <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
   </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="firebase.js"></script>
+  <script src="firebase.js?v=5"></script>
+
 </body>
 </html>

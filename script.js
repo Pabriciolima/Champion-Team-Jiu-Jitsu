@@ -142,6 +142,7 @@ window.aguardarFirebasePronto = function(timeoutMs = 20000) {
 window.atualizarStatusFirebase = function(tipo, mensagem) {
   const caixa = document.getElementById("firebaseStatus");
   const texto = document.getElementById("firebaseStatusText");
+  const tentar = document.getElementById("firebaseRetryButton");
   if (!caixa || !texto) return;
 
   caixa.classList.remove(
@@ -153,7 +154,15 @@ window.atualizarStatusFirebase = function(tipo, mensagem) {
   );
   caixa.classList.add(`firebase-${tipo}`);
   texto.textContent = mensagem;
+
+  if (tentar) {
+    tentar.hidden = tipo !== "error" && tipo !== "offline";
+  }
 };
+
+document.getElementById("firebaseRetryButton")?.addEventListener("click", () => {
+  window.firebaseReconectar?.();
+});
 
 window.obterDadosLocaisFirebase = function(chave) {
   try {
