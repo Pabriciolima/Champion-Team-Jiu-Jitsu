@@ -2,27 +2,34 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function signedIn() {
       return request.auth != null;
     }
 
-    function currentUserExists() {
-      return signedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    function userProfile() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data;
     }
 
-    function currentRole() {
-      return currentUserExists()
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-        : null;
+    function hasProfile() {
+      return signedIn() &&
+        exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        );
     }
 
     function isManager() {
-      return currentRole() == "gestor";
+      return hasProfile() && userProfile().role == "gestor";
     }
 
     function isTeacher() {
-      return currentRole() == "professor";
+      return hasProfile() && userProfile().role == "professor";
+    }
+
+    function isStudent() {
+      return hasProfile() && userProfile().role == "aluno";
     }
 
     function isBootstrapManager(uid) {
@@ -42,27 +49,41 @@ service cloud.firestore {
         )
         || isManager();
 
-      allow update: if isManager();
-      allow delete: if isManager();
+      allow update, delete: if isManager();
     }
 
     match /academyData/{key} {
-      allow read: if isManager() || isTeacher();
-
-      allow create, update: if
-        isManager()
+      allow read: if isManager()
         || (
           isTeacher()
-          && key == "fitcontrol_fichas_treino"
+          && key in [
+            "fitcontrol_alunos",
+            "fitcontrol_professores",
+            "fitcontrol_fichas_treino",
+            "champion_team_graduacoes",
+            "champion_team_regras_graduacao",
+            "champion_team_indicacoes_faixa"
+          ]
         );
 
-      allow delete: if false;
+      allow create, update: if isManager()
+        || (
+          isTeacher()
+          && key in [
+            "fitcontrol_fichas_treino",
+            "champion_team_indicacoes_faixa"
+          ]
+        );
+
+      allow delete: if isManager();
     }
 
     match /studentViews/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow create, update: if isManager();
-      allow delete: if isManager();
+      allow read: if signedIn()
+        && request.auth.uid == uid
+        && isStudent();
+
+      allow create, update, delete: if isManager();
     }
 
     match /{document=**} {
