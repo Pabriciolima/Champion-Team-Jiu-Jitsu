@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "21";
+window.CHAMPION_APP_VERSION = "24";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -177,7 +177,8 @@ const FIREBASE_STORAGE_VARIABLES = {
   champion_team_graduacoes: "graduacoes",
   champion_team_regras_graduacao: "regrasGraduacao",
   champion_team_historico_graduacao: "historicoGraduacoes",
-  champion_team_exames_graduacao: "examesGraduacao"
+  champion_team_exames_graduacao: "examesGraduacao",
+  champion_team_indicacoes_faixa: "indicacoesFaixa"
 };
 
 window.CHAMPION_FIREBASE_KEYS = Object.keys(FIREBASE_STORAGE_VARIABLES);
@@ -968,7 +969,7 @@ if (document.readyState === "loading") {
       }
 
       atualizarTudo();
-      mostrarAlerta("Aluno e todo o histórico foram excluídos.");
+      mostrarAlerta("Aluno e histórico removidos. O acesso foi desativado e pode ser reutilizado.");
     }
 
     function atualizarStatusMatriculas() {
@@ -1884,7 +1885,7 @@ document.getElementById("formProfessor")?.addEventListener("submit", async (even
       mostrarAlerta("Professor atualizado com sucesso.");
     } else {
       professores.push(dados);
-      mostrarAlerta("Professor cadastrado. Login: nome + CPF.");
+      mostrarAlerta("Professor cadastrado. Login: e-mail cadastrado; senha inicial: 6 primeiros números do CPF.");
     }
 
     salvarProfessores();
@@ -4791,7 +4792,20 @@ atualizarTudo = function() {
   function init(){
     if(!window.firebase) throw new Error("SDK do Firebase não carregou.");
     app=firebase.apps.length?firebase.app():firebase.initializeApp(firebaseConfig);
-    auth=firebase.auth(); db=firebase.firestore();
+    auth=firebase.auth();
+    db=firebase.firestore();
+
+    // Mantém a sessão no celular e reduz leituras repetidas após recarregar.
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((erro)=>{
+      console.warn("Persistência do login não disponível:",erro);
+    });
+
+    // O cache offline melhora o primeiro carregamento em redes móveis instáveis.
+    db.enablePersistence({synchronizeTabs:true}).catch((erro)=>{
+      if(!["failed-precondition","unimplemented"].includes(erro?.code)){
+        console.warn("Persistência do Firestore não disponível:",erro);
+      }
+    });
   }
   function docRef(key){return db.collection(DATA).doc(key.replace(/[^a-zA-Z0-9_-]/g,"_"));}
   function apply(key,data){
@@ -4846,6 +4860,22 @@ atualizarTudo = function() {
   async function loadManager(){
     status("syncing","Carregando a administração...");
     await loadKeys(keys,true);
+  }
+
+  function loadManagerInBackground(){
+    status("syncing","Acesso liberado · sincronizando dados...");
+
+    loadManager()
+      .then(()=>{
+        status("online",`Firebase conectado · versão ${window.CHAMPION_APP_VERSION}`);
+      })
+      .catch((erro)=>{
+        console.error("Falha na sincronização administrativa:",erro);
+        status(
+          navigator.onLine?"offline":"offline",
+          "Painel aberto. Alguns dados ainda estão sendo sincronizados."
+        );
+      });
   }
 
   async function loadProfessor(){
@@ -4947,59 +4977,48 @@ atualizarTudo = function() {
     });
   };
 
-  window.firebaseCriarUsuario=async({
-    role,
-    profileId,
-    nome,
-    email,
-    cpf
-  })=>{
-    if(currentProfile?.role!=="gestor"){
-      throw new Error("Somente o gestor pode criar acessos.");
-    }
+  window.firebaseExcluirPerfilAluno=async(authUid)=>{
+    if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode remover alunos.");
+    if(!authUid)return;
+    const profileRef=db.collection(USERS).doc(authUid);
+    const studentViewRef=db.collection(STUDENT_VIEWS).doc(authUid);
+    const snap=await profileRef.get();
+    const previous=snap.exists?snap.data():{};
+    const batch=db.batch();
+    batch.set(profileRef,{...previous,ativo:false,profileId:null,excluidoEm:firebase.firestore.FieldValue.serverTimestamp(),excluidoPor:auth.currentUser.uid},{merge:true});
+    batch.delete(studentViewRef);
+    await batch.commit();
+  };
 
+  window.firebaseCriarUsuario=async({role,profileId,nome,email,cpf})=>{
+    if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode criar acessos.");
     const loginEmail=String(email||"").trim().toLowerCase();
     const cpfNumeros=String(cpf||"").replace(/\D/g,"");
     const senhaInicial=cpfNumeros.slice(0,6);
-
-    if(!loginEmail || !loginEmail.includes("@")){
-      throw new Error("Informe um e-mail válido.");
+    if(!loginEmail||!loginEmail.includes("@"))throw new Error("Informe um e-mail válido.");
+    if(senhaInicial.length<6)throw new Error("O CPF precisa possuir pelo menos 6 números.");
+    const existing=await db.collection(USERS).where("email","==",loginEmail).limit(1).get();
+    if(!existing.empty){
+      const doc=existing.docs[0];
+      await doc.ref.set({role,profileId,nome,email:loginEmail,cpf:cpfNumeros,ativo:true,reativadoEm:firebase.firestore.FieldValue.serverTimestamp(),reativadoPor:auth.currentUser.uid},{merge:true});
+      return {uid:doc.id,email:loginEmail,senhaInicial,reutilizado:true};
     }
-
-    if(senhaInicial.length<6){
-      throw new Error("O CPF precisa possuir pelo menos 6 números.");
-    }
-
     const secondaryName="creator-"+Date.now();
     const secondary=firebase.initializeApp(firebaseConfig,secondaryName);
-
     try{
-      const cred=await secondary.auth().createUserWithEmailAndPassword(
-        loginEmail,
-        senhaInicial
-      );
-
-      await db.collection(USERS).doc(cred.user.uid).set({
-        role,
-        profileId,
-        nome,
-        email:loginEmail,
-        cpf:cpfNumeros,
-        ativo:true,
-        criadoEm:firebase.firestore.FieldValue.serverTimestamp(),
-        criadoPor:auth.currentUser.uid
-      });
-
-      return {
-        uid:cred.user.uid,
-        email:loginEmail,
-        senhaInicial
-      };
+      const cred=await secondary.auth().createUserWithEmailAndPassword(loginEmail,senhaInicial);
+      await db.collection(USERS).doc(cred.user.uid).set({role,profileId,nome,email:loginEmail,cpf:cpfNumeros,ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp(),criadoPor:auth.currentUser.uid});
+      return {uid:cred.user.uid,email:loginEmail,senhaInicial,reutilizado:false};
     }catch(error){
+      if(error?.code==="auth/email-already-in-use"||error?.code==="auth/email-already-exists"){
+        try{
+          const recovered=await secondary.auth().signInWithEmailAndPassword(loginEmail,senhaInicial);
+          await db.collection(USERS).doc(recovered.user.uid).set({role,profileId,nome,email:loginEmail,cpf:cpfNumeros,ativo:true,recuperadoEm:firebase.firestore.FieldValue.serverTimestamp(),recuperadoPor:auth.currentUser.uid},{merge:true});
+          return {uid:recovered.user.uid,email:loginEmail,senhaInicial,reutilizado:true};
+        }catch(_){throw new Error("O e-mail ainda existe no Firebase Authentication e a senha já foi alterada. Exclua essa conta em Authentication > Usuários e salve o cadastro novamente.");}
+      }
       throw new Error(errMsg(error));
-    }finally{
-      await secondary.delete();
-    }
+    }finally{await secondary.delete();}
   };
 
   window.firebaseAtualizarPerfilAcesso=async({
@@ -5021,6 +5040,7 @@ atualizarTudo = function() {
       profileId,
       nome,
       nomeNormalizado:normalizarNomeLogin(nome),
+      email:String(email||"").trim().toLowerCase(),
       contactEmail:String(email||"").trim().toLowerCase(),
       cpf:String(cpf||"").replace(/\D/g,""),
       ativo:true,
@@ -5074,18 +5094,42 @@ atualizarTudo = function() {
           throw new Error("Informe o e-mail cadastrado.");
         }
 
-        status("syncing","Autenticando...");
+        if(!navigator.onLine){
+          throw new Error("O celular está sem internet. Conecte-se e tente novamente.");
+        }
 
-        const cred=await comTimeout(
-          auth.signInWithEmailAndPassword(email,senha),
-          8000,
-          "O Firebase demorou para responder."
-        );
+        status("syncing","Autenticando com o Firebase...");
+
+        // Em redes móveis, 8 segundos era insuficiente. O login agora possui
+        // uma tentativa normal e uma repetição automática antes de falhar.
+        let cred;
+        try{
+          cred=await comTimeout(
+            auth.signInWithEmailAndPassword(email,senha),
+            25000,
+            "A conexão móvel está lenta. Tentando novamente..."
+          );
+        }catch(primeiroErro){
+          if(
+            primeiroErro?.code &&
+            !["auth/network-request-failed","auth/internal-error"].includes(primeiroErro.code)
+          ){
+            throw primeiroErro;
+          }
+
+          status("syncing","Conexão lenta · segunda tentativa...");
+          await new Promise(resolve=>setTimeout(resolve,1200));
+          cred=await comTimeout(
+            auth.signInWithEmailAndPassword(email,senha),
+            25000,
+            "O Firebase não respondeu. Verifique a internet e tente novamente."
+          );
+        }
 
         currentProfile=await comTimeout(
           profileFor(cred.user),
-          5000,
-          "O perfil de acesso não foi encontrado."
+          15000,
+          "O login foi aceito, mas o perfil demorou para carregar."
         );
 
         unsub.splice(0).forEach(fn=>fn());
@@ -5094,11 +5138,23 @@ atualizarTudo = function() {
         loadingUid=cred.user.uid;
 
         if(currentProfile.role==="gestor"){
-          await loadManager();
+          // O gestor não precisa esperar todas as coleções para entrar.
+          // O painel abre imediatamente e os dados sincronizam ao fundo.
+          loadManagerInBackground();
         }else if(currentProfile.role==="professor"){
-          await loadProfessor();
+          // O professor precisa de poucas coleções para montar seu painel.
+          await comTimeout(
+            loadProfessor(),
+            20000,
+            "O painel do professor está demorando para sincronizar."
+          );
         }else if(currentProfile.role==="aluno"){
-          await loadStudent(cred.user.uid);
+          // O aluno precisa do documento individual antes de abrir.
+          await comTimeout(
+            loadStudent(cred.user.uid),
+            20000,
+            "O painel do aluno ainda não foi carregado. Tente novamente."
+          );
         }else{
           throw new Error("Perfil de acesso inválido.");
         }
@@ -5107,15 +5163,11 @@ atualizarTudo = function() {
         window.CHAMPION_FIREBASE_READY=true;
         window.marcarFirebasePronto?.();
 
-        status(
-          "online",
-          `Firebase conectado · versão ${window.CHAMPION_APP_VERSION}`
-        );
+        if(currentProfile.role!=="gestor"){
+          status("online",`Firebase conectado · versão ${window.CHAMPION_APP_VERSION}`);
+        }
 
-        return {
-          user:cred.user,
-          perfil:currentProfile
-        };
+        return {user:cred.user,perfil:currentProfile};
       }catch(erro){
         let mensagem;
 
@@ -5126,10 +5178,11 @@ atualizarTudo = function() {
           erro?.code==="auth/user-not-found"
         ){
           mensagem="E-mail ou senha inválidos.";
+        }else if(erro?.code==="auth/network-request-failed"){
+          mensagem="Falha de internet ao acessar o Firebase. Tente novamente.";
         }else{
           mensagem=
-            erro?.message &&
-            !String(erro.message).startsWith("Firebase:")
+            erro?.message && !String(erro.message).startsWith("Firebase:")
               ? erro.message
               : errMsg(erro);
         }
@@ -5146,7 +5199,15 @@ atualizarTudo = function() {
   };
 
   window.firebaseLogout=async()=>{unsub.splice(0).forEach(fn=>fn());cache.clear();currentProfile=null;ready=false;if(auth)await auth.signOut();};
-  window.firebaseReconectar=async()=>{if(auth?.currentUser){currentProfile=await profileFor(auth.currentUser);if(currentProfile.role==="aluno")await loadStudent(auth.currentUser.uid);else await loadManagerProfessor();status("online","Firebase reconectado");}};
+  window.firebaseReconectar=async()=>{
+    if(!auth?.currentUser)return;
+    currentProfile=await profileFor(auth.currentUser);
+    if(currentProfile.role==="gestor")await loadManager();
+    else if(currentProfile.role==="professor")await loadProfessor();
+    else if(currentProfile.role==="aluno")await loadStudent(auth.currentUser.uid);
+    else throw new Error("Perfil de acesso inválido.");
+    status("online","Firebase reconectado");
+  };
 
   try{
       window.atualizarStatusFirebase?.("syncing","Inicializando Firebase...");
@@ -5164,33 +5225,31 @@ atualizarTudo = function() {
       try{
         currentProfile=await comTimeout(
           profileFor(user),
-          5000,
+          15000,
           "Não foi possível restaurar o perfil."
         );
 
+        if(currentProfile.role==="gestor"){
+          loadManagerInBackground();
+        }else if(currentProfile.role==="professor"){
+          await comTimeout(loadProfessor(),20000,"O painel do professor demorou para carregar.");
+        }else if(currentProfile.role==="aluno"){
+          await comTimeout(loadStudent(user.uid),20000,"O painel do aluno demorou para carregar.");
+        }else{
+          throw new Error("Perfil de acesso inválido.");
+        }
+
         window.CHAMPION_FIREBASE_READY=true;
         window.marcarFirebasePronto?.();
-
         window.dispatchEvent(
           new CustomEvent("champion-auth-restored",{
             detail:{user,perfil:currentProfile}
           })
         );
 
-        const carregamento=currentProfile.role==="gestor"
-          ? loadManager()
-          : currentProfile.role==="professor"
-            ? loadProfessor()
-            : loadStudent(user.uid);
-
-        carregamento
-          .then(()=>{
-            status("online","Firebase conectado · dados sincronizados");
-          })
-          .catch((erro)=>{
-            console.error("Falha na restauração da base:",erro);
-            status("offline","Sessão restaurada. Sincronização pendente.");
-          });
+        if(currentProfile.role!=="gestor"){
+          status("online","Firebase conectado · dados sincronizados");
+        }
       }catch(erro){
         console.error("Falha ao restaurar sessão:",erro);
         await auth.signOut();

@@ -3802,3 +3802,28 @@ body[data-role="aluno"] .sidebar .menu button:not([data-view="areaAluno"]){
     flex-direction:column;
   }
 }
+
+
+/* =========================================================
+   CONEXÃO MÓVEL ESTÁVEL — V24
+========================================================= */
+@media(max-width:700px){
+  .firebase-status{
+    left:12px;
+    right:12px;
+    bottom:12px;
+    width:auto;
+    max-width:none;
+  }
+
+  .firebase-status-text{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
+
+#loginForm button[type="submit"]:disabled{
+  opacity:.76;
+  cursor:wait;
+}
