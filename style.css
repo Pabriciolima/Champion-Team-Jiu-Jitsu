@@ -3827,3 +3827,300 @@ body[data-role="aluno"] .sidebar .menu button:not([data-view="areaAluno"]){
   opacity:.76;
   cursor:wait;
 }
+
+
+/* =========================================================
+   MENU HAMBÚRGUER PREMIUM MOBILE — V25
+========================================================= */
+.mobile-app-header,
+.mobile-menu-backdrop,
+.mobile-menu-close{
+  display:none;
+}
+
+@media (max-width:860px){
+  body.mobile-menu-open{
+    overflow:hidden;
+    touch-action:none;
+  }
+
+  .app{
+    display:block;
+    min-height:100vh;
+    padding-top:72px;
+  }
+
+  .mobile-app-header{
+    position:fixed;
+    inset:0 0 auto 0;
+    z-index:10020;
+    height:72px;
+    display:grid;
+    grid-template-columns:46px minmax(0,1fr) auto;
+    align-items:center;
+    gap:11px;
+    padding:0 14px;
+    border-bottom:1px solid rgba(255,255,255,.09);
+    background:rgba(6,8,10,.94);
+    backdrop-filter:blur(18px);
+    box-shadow:0 10px 34px rgba(0,0,0,.42);
+  }
+
+  .mobile-menu-button{
+    width:44px;
+    height:44px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:8px;
+    background:#11151a;
+    transition:.22s ease;
+  }
+
+  .mobile-menu-button span{
+    width:21px;
+    height:2px;
+    border-radius:99px;
+    background:#fff;
+    transition:.22s ease;
+  }
+
+  .mobile-menu-button.active span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .mobile-menu-button.active span:nth-child(2){opacity:0;transform:scaleX(0)}
+  .mobile-menu-button.active span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+  .mobile-header-brand{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:9px;
+  }
+
+  .mobile-header-brand img{
+    width:38px;
+    height:38px;
+    flex:0 0 auto;
+    object-fit:contain;
+  }
+
+  .mobile-header-brand>div{
+    min-width:0;
+    display:grid;
+  }
+
+  .mobile-header-brand strong{
+    overflow:hidden;
+    color:#fff;
+    font:italic 900 20px/1 "Barlow Condensed",sans-serif;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .mobile-header-brand em{
+    color:var(--red,#ff334f);
+    font-style:italic;
+  }
+
+  .mobile-header-brand small{
+    margin-top:4px;
+    color:#7c8691;
+    font-size:7px;
+    font-weight:800;
+    letter-spacing:1.5px;
+  }
+
+  .mobile-header-actions{
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+
+  .mobile-notification-button,
+  .mobile-logout-button{
+    position:relative;
+    min-height:40px;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:7px;
+    background:#11151a;
+    color:#fff;
+  }
+
+  .mobile-notification-button{
+    width:40px;
+  }
+
+  .mobile-notification-button span{
+    position:absolute;
+    top:-5px;
+    right:-5px;
+    display:none;
+    min-width:18px;
+    height:18px;
+    place-items:center;
+    padding:0 5px;
+    border-radius:99px;
+    background:var(--red,#ff334f);
+    color:#fff;
+    font-size:9px;
+    font-weight:900;
+  }
+
+  .mobile-notification-button span.show{display:grid}
+
+  .mobile-logout-button{
+    padding:0 10px;
+    color:#ff7184;
+    font-size:9px;
+    font-weight:900;
+    text-transform:uppercase;
+  }
+
+  .mobile-menu-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:10030;
+    display:block;
+    background:rgba(0,0,0,.76);
+    backdrop-filter:blur(5px);
+    opacity:0;
+    visibility:hidden;
+    transition:.25s ease;
+  }
+
+  .mobile-menu-backdrop.show{
+    opacity:1;
+    visibility:visible;
+  }
+
+  .sidebar{
+    position:fixed !important;
+    inset:0 auto 0 0;
+    z-index:10040;
+    width:min(86vw,340px);
+    height:100dvh !important;
+    padding:22px 16px 28px !important;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    border-right:1px solid rgba(255,255,255,.11);
+    background:
+      radial-gradient(circle at 20% 5%,rgba(255,51,79,.12),transparent 27%),
+      linear-gradient(180deg,#0d1014,#07090b 55%,#050607);
+    box-shadow:28px 0 70px rgba(0,0,0,.62);
+    transform:translateX(-105%);
+    transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  }
+
+  .sidebar.mobile-open{
+    transform:translateX(0);
+  }
+
+  .mobile-menu-close{
+    position:absolute;
+    top:16px;
+    right:14px;
+    z-index:2;
+    width:38px;
+    height:38px;
+    display:grid;
+    place-items:center;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:7px;
+    background:#15191e;
+    color:#aeb6bf;
+    font-size:25px;
+  }
+
+  .sidebar .brand{
+    justify-content:flex-start !important;
+    margin:0 48px 18px 0 !important;
+    padding:0 4px 18px !important;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .sidebar .champion-logo{
+    width:50px;
+    height:50px;
+  }
+
+  .sidebar .brand h1{
+    font-size:27px;
+  }
+
+  .sidebar .gym-status{
+    display:flex !important;
+    margin:0 4px 18px;
+    border-radius:6px;
+  }
+
+  .sidebar .menu{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:7px !important;
+  }
+
+  .sidebar .menu button,
+  .sidebar .menu button:last-child{
+    grid-column:auto !important;
+    justify-content:flex-start !important;
+    width:100%;
+    min-height:50px;
+    padding:12px 14px !important;
+    border:1px solid transparent;
+    border-radius:7px;
+    font-size:13px !important;
+  }
+
+  .sidebar .menu button:hover{
+    transform:none;
+  }
+
+  .sidebar .menu button.active{
+    border-color:rgba(255,51,79,.18);
+    border-left:3px solid var(--red,#ff334f);
+    background:linear-gradient(90deg,rgba(255,51,79,.18),rgba(255,51,79,.025));
+    color:#fff;
+  }
+
+  .sidebar .menu-icon{
+    width:29px;
+    font-size:17px;
+  }
+
+  .main{
+    width:100%;
+    padding:18px 14px 30px !important;
+  }
+
+  .topbar{
+    margin-bottom:18px;
+    align-items:flex-start !important;
+    flex-direction:column !important;
+  }
+
+  .topbar-actions{
+    display:none !important;
+  }
+
+  .topbar h2{
+    font-size:34px !important;
+  }
+
+  .topbar p{
+    font-size:12px;
+  }
+}
+
+@media (max-width:430px){
+  .mobile-app-header{
+    grid-template-columns:44px minmax(0,1fr) auto;
+    padding:0 10px;
+  }
+  .mobile-header-brand strong{font-size:18px}
+  .mobile-header-brand small{display:none}
+  .mobile-header-brand img{width:35px;height:35px}
+  .mobile-logout-button{padding:0 8px;font-size:8px}
+  .main{padding-inline:11px !important}
+}

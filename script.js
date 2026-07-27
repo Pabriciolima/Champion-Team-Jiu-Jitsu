@@ -1,4 +1,3 @@
-
 window.addEventListener("error", (event) => {
   console.error("Erro global Champion Team:", event.error || event.message);
 
@@ -20,7 +19,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "24";
+window.CHAMPION_APP_VERSION = "25";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -5260,3 +5259,83 @@ atualizarTudo = function() {
 })();
 
 
+
+
+/* =========================================================
+   MENU HAMBÚRGUER MOBILE — V25
+========================================================= */
+(function configurarMenuMobileChampionTeam(){
+  const sidebar=document.getElementById("appSidebar");
+  const openButton=document.getElementById("mobileMenuButton");
+  const closeButton=document.getElementById("mobileMenuClose");
+  const backdrop=document.getElementById("mobileMenuBackdrop");
+  const mobileNotification=document.getElementById("mobileNotificationButton");
+  const mobileLogout=document.getElementById("mobileLogoutButton");
+
+  if(!sidebar || !openButton || !backdrop)return;
+
+  function menuAberto(){
+    return sidebar.classList.contains("mobile-open");
+  }
+
+  function abrirMenu(){
+    sidebar.classList.add("mobile-open");
+    backdrop.classList.add("show");
+    document.body.classList.add("mobile-menu-open");
+    openButton.classList.add("active");
+    openButton.setAttribute("aria-expanded","true");
+    closeButton?.focus();
+  }
+
+  function fecharMenu({restaurarFoco=true}={}){
+    sidebar.classList.remove("mobile-open");
+    backdrop.classList.remove("show");
+    document.body.classList.remove("mobile-menu-open");
+    openButton.classList.remove("active");
+    openButton.setAttribute("aria-expanded","false");
+    if(restaurarFoco && window.innerWidth<=860)openButton.focus();
+  }
+
+  function alternarMenu(){
+    menuAberto()?fecharMenu():abrirMenu();
+  }
+
+  openButton.addEventListener("click",alternarMenu);
+  closeButton?.addEventListener("click",()=>fecharMenu());
+  backdrop.addEventListener("click",()=>fecharMenu());
+
+  sidebar.querySelectorAll('.menu button[data-view]').forEach(button=>{
+    button.addEventListener("click",()=>{
+      if(window.innerWidth<=860)fecharMenu({restaurarFoco:false});
+    });
+  });
+
+  document.addEventListener("keydown",event=>{
+    if(event.key==="Escape" && menuAberto())fecharMenu();
+  });
+
+  window.addEventListener("resize",()=>{
+    if(window.innerWidth>860 && menuAberto())fecharMenu({restaurarFoco:false});
+  });
+
+  mobileNotification?.addEventListener("click",()=>{
+    document.getElementById("topNotificationButton")?.click();
+  });
+
+  mobileLogout?.addEventListener("click",()=>{
+    document.getElementById("logoutButton")?.click();
+  });
+
+  const observer=new MutationObserver(()=>{
+    const source=document.getElementById("topNotificationBadge");
+    const target=document.getElementById("mobileNotificationBadge");
+    if(!source || !target)return;
+    target.textContent=source.textContent||"0";
+    target.classList.toggle("show",source.classList.contains("show") || Number(source.textContent||0)>0);
+  });
+
+  const sourceBadge=document.getElementById("topNotificationBadge");
+  if(sourceBadge){
+    observer.observe(sourceBadge,{subtree:true,childList:true,attributes:true,characterData:true});
+  }
+})();
