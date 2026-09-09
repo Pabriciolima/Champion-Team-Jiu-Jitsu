@@ -1,8 +1,9 @@
+
 window.addEventListener("error", (event) => {
   console.error("Erro global Champion Team:", event.error || event.message);
 
   const mensagem = event.error?.message || event.message || "Erro inesperado no sistema.";
-  window.atualizarStatusFirebase?.(
+  window.atualizarStatusSupabase?.(
     "error",
     `Falha ao iniciar: ${mensagem}`
   );
@@ -12,14 +13,14 @@ window.addEventListener("unhandledrejection", (event) => {
   console.error("Promise rejeitada:", event.reason);
 
   const mensagem = event.reason?.message || String(event.reason || "Falha inesperada.");
-  window.atualizarStatusFirebase?.(
+  window.atualizarStatusSupabase?.(
     "error",
     `Falha de conexão: ${mensagem}`
   );
 });
 
 
-window.CHAMPION_APP_VERSION = "25";
+window.CHAMPION_APP_VERSION = "32";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -71,7 +72,7 @@ const STORAGE_KEYS = {
 
       localStorage.setItem(chave, serializado);
 
-      // Dados recebidos do Firestore não podem ser enviados de volta.
+      // Dados recebidos do Supabase não podem ser enviados de volta.
       // Isso elimina o ciclo: onSnapshot → atualizarTudo → salvar → onSnapshot.
       if (window.__CHAMPION_APLICANDO_FIREBASE__) return;
 
@@ -80,10 +81,10 @@ const STORAGE_KEYS = {
 
       localStorage.setItem(`champion_sync_meta_${chave}`, String(agora));
 
-      if (typeof window.firebaseCloudSave === "function") {
-        window.firebaseCloudSave(chave, lista, agora).catch((erro) => {
-          console.error("Falha ao sincronizar com Firebase:", erro);
-          window.atualizarStatusFirebase?.(
+      if (typeof window.supabaseCloudSave === "function") {
+        window.supabaseCloudSave(chave, lista, agora).catch((erro) => {
+          console.error("Falha ao sincronizar com Supabase:", erro);
+          window.atualizarStatusSupabase?.(
             "offline",
             "Alteração mantida no aparelho. Tentaremos sincronizar novamente."
           );
@@ -159,7 +160,7 @@ function gerarId() {
 
 /* =========================================================
    PONTE FIREBASE
-   Recebe dados em tempo real do Firestore e atualiza as
+   Recebe dados em tempo real do Supabase e atualiza as
    variáveis já utilizadas pelo sistema, sem quebrar o modo local.
 ========================================================= */
 const FIREBASE_STORAGE_VARIABLES = {
@@ -180,29 +181,29 @@ const FIREBASE_STORAGE_VARIABLES = {
   champion_team_indicacoes_faixa: "indicacoesFaixa"
 };
 
-window.CHAMPION_FIREBASE_KEYS = Object.keys(FIREBASE_STORAGE_VARIABLES);
-window.CHAMPION_FIREBASE_READY = false;
-let resolverFirebasePronto;
+window.CHAMPION_SUPABASE_KEYS = Object.keys(FIREBASE_STORAGE_VARIABLES);
+window.CHAMPION_SUPABASE_READY = false;
+let resolverSupabasePronto;
 
-window.CHAMPION_FIREBASE_READY_PROMISE = new Promise((resolve) => {
-  resolverFirebasePronto = resolve;
+window.CHAMPION_SUPABASE_READY_PROMISE = new Promise((resolve) => {
+  resolverSupabasePronto = resolve;
 });
 
-window.marcarFirebasePronto = function() {
-  if (window.CHAMPION_FIREBASE_READY) return;
-  window.CHAMPION_FIREBASE_READY = true;
-  resolverFirebasePronto?.(true);
-  window.dispatchEvent(new CustomEvent("champion-firebase-ready"));
+window.marcarSupabasePronto = function() {
+  if (window.CHAMPION_SUPABASE_READY) return;
+  window.CHAMPION_SUPABASE_READY = true;
+  resolverSupabasePronto?.(true);
+  window.dispatchEvent(new CustomEvent("champion-supabase-ready"));
 };
 
-window.aguardarFirebasePronto = function(timeoutMs = 20000) {
-  if (window.CHAMPION_FIREBASE_READY) return Promise.resolve(true);
+window.aguardarSupabasePronto = function(timeoutMs = 20000) {
+  if (window.CHAMPION_SUPABASE_READY) return Promise.resolve(true);
 
   return Promise.race([
-    window.CHAMPION_FIREBASE_READY_PROMISE,
+    window.CHAMPION_SUPABASE_READY_PROMISE,
     new Promise((_, reject) => {
       setTimeout(
-        () => reject(new Error("Tempo limite ao carregar o Firebase.")),
+        () => reject(new Error("Tempo limite ao carregar o Supabase.")),
         timeoutMs
       );
     })
@@ -210,10 +211,10 @@ window.aguardarFirebasePronto = function(timeoutMs = 20000) {
 };
 
 
-window.atualizarStatusFirebase = function(tipo, mensagem) {
-  const caixa = document.getElementById("firebaseStatus");
-  const texto = document.getElementById("firebaseStatusText");
-  const tentar = document.getElementById("firebaseRetryButton");
+window.atualizarStatusSupabase = function(tipo, mensagem) {
+  const caixa = document.getElementById("supabaseStatus");
+  const texto = document.getElementById("supabaseStatusText");
+  const tentar = document.getElementById("supabaseRetryButton");
   if (!caixa || !texto) return;
 
   caixa.classList.remove(
@@ -231,11 +232,11 @@ window.atualizarStatusFirebase = function(tipo, mensagem) {
   }
 };
 
-document.getElementById("firebaseRetryButton")?.addEventListener("click", () => {
-  window.firebaseReconectar?.();
+document.getElementById("supabaseRetryButton")?.addEventListener("click", () => {
+  window.supabaseReconectar?.();
 });
 
-window.obterDadosLocaisFirebase = function(chave) {
+window.obterDadosLocaisSupabase = function(chave) {
   try {
     return JSON.parse(localStorage.getItem(chave)) || [];
   } catch (erro) {
@@ -244,7 +245,7 @@ window.obterDadosLocaisFirebase = function(chave) {
   }
 };
 
-window.aplicarDadosFirebase = function(chave, dadosRecebidos) {
+window.aplicarDadosSupabase = function(chave, dadosRecebidos) {
   const dados = Array.isArray(dadosRecebidos) ? dadosRecebidos : [];
   const serializado = JSON.stringify(dados);
 
@@ -318,12 +319,12 @@ window.aplicarDadosFirebase = function(chave, dadosRecebidos) {
 };
 
 window.addEventListener("online", () => {
-  window.atualizarStatusFirebase?.("syncing", "Internet restabelecida. Sincronizando...");
-  window.firebaseReconectar?.();
+  window.atualizarStatusSupabase?.("syncing", "Internet restabelecida. Sincronizando...");
+  window.supabaseReconectar?.();
 });
 
 window.addEventListener("offline", () => {
-  window.atualizarStatusFirebase?.(
+  window.atualizarStatusSupabase?.(
     "offline",
     "Sem internet. O sistema continua funcionando neste aparelho."
   );
@@ -398,7 +399,7 @@ window.addEventListener("offline", () => {
       };
 
       if (!id) {
-        const conta = await window.firebaseCriarUsuario?.({
+        const conta = await window.supabaseCriarUsuario?.({
           role: "aluno",
           profileId: dados.id,
           nome: dados.nome,
@@ -407,7 +408,7 @@ window.addEventListener("offline", () => {
           password: String(dados.cpf || "").replace(/\D/g, "").slice(0,6)
         });
         if (!conta?.uid) {
-          mostrarAlerta("Não foi possível criar o acesso Firebase do aluno.", "error");
+          mostrarAlerta("Não foi possível criar o acesso Supabase do aluno.", "error");
           return;
         }
         dados.authUid = conta.uid;
@@ -416,7 +417,7 @@ window.addEventListener("offline", () => {
         dados.authUid = anterior?.authUid || "";
 
         if (!dados.authUid) {
-          const conta = await window.firebaseCriarUsuario?.({
+          const conta = await window.supabaseCriarUsuario?.({
             role: "aluno",
             profileId: dados.id,
             nome: dados.nome,
@@ -436,7 +437,7 @@ window.addEventListener("offline", () => {
           String(anterior.email).trim().toLowerCase() !== dados.email
         ) {
           try {
-            await window.firebaseMigrarAcessoAluno?.({
+            await window.supabaseMigrarAcessoAluno?.({
               authUid: dados.authUid,
               cpf: dados.cpf,
               emailNovo: dados.email,
@@ -459,9 +460,9 @@ window.addEventListener("offline", () => {
 
       salvar(STORAGE_KEYS.alunos, alunos);
 
-      if (dados.authUid && typeof window.firebaseAtualizarPerfilAcesso === "function") {
+      if (dados.authUid && typeof window.supabaseAtualizarPerfilAcesso === "function") {
         try {
-          await window.firebaseAtualizarPerfilAcesso({
+          await window.supabaseAtualizarPerfilAcesso({
             authUid: dados.authUid,
             role: "aluno",
             profileId: dados.id,
@@ -953,13 +954,13 @@ if (document.readyState === "loading") {
       salvar(GRADUATION_KEYS.exames, examesGraduacao);
       salvar(STORAGE_KEYS.alunos, alunos);
 
-      if (authUid && typeof window.firebaseExcluirPerfilAluno === "function") {
+      if (authUid && typeof window.supabaseExcluirPerfilAluno === "function") {
         try {
-          await window.firebaseExcluirPerfilAluno(authUid);
+          await window.supabaseExcluirPerfilAluno(authUid);
         } catch (erro) {
-          console.error("Falha ao remover perfil Firebase:", erro);
+          console.error("Falha ao remover perfil Supabase:", erro);
           mostrarAlerta(
-            "Histórico removido, mas o perfil de acesso Firebase precisará ser revisado.",
+            "Histórico removido, mas o perfil de acesso Supabase precisará ser revisado.",
             "error"
           );
           atualizarTudo();
@@ -1107,36 +1108,56 @@ if (document.readyState === "loading") {
       const ultimos = document.getElementById("ultimosCheckins");
 
       if (!checkins.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty">Nenhum check-in registrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum check-in registrado.</td></tr>';
         ultimos.innerHTML = '<tr><td colspan="4" class="empty">Nenhum check-in registrado.</td></tr>';
         return;
       }
 
       tbody.innerHTML = checkins.map((checkin) => {
         const aluno = alunos.find((item) => item.id === checkin.alunoId);
+        const statusMeta = statusCheckinLabelV30(checkin.validationStatus);
 
         return `
           <tr>
             <td>${aluno?.nome || "Aluno não encontrado"}</td>
             <td>${aluno?.cpf || "-"}</td>
+            <td>
+              ${checkin.fotoUrl
+                ? `<img class="admin-checkin-thumb" data-checkin-photo-path="${checkin.fotoUrl}" alt="Selfie de check-in">`
+                : `<span class="admin-checkin-no-photo">—</span>`
+              }
+            </td>
             <td>${formatarData(checkin.data)}</td>
-            <td>${checkin.horario}</td>
+            <td>${checkin.horario || checkin.hora || "--:--"}</td>
+            <td><span class="student-checkin-status ${statusMeta.className}">${statusMeta.label}</span></td>
+            <td>
+              ${checkin.validationStatus === "pending"
+                ? `<div class="checkin-validation-actions">
+                    <button class="btn btn-success" type="button" data-validate-checkin="${checkin.id}" data-status="approved">Validar</button>
+                    <button class="btn btn-danger" type="button" data-validate-checkin="${checkin.id}" data-status="rejected">Recusar</button>
+                  </div>`
+                : `<span class="muted">Concluído</span>`
+              }
+            </td>
           </tr>
         `;
       }).join("");
 
       ultimos.innerHTML = checkins.slice(0, 5).map((checkin) => {
         const aluno = alunos.find((item) => item.id === checkin.alunoId);
+        const statusMeta = statusCheckinLabelV30(checkin.validationStatus);
 
         return `
           <tr>
             <td>${aluno?.nome || "Aluno não encontrado"}</td>
             <td>${formatarData(checkin.data)}</td>
-            <td>${checkin.horario}</td>
-            <td><span class="status ativo">Liberado</span></td>
+            <td>${checkin.horario || checkin.hora || "--:--"}</td>
+            <td><span class="student-checkin-status ${statusMeta.className}">${statusMeta.label}</span></td>
           </tr>
         `;
       }).join("");
+
+      window.hidratarFotosCheckinV30?.(tbody);
     }
 
     function atualizarDashboard() {
@@ -1206,7 +1227,7 @@ document.querySelectorAll("[data-go-view]").forEach((botao) => {
 const LOGIN_KEY = "fitcontrol_login_ativo";
 function abrirSistema(){document.getElementById("loginScreen").classList.add("hidden");document.getElementById("appShell").classList.remove("app-locked");atualizarGraficosDashboard()}
 async function fecharSistema(){
-  await window.firebaseLogout?.();
+  await window.supabaseLogout?.();
   localStorage.removeItem(LOGIN_KEY);
   sessionStorage.removeItem(LOGIN_KEY);
   localStorage.removeItem("fitcontrol_tipo_usuario");
@@ -1241,13 +1262,13 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
   }
 
   try {
-    if (typeof window.firebaseLogin !== "function") {
+    if (typeof window.supabaseLogin !== "function") {
       throw new Error(
-        "O Firebase não foi carregado. Faça um novo deploy com o script.js atualizado e limpe o cache."
+        "O Supabase não foi carregado. Faça um novo deploy com o script.js atualizado e limpe o cache."
       );
     }
 
-    const sessao = await window.firebaseLogin(identificador, senha);
+    const sessao = await window.supabaseLogin(identificador, senha);
     const perfil = sessao.perfil;
 
     localStorage.setItem("fitcontrol_tipo_usuario", perfil.role);
@@ -1258,7 +1279,7 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
     else sessionStorage.setItem(LOGIN_KEY, "true");
 
     if (perfil.role === "gestor") {
-      abrirSistemaComoAdministrador();
+      abrirSistemaComoAdministrador(perfil.dbRole || "owner", perfil.nome || "Administrador");
       aplicarPermissoesPerfil("gestor");
       mostrarAlerta("Acesso do gestor realizado.");
       return;
@@ -1305,7 +1326,17 @@ function atualizarGraficosDashboard(){atualizarGraficoCheckins();atualizarGrafic
 const atualizarTudoBase=atualizarTudo;atualizarTudo=function(){atualizarTudoBase();atualizarGraficosDashboard()};
 
 function atualizarPerfilCabecalho(nome,funcao,avatar){const n=document.getElementById("currentUserName"),f=document.getElementById("currentUserRole"),a=document.getElementById("currentUserAvatar");if(n)n.textContent=nome;if(f)f.textContent=funcao;if(a)a.textContent=avatar}
-function abrirSistemaComoAdministrador(){document.body.classList.remove("student-mode");atualizarPerfilCabecalho("Administrador","Gestor da academia","AD");abrirSistema();document.querySelector('.menu button[data-view="dashboard"]')?.click()}
+function abrirSistemaComoAdministrador(dbRole="owner", nome="Administrador"){
+  document.body.classList.remove("student-mode","professor-mode");
+  const isMaster = dbRole === "master_admin";
+  atualizarPerfilCabecalho(
+    isMaster ? (nome || "Master Admin") : (nome || "Proprietário"),
+    isMaster ? "Administrador Master do SaaS" : "Proprietário da academia",
+    isMaster ? "MA" : "AD"
+  );
+  abrirSistema();
+  document.querySelector('.menu button[data-view="dashboard"]')?.click();
+}
 function abrirSistemaComoProfessor(professor){
   document.body.classList.remove("student-mode");
   document.body.classList.add("professor-mode");
@@ -1319,7 +1350,7 @@ function aplicarPermissoesPerfil(role){
     gestor: [
       "dashboard","alunos","planos","matriculas","professores",
       "treinos","videos","loja","areaAluno","notificacoes",
-      "graduacoes","checkin"
+      "graduacoes","checkin","billingCrm"
     ],
     professor: ["treinos"],
     aluno: ["areaAluno"]
@@ -1328,23 +1359,49 @@ function aplicarPermissoesPerfil(role){
   const lista = permitidas[role] || [];
 
   document.querySelectorAll(".menu button[data-view]").forEach(botao => {
-    botao.hidden = !lista.includes(botao.dataset.view);
+    const permitido = lista.includes(botao.dataset.view);
+    botao.hidden = !permitido;
+    botao.classList.toggle("role-hidden", !permitido);
+
+    if (permitido) {
+      botao.style.removeProperty("display");
+      botao.removeAttribute("aria-hidden");
+      botao.tabIndex = 0;
+    } else {
+      botao.style.setProperty("display","none","important");
+      botao.setAttribute("aria-hidden","true");
+      botao.tabIndex = -1;
+    }
   });
 
   document.querySelectorAll(".view").forEach(view => {
-    if (!lista.includes(view.id)) {
-      view.classList.remove("active");
-    }
+    const permitida = lista.includes(view.id);
+    view.classList.toggle("role-view-disabled", !permitida);
+    if (!permitida) view.classList.remove("active");
   });
+
+  const topNotificationButton = document.getElementById("topNotificationButton");
+  if (topNotificationButton) {
+    const mostrarNotificacoes = role === "gestor";
+    topNotificationButton.hidden = !mostrarNotificacoes;
+    topNotificationButton.style.setProperty(
+      "display",
+      mostrarNotificacoes ? "" : "none",
+      mostrarNotificacoes ? "" : "important"
+    );
+  }
 
   document.body.dataset.role = role;
   document.body.classList.toggle("professor-mode", role === "professor");
   document.body.classList.toggle("student-mode", role === "aluno");
+
+  const teacherOverview = document.getElementById("teacherOverview");
+  if (teacherOverview) teacherOverview.hidden = role !== "professor";
 }
 
 function abrirSistemaComoAluno(aluno){document.body.classList.add("student-mode");atualizarPerfilCabecalho(aluno.nome,"Aluno da academia",obterIniciaisAluno(aluno.nome));alunoLogadoId=aluno.id;sessionStorage.setItem("fitcontrol_aluno_logado",aluno.id);document.getElementById("studentAccessScreen")?.classList.add("hidden");document.getElementById("studentDashboard")?.classList.remove("hidden");abrirSistema();document.querySelector('.menu button[data-view="areaAluno"]')?.click();renderizarAreaAluno()}
 function restaurarSessaoPorPerfil(){
-  // A restauração real é controlada pelo Firebase Authentication.
+  // A restauração real é controlada pelo Supabase Authentication.
 }
 
 window.addEventListener("champion-auth-restored", (event) => {
@@ -1356,7 +1413,7 @@ window.addEventListener("champion-auth-restored", (event) => {
   localStorage.setItem("champion_perfil", JSON.stringify(perfil));
 
   if (perfil.role === "gestor") {
-    abrirSistemaComoAdministrador();
+    abrirSistemaComoAdministrador(perfil.dbRole || "owner", perfil.nome || "Administrador");
     aplicarPermissoesPerfil("gestor");
   } else if (perfil.role === "professor") {
     const professor = professores.find(p => String(p.id) === String(perfil.profileId)) || { nome: perfil.nome || user.email };
@@ -1851,7 +1908,7 @@ document.getElementById("formProfessor")?.addEventListener("submit", async (even
 
   try {
     if (!dados.authUid) {
-      const conta = await window.firebaseCriarUsuario?.({
+      const conta = await window.supabaseCriarUsuario?.({
         role: "professor",
         profileId: dados.id,
         nome: dados.nome,
@@ -1867,7 +1924,7 @@ document.getElementById("formProfessor")?.addEventListener("submit", async (even
 
       dados.authUid = conta.uid;
     } else if (senhaAntiga && anterior?.email) {
-      await window.firebaseMigrarProfessor?.({
+      await window.supabaseMigrarProfessor?.({
         authUid: dados.authUid,
         emailAntigo: anterior.email,
         senhaAntiga,
@@ -1889,9 +1946,9 @@ document.getElementById("formProfessor")?.addEventListener("submit", async (even
 
     salvarProfessores();
 
-    if (dados.authUid && typeof window.firebaseAtualizarPerfilAcesso === "function") {
+    if (dados.authUid && typeof window.supabaseAtualizarPerfilAcesso === "function") {
       try {
-        await window.firebaseAtualizarPerfilAcesso({
+        await window.supabaseAtualizarPerfilAcesso({
           authUid: dados.authUid,
           role: "professor",
           profileId: dados.id,
@@ -3234,6 +3291,161 @@ const modelosJiuJitsu=[
 if(typeof modelosAutomaticosTreino!=="undefined"){modelosAutomaticosTreino.splice(0,modelosAutomaticosTreino.length,...modelosJiuJitsu);filtroModeloTreinoAtual="Todos";renderizarModelosAutomaticosTreino()}
 
 
+
+// ==========================================================
+// CHECK-IN COM SELFIE — ÁREA DO ALUNO — V30
+// ==========================================================
+let studentSelfieFileV30 = null;
+
+function statusCheckinLabelV30(status){
+  const s=String(status||"pending");
+  if(s==="approved") return {label:"PRESENÇA VALIDADA",className:"approved"};
+  if(s==="rejected") return {label:"CHECK-IN RECUSADO",className:"rejected"};
+  return {label:"AGUARDANDO VALIDAÇÃO",className:"pending"};
+}
+
+window.renderStudentSelfieCheckinV30 = async function(payload={}){
+  const student=payload.student;
+  const classes=Array.isArray(payload.classes)?payload.classes:[];
+  const dbCheckins=Array.isArray(payload.checkins)?payload.checkins:[];
+  const select=document.getElementById("studentCheckinClass");
+  const history=document.getElementById("studentCheckinHistory");
+  const badge=document.getElementById("studentCheckinStatusBadge");
+  if(!student || !select || !history) return;
+
+  select.innerHTML='<option value="">Selecione sua turma</option>' + classes.map(c=>`
+    <option value="${c.id}">
+      ${escaparHtml(c.name)} • ${String(c.start_time||"").slice(0,5)}
+    </option>
+  `).join("");
+
+  const today=hojeIso();
+  const todayCheckin=dbCheckins.find(c=>String(c.checkin_date||c.checked_in_at||"").slice(0,10)===today);
+  if(todayCheckin && badge){
+    const meta=statusCheckinLabelV30(todayCheckin.validation_status);
+    badge.textContent=meta.label;
+    badge.className=`student-checkin-badge ${meta.className}`;
+  }else if(badge){
+    badge.textContent="PRONTO PARA CHECK-IN";
+    badge.className="student-checkin-badge";
+  }
+
+  history.innerHTML=dbCheckins.length
+    ? dbCheckins.slice(0,6).map(c=>{
+        const meta=statusCheckinLabelV30(c.validation_status);
+        const cls=classes.find(x=>String(x.id)===String(c.class_id));
+        return `
+          <article class="student-checkin-history-card">
+            <div class="student-checkin-history-photo">
+              ${c.photo_url
+                ? `<img data-checkin-photo-path="${c.photo_url}" alt="Selfie do check-in">`
+                : `<div class="student-checkin-no-photo">✓</div>`
+              }
+            </div>
+            <div class="student-checkin-history-content">
+              <strong>${cls?.name || "Check-in"}</strong>
+              <span>${formatarData(String(c.checkin_date||c.checked_in_at||"").slice(0,10))} • ${String(c.checked_in_at||"").slice(11,16)}</span>
+              <small class="student-checkin-status ${meta.className}">${meta.label}</small>
+            </div>
+          </article>
+        `;
+      }).join("")
+    : '<div class="empty">Você ainda não realizou check-in com selfie.</div>';
+
+  await window.hidratarFotosCheckinV30?.(history);
+};
+
+document.getElementById("studentSelfieInput")?.addEventListener("change",(event)=>{
+  const file=event.target.files?.[0] || null;
+  const preview=document.getElementById("studentSelfiePreview");
+  const message=document.getElementById("studentSelfieCheckinMessage");
+  studentSelfieFileV30=file;
+
+  if(message) message.textContent="";
+
+  if(!file){
+    if(preview) preview.innerHTML=`
+      <div class="student-selfie-placeholder">
+        <span>📷</span>
+        <strong>SUA SELFIE APARECE AQUI</strong>
+        <small>A foto é privada e usada somente para validar a presença.</small>
+      </div>`;
+    return;
+  }
+
+  if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){
+    studentSelfieFileV30=null;
+    event.target.value="";
+    if(message) message.textContent="Use uma imagem JPG, PNG ou WEBP.";
+    return;
+  }
+
+  if(file.size > 10 * 1024 * 1024){
+    studentSelfieFileV30=null;
+    event.target.value="";
+    if(message) message.textContent="A foto deve ter no máximo 10 MB.";
+    return;
+  }
+
+  const reader=new FileReader();
+  reader.onload=()=>{
+    if(preview) preview.innerHTML=`<img src="${reader.result}" alt="Prévia da selfie">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById("studentSelfieCheckinButton")?.addEventListener("click",async()=>{
+  const aluno=obterAlunoLogado();
+  const classId=document.getElementById("studentCheckinClass")?.value;
+  const message=document.getElementById("studentSelfieCheckinMessage");
+  const button=document.getElementById("studentSelfieCheckinButton");
+
+  if(!aluno){
+    if(message) message.textContent="Sessão do aluno não encontrada.";
+    return;
+  }
+  if(!classId){
+    if(message) message.textContent="Selecione sua turma.";
+    return;
+  }
+  if(!studentSelfieFileV30){
+    if(message) message.textContent="Tire ou escolha uma selfie antes de enviar.";
+    return;
+  }
+
+  button.disabled=true;
+  button.textContent="ENVIANDO CHECK-IN...";
+  if(message) message.textContent="Enviando sua selfie com segurança...";
+
+  try{
+    await window.supabaseRegistrarSelfieCheckin({
+      studentId:aluno.id,
+      classId,
+      file:studentSelfieFileV30
+    });
+
+    studentSelfieFileV30=null;
+    const input=document.getElementById("studentSelfieInput");
+    if(input) input.value="";
+    const preview=document.getElementById("studentSelfiePreview");
+    if(preview) preview.innerHTML=`
+      <div class="student-selfie-success">
+        <span>✓</span>
+        <strong>CHECK-IN ENVIADO</strong>
+        <small>Aguarde a validação do professor.</small>
+      </div>`;
+
+    if(message) message.textContent="Check-in enviado. Sua presença está aguardando validação.";
+    mostrarAlerta("Selfie enviada. O professor já pode validar sua presença.");
+  }catch(e){
+    if(message) message.textContent=e.message || "Não foi possível enviar o check-in.";
+    mostrarAlerta(e.message || "Falha ao enviar check-in.","error");
+  }finally{
+    button.disabled=false;
+    button.textContent="ENVIAR SELFIE E CONFIRMAR CHECK-IN";
+  }
+});
+
 // ==========================================================
 // ÁREA DO ALUNO COM ACESSO POR CPF E COMPRAS
 // ==========================================================
@@ -4543,7 +4755,7 @@ function configurarFormularioAlterarSenha({
         botao.textContent = "Atualizando...";
       }
 
-      await window.firebaseAlterarSenhaUsuario?.(atual, nova);
+      await window.supabaseAlterarSenhaUsuario?.(atual, nova);
 
       event.target.reset();
       mostrarAlerta("Senha atualizada com sucesso.");
@@ -4738,458 +4950,1071 @@ atualizarTudo = function() {
 };
 
 
+
 /* =========================================================
-   FIREBASE INTEGRADO — 3 PERFIS
+   PAINEL DO PROFESSOR — V28
+========================================================= */
+window.renderProfessorOverviewV28 = function(payload = {}){
+  const root = document.getElementById("teacherOverview");
+  if (!root) return;
+
+  const classes = Array.isArray(payload.classes) ? payload.classes : [];
+  const classStudents = Array.isArray(payload.classStudents) ? payload.classStudents : [];
+  const checkins = Array.isArray(payload.checkins) ? payload.checkins : [];
+  const students = Array.isArray(payload.students) ? payload.students : [];
+
+  const today = new Date();
+  const isoToday = [
+    today.getFullYear(),
+    String(today.getMonth()+1).padStart(2,"0"),
+    String(today.getDate()).padStart(2,"0")
+  ].join("-");
+
+  const classIds = new Set(classes.map(x=>String(x.id)));
+  const linkedStudentIds = new Set(
+    classStudents
+      .filter(x=>classIds.has(String(x.class_id)))
+      .map(x=>String(x.student_id))
+  );
+
+  const checkinsToday = checkins.filter(x=>{
+    const date = String(x.checked_in_at || x.checkin_date || "").slice(0,10);
+    return date === isoToday && classIds.has(String(x.class_id));
+  });
+
+  document.getElementById("teacherClassesCount").textContent = classes.length;
+  document.getElementById("teacherStudentsCount").textContent = linkedStudentIds.size;
+  document.getElementById("teacherCheckinsToday").textContent = checkinsToday.filter(x=>x.validation_status!=="rejected").length;
+
+  const validationList=document.getElementById("teacherCheckinValidationList");
+  const pending=checkinsToday.filter(x=>x.photo_url && (x.validation_status||"pending")==="pending");
+  const pendingCount=document.getElementById("teacherPendingCheckinsCount");
+  if(pendingCount) pendingCount.textContent=`${pending.length} PENDENTE${pending.length===1?"":"S"}`;
+
+  if(validationList){
+    const studentMap=new Map(students.map(s=>[String(s.id),s]));
+    validationList.innerHTML=pending.length
+      ? pending.map(c=>{
+          const st=studentMap.get(String(c.student_id));
+          const time=String(c.checked_in_at||"").slice(11,16);
+          return `
+            <article class="teacher-validation-card">
+              <div class="teacher-validation-photo">
+                <img data-checkin-photo-path="${c.photo_url}" alt="Selfie de ${st?.full_name||"aluno"}">
+              </div>
+              <div class="teacher-validation-content">
+                <span class="teacher-validation-kicker">AGUARDANDO VALIDAÇÃO</span>
+                <h5>${st?.full_name||"Aluno"}</h5>
+                <p>${time||"--:--"} • ${classes.find(x=>String(x.id)===String(c.class_id))?.name||"Turma"}</p>
+                <div class="teacher-validation-actions">
+                  <button type="button" class="btn btn-success" data-validate-checkin="${c.id}" data-status="approved">CONFIRMAR PRESENÇA</button>
+                  <button type="button" class="btn btn-danger" data-validate-checkin="${c.id}" data-status="rejected">RECUSAR</button>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join("")
+      : '<div class="teacher-empty-state">Nenhum check-in com selfie aguardando validação.</div>';
+
+    window.hidratarFotosCheckinV30?.(validationList);
+  }
+
+  const studentsMap = new Map(students.map(s=>[String(s.id),s]));
+  const weekdays = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  const list = document.getElementById("teacherScheduleList");
+  if (!list) return;
+
+  if (!classes.length) {
+    list.innerHTML = '<div class="teacher-empty-state">Nenhuma turma vinculada ao professor.</div>';
+    return;
+  }
+
+  list.innerHTML = classes
+    .slice()
+    .sort((a,b)=>(Number(a.weekday||0)-Number(b.weekday||0)) || String(a.start_time||"").localeCompare(String(b.start_time||"")))
+    .map(cls=>{
+      const ids = classStudents.filter(x=>String(x.class_id)===String(cls.id)).map(x=>String(x.student_id));
+      const presentToday = new Set(
+        checkinsToday
+          .filter(x=>String(x.class_id)===String(cls.id))
+          .map(x=>String(x.student_id))
+      );
+
+      const names = ids
+        .map(id=>studentsMap.get(id)?.full_name)
+        .filter(Boolean)
+        .slice(0,5);
+
+      return `
+        <article class="teacher-class-card">
+          <div class="teacher-class-main">
+            <div>
+              <span class="teacher-class-day">${weekdays[Number(cls.weekday||0)] || "Dia"}</span>
+              <h5>${cls.name || "Turma"}</h5>
+              <p>${String(cls.start_time||"").slice(0,5)} → ${String(cls.end_time||"").slice(0,5)} • ${cls.level || "Todos os níveis"}</p>
+            </div>
+            <div class="teacher-class-count">
+              <strong>${presentToday.size}/${ids.length}</strong>
+              <span>presentes hoje</span>
+            </div>
+          </div>
+          <div class="teacher-class-students">
+            ${names.length ? names.map(n=>`<span>${n}</span>`).join("") : '<span class="muted">Sem alunos vinculados</span>'}
+            ${ids.length > names.length ? `<span>+${ids.length-names.length}</span>` : ""}
+          </div>
+        </article>
+      `;
+    }).join("");
+};
+
+document.addEventListener("click", async (event)=>{
+  const button=event.target.closest("[data-validate-checkin]");
+  if(!button) return;
+
+  const checkinId=button.dataset.validateCheckin;
+  const statusValue=button.dataset.status;
+  if(!checkinId || !statusValue) return;
+
+  button.disabled=true;
+  try{
+    await window.supabaseValidarCheckin(checkinId,statusValue);
+    mostrarAlerta(
+      statusValue==="approved" ? "Presença confirmada." : "Check-in recusado.",
+      statusValue==="approved" ? "success" : "error"
+    );
+  }catch(e){
+    mostrarAlerta(e.message || "Não foi possível validar o check-in.","error");
+  }finally{
+    button.disabled=false;
+  }
+});
+
+/* =========================================================
+   SUPABASE NORMALIZADO — V28
+   Fonte de verdade: tabelas PostgreSQL
 ========================================================= */
 (function(){
   "use strict";
-  if (window.__CHAMPION_FIREBASE_BOOTSTRAPPED__) return;
-  window.__CHAMPION_FIREBASE_BOOTSTRAPPED__ = true;
-  const firebaseConfig={
-    apiKey:"AIzaSyBxaunouh9vyEoseDrfgZkpdL1gswlk5wc",
-    authDomain:"champion-team-jiu-jitsu.firebaseapp.com",
-    projectId:"champion-team-jiu-jitsu",
-    storageBucket:"champion-team-jiu-jitsu.firebasestorage.app",
-    messagingSenderId:"172574452967",
-    appId:"1:172574452967:web:cd64c1a576229f7fb5c642"
-  };
-  const DATA="academyData", USERS="users", STUDENT_VIEWS="studentViews";
-  const keys=window.CHAMPION_FIREBASE_KEYS||[];
-  const cache=new Map(), unsub=[];
-  const saveTimers=new Map();
-  const lastCloudJson=new Map();
-  let app,auth,db,currentProfile=null,ready=false;
-  let loginPromise=null;
-  let loadingUid=null;
 
-  const status=(tipo,msg)=>window.atualizarStatusFirebase?.(tipo,msg);
-  const cpfEmail=(cpf,role="aluno")=>{
-    const numeros=String(cpf||"").replace(/\D/g,"");
-    const dominio=role==="professor"?"professor":"aluno";
-    return `${numeros}@${dominio}.championteam.app`;
+  if(window.__CHAMPION_SUPABASE_V27__) return;
+  window.__CHAMPION_SUPABASE_V27__ = true;
+
+  const cfg = window.CHAMPION_SUPABASE_CONFIG || {};
+  let client = null;
+  let user = null;
+  let profile = null;
+  let academy = null;
+  let channels = [];
+  let loginPromise = null;
+
+  const legacyKeys = window.CHAMPION_SUPABASE_KEYS || [];
+
+  const roleToLegacy = {
+    master_admin: "gestor",
+    owner: "gestor",
+    teacher: "professor",
+    student: "aluno"
   };
-  const normalizarNomeLogin=valor=>String(valor||"")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g," ");
-  const errMsg=e=>({
-    "auth/invalid-credential":"E-mail ou senha inválidos.",
-    "auth/invalid-login-credentials":"E-mail ou senha inválidos.",
-    "auth/user-disabled":"Este acesso foi desativado.",
-    "auth/network-request-failed":"Falha de internet ao acessar o Firebase.",
-    "auth/too-many-requests":"Muitas tentativas. Aguarde alguns minutos.",
-    "auth/user-not-found":"Usuário não cadastrado.",
-    "auth/wrong-password":"Senha inválida.",
-    "auth/email-already-in-use":"Já existe uma conta com este e-mail ou CPF.",
-    "auth/weak-password":"A senha precisa ter pelo menos 6 caracteres.",
-    "auth/operation-not-allowed":"Ative E-mail/Senha no Firebase Authentication.",
-    "permission-denied":"As regras do Firestore bloquearam esta operação."
-  }[e?.code]||e?.message||"Falha no Firebase.");
+
+  const roleFromLegacy = {
+    gestor: "owner",
+    professor: "teacher",
+    aluno: "student"
+  };
+
+  function status(type,message){
+    window.atualizarStatusSupabase?.(type,message);
+  }
+
+  function err(error){
+    const m = String(error?.message || error || "");
+    if(/invalid login credentials/i.test(m)) return "E-mail ou senha inválidos.";
+    if(/email not confirmed/i.test(m)) return "O e-mail ainda não foi confirmado.";
+    if(/row level security|permission/i.test(m)) return "O Supabase bloqueou esta operação por segurança.";
+    if(/fetch|network/i.test(m)) return "Falha de conexão com o Supabase.";
+    return m || "Erro no Supabase.";
+  }
 
   function init(){
-    if(!window.firebase) throw new Error("SDK do Firebase não carregou.");
-    app=firebase.apps.length?firebase.app():firebase.initializeApp(firebaseConfig);
-    auth=firebase.auth();
-    db=firebase.firestore();
+    if(client) return client;
 
-    // Mantém a sessão no celular e reduz leituras repetidas após recarregar.
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((erro)=>{
-      console.warn("Persistência do login não disponível:",erro);
-    });
-
-    // O cache offline melhora o primeiro carregamento em redes móveis instáveis.
-    db.enablePersistence({synchronizeTabs:true}).catch((erro)=>{
-      if(!["failed-precondition","unimplemented"].includes(erro?.code)){
-        console.warn("Persistência do Firestore não disponível:",erro);
-      }
-    });
-  }
-  function docRef(key){return db.collection(DATA).doc(key.replace(/[^a-zA-Z0-9_-]/g,"_"));}
-  function apply(key,data){
-    const lista=Array.isArray(data)?data:[];
-    const json=JSON.stringify(lista);
-    if(lastCloudJson.get(key)===json && JSON.stringify(cache.get(key)||[])===json)return;
-    lastCloudJson.set(key,json);
-    cache.set(key,lista);
-    window.aplicarDadosFirebase?.(key,lista);
-  }
-
-  async function profileFor(user){
-    let snap=await db.collection(USERS).doc(user.uid).get();
-    if(!snap.exists && user.email==="admin@fitcontrol.com"){
-      const p={role:"gestor",nome:"Gestor Champion Team",email:user.email,ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp()};
-      await db.collection(USERS).doc(user.uid).set(p);
-      snap=await db.collection(USERS).doc(user.uid).get();
+    if(!window.supabase?.createClient){
+      throw new Error("SDK do Supabase não carregou.");
     }
-    if(!snap.exists) throw new Error("Perfil de acesso não configurado pelo gestor.");
-    const p=snap.data(); if(p.ativo===false) throw new Error("Acesso desativado."); return p;
-  }
 
-  async function loadKeys(keysToLoad, createMissing=false){
-    const carregarChave=async(key)=>{
-      const ref=docRef(key);
-      const snap=await ref.get();
+    if(!/^https:\/\/.+\.supabase\.co$/.test(String(cfg.url || ""))){
+      throw new Error("URL do Supabase inválida.");
+    }
 
-      if(!snap.exists){
-        if(createMissing){
-          const local=window.obterDadosLocaisFirebase?.(key)||[];
-          await ref.set({
-            itens:local,
-            updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-          });
-          apply(key,local);
-        }else{
-          apply(key,[]);
-        }
-      }else{
-        apply(key,snap.data()?.itens||[]);
+    if(!cfg.anonKey){
+      throw new Error("Chave pública do Supabase não configurada.");
+    }
+
+    client = window.supabase.createClient(cfg.url,cfg.anonKey,{
+      auth:{
+        persistSession:true,
+        autoRefreshToken:true,
+        detectSessionInUrl:true,
+        storageKey:"champion-team-v27-auth"
       }
+    });
 
-      unsub.push(ref.onSnapshot(s=>{
-        if(!s.exists || s.metadata.hasPendingWrites)return;
-        apply(key,s.data()?.itens||[]);
-      }));
-    };
-
-    await Promise.all(keysToLoad.map(carregarChave));
+    return client;
   }
 
-  async function loadManager(){
-    status("syncing","Carregando a administração...");
-    await loadKeys(keys,true);
-  }
+  const ativoTexto = v => v === false || v === "inactive" || v === "cancelled" ? "Inativo" : "Ativo";
+  const statusMembership = v => {
+    const map = {active:"Ativo",inactive:"Inativo",suspended:"Suspensa",cancelled:"Cancelada"};
+    return map[v] || "Ativo";
+  };
+  const statusMembershipDb = v => {
+    const s = String(v||"").toLowerCase();
+    if(s.includes("cancel")) return "cancelled";
+    if(s.includes("susp")) return "suspended";
+    if(s.includes("inat")) return "inactive";
+    return "active";
+  };
 
-  function loadManagerInBackground(){
-    status("syncing","Acesso liberado · sincronizando dados...");
-
-    loadManager()
-      .then(()=>{
-        status("online",`Firebase conectado · versão ${window.CHAMPION_APP_VERSION}`);
-      })
-      .catch((erro)=>{
-        console.error("Falha na sincronização administrativa:",erro);
-        status(
-          navigator.onLine?"offline":"offline",
-          "Painel aberto. Alguns dados ainda estão sendo sincronizados."
-        );
-      });
-  }
-
-  async function loadProfessor(){
-    status("syncing","Carregando o painel do professor...");
-
-    const professorKeys=[
-      "fitcontrol_alunos",
-      "fitcontrol_professores",
-      "fitcontrol_fichas_treino",
-      "champion_team_graduacoes",
-      "champion_team_regras_graduacao",
-      "champion_team_indicacoes_faixa"
-    ];
-
-    await loadKeys(professorKeys,false);
-  }
-
-  async function loadStudent(uid){
-    status("syncing","Carregando seu painel...");
-    const ref=db.collection(STUDENT_VIEWS).doc(uid), snap=await ref.get();
-    if(!snap.exists) throw new Error("O gestor ainda não sincronizou o painel deste aluno.");
-    const data=snap.data()?.data||{};
-    keys.forEach(k=>apply(k,data[k]||[]));
-    unsub.push(ref.onSnapshot(s=>{if(!s.exists)return;const d=s.data()?.data||{};keys.forEach(k=>apply(k,d[k]||[]));}));
-  }
-
-  function buildStudentView(student){
-    const id=student.id;
-    const get=k=>cache.get(k)||window.obterDadosLocaisFirebase?.(k)||[];
+  function legacyStudent(r){
     return {
-      fitcontrol_alunos:[student],
-      fitcontrol_planos:get("fitcontrol_planos").filter(x=>x.status!=="Inativo"),
-      fitcontrol_matriculas:get("fitcontrol_matriculas").filter(x=>String(x.alunoId)===String(id)),
-      fitcontrol_checkins:get("fitcontrol_checkins").filter(x=>String(x.alunoId)===String(id)),
-      fitcontrol_professores:get("fitcontrol_professores").filter(x=>x.status!=="Inativo"),
-      fitcontrol_fichas_treino:get("fitcontrol_fichas_treino").filter(x=>String(x.alunoId)===String(id)),
-      fitcontrol_videos_jiujitsu:get("fitcontrol_videos_jiujitsu").filter(x=>x.status!=="Inativo"),
-      fitcontrol_produtos_loja:get("fitcontrol_produtos_loja").filter(x=>x.status!=="Inativo"),
-      fitcontrol_pedidos_loja:get("fitcontrol_pedidos_loja").filter(x=>String(x.alunoId)===String(id)),
-      fitcontrol_notificacoes:get("fitcontrol_notificacoes").filter(n=>n.publico==="Todos os alunos"||(n.publico==="Aluno específico"&&String(n.alunoId)===String(id))),
-      champion_team_graduacoes:get("champion_team_graduacoes").filter(x=>String(x.alunoId)===String(id)),
-      champion_team_regras_graduacao:get("champion_team_regras_graduacao"),
-      champion_team_historico_graduacao:get("champion_team_historico_graduacao").filter(x=>String(x.alunoId)===String(id)),
-      champion_team_exames_graduacao:get("champion_team_exames_graduacao").filter(x=>(x.participantes||[]).map(String).includes(String(id)))
+      id:r.id,
+      nome:r.full_name,
+      cpf:r.cpf || "",
+      telefone:r.phone || "",
+      email:r.email || "",
+      nascimento:r.birth_date || "",
+      status:ativoTexto(r.active !== false && r.status === "active"),
+      authUid:r.profile_id || "",
+      faixa:r.belt || "Branca",
+      grau:Number(r.degree || 0)
     };
   }
 
-  async function rebuildStudentViews(){
-    if(currentProfile?.role!=="gestor")return;
-    const students=cache.get("fitcontrol_alunos")||[];
-    const batch=db.batch(); let count=0;
-    for(const s of students){if(!s.authUid)continue;batch.set(db.collection(STUDENT_VIEWS).doc(s.authUid),{profileId:s.id,data:buildStudentView(s),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});count++;}
-    if(count)await batch.commit();
+  function legacyTeacher(r){
+    return {
+      id:r.id,
+      nome:r.full_name,
+      cpf:r.cpf || "",
+      cref:r.cref || "",
+      especialidade:r.specialty || "Jiu-Jitsu",
+      status:r.active ? "Ativo" : "Inativo",
+      telefone:r.phone || "",
+      email:r.email || "",
+      turno:r.shift || "",
+      admissao:r.admission_date || "",
+      authUid:r.profile_id || ""
+    };
   }
 
-  window.firebaseCloudSave=(key,data)=>{
-    if(!auth?.currentUser||!currentProfile)return Promise.reject(new Error("Sessão Firebase ausente."));
-    if(currentProfile.role==="aluno"){
-      return Promise.reject(new Error("Aluno não pode alterar a base administrativa."));
+  function legacyPlan(r){
+    return {
+      id:r.id,
+      nome:r.name,
+      valor:Number(r.price || 0),
+      duracao:Number(r.duration_months || 1),
+      status:r.active ? "Ativo" : "Inativo"
+    };
+  }
+
+  function legacyMembership(r){
+    return {
+      id:r.id,
+      alunoId:r.student_id,
+      planoId:r.plan_id,
+      inicio:r.start_date,
+      vencimento:r.next_due_date || "",
+      pagamento:r.payment_method || "PIX",
+      status:statusMembership(r.status)
+    };
+  }
+
+  function legacyCheckin(r){
+    return {
+      id:r.id,
+      alunoId:r.student_id,
+      turmaId:r.class_id || "",
+      data:String(r.checkin_date || r.checked_in_at || "").slice(0,10),
+      horario:String(r.checked_in_at || "").slice(11,16),
+      hora:String(r.checked_in_at || "").slice(11,16),
+      fotoUrl:r.photo_url || "",
+      origem:r.source || "student",
+      validationStatus:r.validation_status || "approved",
+      validatedAt:r.validated_at || "",
+      validationNotes:r.validation_notes || ""
+    };
+  }
+
+  function legacyProduct(r){
+    return {
+      id:r.id,
+      nome:r.name,
+      descricao:r.description || "",
+      categoria:r.category || "",
+      preco:Number(r.price || 0),
+      estoque:Number(r.stock || 0),
+      imagem:r.image_url || "",
+      status:r.active ? "Ativo" : "Inativo",
+      destaque:!!r.featured
+    };
+  }
+
+  function legacyNotification(r){
+    return {
+      id:r.id,
+      alunoId:r.student_id || "",
+      publico:r.student_id ? "Aluno específico" : "Todos os alunos",
+      titulo:r.title,
+      mensagem:r.message,
+      tipo:r.type || "info",
+      criadoEm:r.created_at,
+      lidaEm:r.read_at || ""
+    };
+  }
+
+  function legacyGraduation(r){
+    return {
+      id:r.id,
+      alunoId:r.student_id,
+      faixa:r.belt,
+      grau:Number(r.degree || 0),
+      data:r.graduated_at,
+      observacoes:r.notes || ""
+    };
+  }
+
+  function legacyRecommendation(r){
+    return {
+      id:r.id,
+      alunoId:r.student_id,
+      professorId:r.teacher_id,
+      faixaSugerida:r.suggested_belt,
+      grauSugerido:Number(r.suggested_degree || 0),
+      observacao:r.justification || "",
+      status:r.status === "approved" ? "Aprovada" : r.status === "rejected" ? "Recusada" : "Pendente",
+      criadaEm:r.created_at
+    };
+  }
+
+  async function getProfile(authUser){
+    const {data,error} = await client
+      .from("profiles")
+      .select("*")
+      .eq("id",authUser.id)
+      .single();
+    if(error) throw error;
+    if(!data.active) throw new Error("Este acesso está desativado.");
+    return data;
+  }
+
+  async function getAcademy(){
+    if(academy) return academy;
+
+    if(profile?.academy_id){
+      const {data,error} = await client
+        .from("academies")
+        .select("*")
+        .eq("id",profile.academy_id)
+        .single();
+      if(error) throw error;
+      academy = data;
+      return academy;
     }
 
-    const professorWritableKeys=new Set([
-      "fitcontrol_fichas_treino",
-      "champion_team_indicacoes_faixa"
+    const {data,error} = await client
+      .from("academies")
+      .select("*")
+      .eq("slug",cfg.academySlug)
+      .single();
+    if(error) throw error;
+    academy = data;
+    return academy;
+  }
+
+  async function fetchAppData(key){
+    const a = await getAcademy();
+    const {data,error} = await client
+      .from("app_data")
+      .select("items")
+      .eq("academy_id",a.id)
+      .eq("key",key)
+      .maybeSingle();
+    if(error) throw error;
+    return Array.isArray(data?.items) ? data.items : [];
+  }
+
+  async function loadNormalized(){
+    const a = await getAcademy();
+
+    const [
+      studentsRes, teachersRes, plansRes, membershipsRes, checkinsRes,
+      productsRes, ordersRes, notificationsRes, gradRes, recRes,
+      trainingPlansRes, trainingItemsRes, paymentsRes, billingEventsRes
+    ] = await Promise.all([
+      client.from("students").select("*").eq("academy_id",a.id),
+      client.from("teachers").select("*").eq("academy_id",a.id),
+      client.from("plans").select("*").eq("academy_id",a.id),
+      client.from("memberships").select("*").eq("academy_id",a.id),
+      client.from("checkins").select("*").eq("academy_id",a.id),
+      client.from("products").select("*").eq("academy_id",a.id),
+      client.from("orders").select("*,order_items(*)").eq("academy_id",a.id),
+      client.from("notifications").select("*").eq("academy_id",a.id),
+      client.from("graduation_history").select("*").eq("academy_id",a.id),
+      client.from("belt_recommendations").select("*").eq("academy_id",a.id),
+      client.from("training_plans").select("*").eq("academy_id",a.id),
+      client.from("training_items").select("*"),
+      client.from("payments").select("*").eq("academy_id",a.id).order("due_date",{ascending:true}),
+      client.from("billing_events").select("*").eq("academy_id",a.id).order("created_at",{ascending:false}).limit(100)
     ]);
 
-    if(
-      currentProfile.role==="professor" &&
-      !professorWritableKeys.has(key)
-    ){
-      return Promise.reject(
-        new Error("Professor pode alterar apenas treinos e indicações de faixa.")
-      );
-    }
+    const results = [
+      studentsRes,teachersRes,plansRes,membershipsRes,checkinsRes,
+      productsRes,ordersRes,notificationsRes,gradRes,recRes,
+      trainingPlansRes,trainingItemsRes,paymentsRes,billingEventsRes
+    ];
 
-    const lista=Array.isArray(data)?data:[];
-    const json=JSON.stringify(lista);
-    if(lastCloudJson.get(key)===json)return Promise.resolve();
+    const failed = results.find(x => x.error);
+    if(failed) throw failed.error;
 
-    clearTimeout(saveTimers.get(key));
-    return new Promise((resolve,reject)=>{
-      const timer=setTimeout(async()=>{
-        try{
-          status("syncing","Salvando na nuvem...");
-          cache.set(key,lista);
-          await docRef(key).set({
-            itens:lista,
-            updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy:auth.currentUser.uid
-          },{merge:true});
-          lastCloudJson.set(key,json);
-          if(currentProfile.role==="gestor")await rebuildStudentViews();
-          status("online","Firebase conectado · dados sincronizados");
-          resolve();
-        }catch(e){reject(e);}
-        finally{saveTimers.delete(key);}
-      },350);
-      saveTimers.set(key,timer);
+    const itemsByPlan = new Map();
+    (trainingItemsRes.data||[]).forEach(item=>{
+      if(!itemsByPlan.has(item.training_plan_id)) itemsByPlan.set(item.training_plan_id,[]);
+      itemsByPlan.get(item.training_plan_id).push(item);
     });
-  };
 
-  window.firebaseExcluirPerfilAluno=async(authUid)=>{
-    if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode remover alunos.");
-    if(!authUid)return;
-    const profileRef=db.collection(USERS).doc(authUid);
-    const studentViewRef=db.collection(STUDENT_VIEWS).doc(authUid);
-    const snap=await profileRef.get();
-    const previous=snap.exists?snap.data():{};
-    const batch=db.batch();
-    batch.set(profileRef,{...previous,ativo:false,profileId:null,excluidoEm:firebase.firestore.FieldValue.serverTimestamp(),excluidoPor:auth.currentUser.uid},{merge:true});
-    batch.delete(studentViewRef);
-    await batch.commit();
-  };
+    const fichas = (trainingPlansRes.data||[]).map(p=>({
+      id:p.id,
+      alunoId:p.student_id,
+      professorId:p.teacher_id || "",
+      objetivo:p.objective || "",
+      nivel:p.level || "Iniciante",
+      inicio:p.valid_from || "",
+      validade:p.valid_until || "",
+      diasSemana:Number(p.days_per_week || 3),
+      status:p.active ? "Ativa" : "Inativa",
+      observacoes:p.notes || "",
+      exercicios:(itemsByPlan.get(p.id)||[])
+        .sort((a,b)=>a.position-b.position)
+        .map(x=>({
+          id:x.id,
+          nome:x.technique,
+          grupo:x.muscle_group || "Jiu-Jitsu",
+          series:Number(x.sets || 1),
+          repeticoes:x.repetitions || "",
+          carga:x.load || "",
+          descanso:x.rest || "",
+          videoUrl:x.video_url || ""
+        }))
+    }));
 
-  window.firebaseCriarUsuario=async({role,profileId,nome,email,cpf})=>{
-    if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode criar acessos.");
-    const loginEmail=String(email||"").trim().toLowerCase();
-    const cpfNumeros=String(cpf||"").replace(/\D/g,"");
-    const senhaInicial=cpfNumeros.slice(0,6);
-    if(!loginEmail||!loginEmail.includes("@"))throw new Error("Informe um e-mail válido.");
-    if(senhaInicial.length<6)throw new Error("O CPF precisa possuir pelo menos 6 números.");
-    const existing=await db.collection(USERS).where("email","==",loginEmail).limit(1).get();
-    if(!existing.empty){
-      const doc=existing.docs[0];
-      await doc.ref.set({role,profileId,nome,email:loginEmail,cpf:cpfNumeros,ativo:true,reativadoEm:firebase.firestore.FieldValue.serverTimestamp(),reativadoPor:auth.currentUser.uid},{merge:true});
-      return {uid:doc.id,email:loginEmail,senhaInicial,reutilizado:true};
-    }
-    const secondaryName="creator-"+Date.now();
-    const secondary=firebase.initializeApp(firebaseConfig,secondaryName);
-    try{
-      const cred=await secondary.auth().createUserWithEmailAndPassword(loginEmail,senhaInicial);
-      await db.collection(USERS).doc(cred.user.uid).set({role,profileId,nome,email:loginEmail,cpf:cpfNumeros,ativo:true,criadoEm:firebase.firestore.FieldValue.serverTimestamp(),criadoPor:auth.currentUser.uid});
-      return {uid:cred.user.uid,email:loginEmail,senhaInicial,reutilizado:false};
-    }catch(error){
-      if(error?.code==="auth/email-already-in-use"||error?.code==="auth/email-already-exists"){
-        try{
-          const recovered=await secondary.auth().signInWithEmailAndPassword(loginEmail,senhaInicial);
-          await db.collection(USERS).doc(recovered.user.uid).set({role,profileId,nome,email:loginEmail,cpf:cpfNumeros,ativo:true,recuperadoEm:firebase.firestore.FieldValue.serverTimestamp(),recuperadoPor:auth.currentUser.uid},{merge:true});
-          return {uid:recovered.user.uid,email:loginEmail,senhaInicial,reutilizado:true};
-        }catch(_){throw new Error("O e-mail ainda existe no Firebase Authentication e a senha já foi alterada. Exclua essa conta em Authentication > Usuários e salve o cadastro novamente.");}
+    const orders = (ordersRes.data||[]).map(o=>({
+      id:o.id,
+      alunoId:o.student_id,
+      status:o.status,
+      total:Number(o.total || 0),
+      pagamento:o.payment_method || "PIX",
+      criadoEm:o.created_at,
+      itens:(o.order_items||[]).map(i=>({
+        produtoId:i.product_id,
+        nome:i.product_name,
+        quantidade:Number(i.quantity || 1),
+        valor:Number(i.unit_price || 0)
+      }))
+    }));
+
+    window.aplicarDadosSupabase("fitcontrol_alunos",(studentsRes.data||[]).map(legacyStudent));
+    window.aplicarDadosSupabase("fitcontrol_professores",(teachersRes.data||[]).map(legacyTeacher));
+    window.aplicarDadosSupabase("fitcontrol_planos",(plansRes.data||[]).map(legacyPlan));
+    window.aplicarDadosSupabase("fitcontrol_matriculas",(membershipsRes.data||[]).map(legacyMembership));
+    window.aplicarDadosSupabase("fitcontrol_checkins",(checkinsRes.data||[]).map(legacyCheckin));
+    window.aplicarDadosSupabase("fitcontrol_fichas_treino",fichas);
+    window.aplicarDadosSupabase("fitcontrol_produtos_loja",(productsRes.data||[]).map(legacyProduct));
+    window.aplicarDadosSupabase("fitcontrol_pedidos_loja",orders);
+    window.aplicarDadosSupabase("fitcontrol_notificacoes",(notificationsRes.data||[]).map(legacyNotification));
+    window.aplicarDadosSupabase("champion_team_historico_graduacao",(gradRes.data||[]).map(legacyGraduation));
+    window.aplicarDadosSupabase("champion_team_indicacoes_faixa",(recRes.data||[]).map(legacyRecommendation));
+
+    window.CHAMPION_BILLING_CRM_DATA = {
+      students:studentsRes.data||[],
+      memberships:membershipsRes.data||[],
+      plans:plansRes.data||[],
+      payments:paymentsRes.data||[],
+      events:billingEventsRes.data||[]
+    };
+    window.renderBillingCrmV31?.(window.CHAMPION_BILLING_CRM_DATA);
+
+    for(const key of [
+      "fitcontrol_videos_jiujitsu",
+      "champion_team_graduacoes",
+      "champion_team_regras_graduacao",
+      "champion_team_exames_graduacao"
+    ]){
+      try{
+        window.aplicarDadosSupabase(key,await fetchAppData(key));
+      }catch(e){
+        console.warn("app_data indisponível:",key,e);
       }
-      throw new Error(errMsg(error));
-    }finally{await secondary.delete();}
-  };
+    }
+  }
 
-  window.firebaseAtualizarPerfilAcesso=async({
-    authUid,
-    role,
-    profileId,
-    nome,
-    email,
-    cpf
-  })=>{
-    if(currentProfile?.role!=="gestor"){
-      throw new Error("Somente o gestor pode atualizar acessos.");
+  async function loadStudentOnly(){
+    const {data:student,error:sError}=await client
+      .from("students")
+      .select("*")
+      .eq("profile_id",user.id)
+      .single();
+    if(sError) throw sError;
+
+    const sid = student.id;
+
+    const [
+      membershipsRes, plansRes, paymentsRes, checkinsRes, productsRes,
+      ordersRes, notificationsRes, gradRes, recRes, trainingsRes, classStudentsRes
+    ] = await Promise.all([
+      client.from("memberships").select("*").eq("student_id",sid),
+      client.from("plans").select("*").eq("academy_id",student.academy_id),
+      client.from("payments").select("*").eq("student_id",sid),
+      client.from("checkins").select("*").eq("student_id",sid).order("checked_in_at",{ascending:false}),
+      client.from("products").select("*").eq("academy_id",student.academy_id).eq("active",true),
+      client.from("orders").select("*,order_items(*)").eq("student_id",sid),
+      client.from("notifications").select("*").eq("academy_id",student.academy_id),
+      client.from("graduation_history").select("*").eq("student_id",sid),
+      client.from("belt_recommendations").select("*").eq("student_id",sid),
+      client.from("training_plans").select("*,training_items(*)").eq("student_id",sid),
+      client.from("class_students").select("*").eq("student_id",sid)
+    ]);
+
+    const failed=[membershipsRes,plansRes,paymentsRes,checkinsRes,productsRes,ordersRes,notificationsRes,gradRes,recRes,trainingsRes,classStudentsRes].find(x=>x.error);
+    if(failed) throw failed.error;
+
+    const classIds = (classStudentsRes.data||[]).map(x=>x.class_id).filter(Boolean);
+    let studentClasses = [];
+    if(classIds.length){
+      const {data:classData,error:classError}=await client
+        .from("classes")
+        .select("*")
+        .in("id",classIds)
+        .eq("active",true);
+      if(classError) throw classError;
+      studentClasses = classData || [];
     }
 
-    if(!authUid)return;
+    window.CHAMPION_STUDENT_CHECKIN_DATA = {
+      student,
+      classes:studentClasses,
+      checkins:checkinsRes.data||[]
+    };
 
-    await db.collection(USERS).doc(authUid).set({
-      role,
-      profileId,
-      nome,
-      nomeNormalizado:normalizarNomeLogin(nome),
-      email:String(email||"").trim().toLowerCase(),
-      contactEmail:String(email||"").trim().toLowerCase(),
+    window.CHAMPION_STUDENT_PAYMENT_DATA = {
+      student,
+      payments:paymentsRes.data||[],
+      memberships:membershipsRes.data||[],
+      plans:plansRes.data||[]
+    };
+
+    window.aplicarDadosSupabase("fitcontrol_alunos",[legacyStudent(student)]);
+    window.aplicarDadosSupabase("fitcontrol_planos",(plansRes.data||[]).map(legacyPlan));
+    window.aplicarDadosSupabase("fitcontrol_matriculas",(membershipsRes.data||[]).map(legacyMembership));
+    window.aplicarDadosSupabase("fitcontrol_checkins",(checkinsRes.data||[]).map(legacyCheckin));
+    window.aplicarDadosSupabase("fitcontrol_produtos_loja",(productsRes.data||[]).map(legacyProduct));
+    window.aplicarDadosSupabase("fitcontrol_pedidos_loja",(ordersRes.data||[]).map(o=>({
+      id:o.id,alunoId:o.student_id,status:o.status,total:Number(o.total||0),pagamento:o.payment_method||"PIX",criadoEm:o.created_at,
+      itens:(o.order_items||[]).map(i=>({produtoId:i.product_id,nome:i.product_name,quantidade:i.quantity,valor:Number(i.unit_price||0)}))
+    })));
+    window.aplicarDadosSupabase("fitcontrol_notificacoes",(notificationsRes.data||[]).map(legacyNotification));
+    window.aplicarDadosSupabase("champion_team_historico_graduacao",(gradRes.data||[]).map(legacyGraduation));
+    window.aplicarDadosSupabase("champion_team_indicacoes_faixa",(recRes.data||[]).map(legacyRecommendation));
+    window.aplicarDadosSupabase("fitcontrol_fichas_treino",(trainingsRes.data||[]).map(p=>({
+      id:p.id,alunoId:p.student_id,professorId:p.teacher_id||"",objetivo:p.objective||"",nivel:p.level||"Iniciante",
+      inicio:p.valid_from||"",validade:p.valid_until||"",diasSemana:Number(p.days_per_week||3),status:p.active?"Ativa":"Inativa",
+      observacoes:p.notes||"",
+      exercicios:(p.training_items||[]).sort((a,b)=>a.position-b.position).map(x=>({
+        id:x.id,nome:x.technique,grupo:x.muscle_group||"Jiu-Jitsu",series:Number(x.sets||1),
+        repeticoes:x.repetitions||"",carga:x.load||"",descanso:x.rest||"",videoUrl:x.video_url||""
+      }))
+    })));
+
+    window.renderStudentPaymentHubV31?.(window.CHAMPION_STUDENT_PAYMENT_DATA);
+    window.renderStudentSelfieCheckinV30?.(window.CHAMPION_STUDENT_CHECKIN_DATA);
+  }
+
+  async function loadTeacherOnly(){
+    const {data:teacher,error}=await client
+      .from("teachers").select("*").eq("profile_id",user.id).single();
+    if(error) throw error;
+
+    const a = await getAcademy();
+    const [studentsRes,trainingsRes,recsRes,classesRes,classStudentsRes,checkinsRes] = await Promise.all([
+      client.from("students").select("*").eq("academy_id",a.id),
+      client.from("training_plans").select("*,training_items(*)").eq("academy_id",a.id),
+      client.from("belt_recommendations").select("*").eq("academy_id",a.id),
+      client.from("classes").select("*").eq("teacher_id",teacher.id).eq("active",true),
+      client.from("class_students").select("*"),
+      client.from("checkins").select("*").eq("academy_id",a.id)
+    ]);
+
+    if(studentsRes.error) throw studentsRes.error;
+    if(trainingsRes.error) throw trainingsRes.error;
+    if(recsRes.error) throw recsRes.error;
+    if(classesRes.error) throw classesRes.error;
+    if(classStudentsRes.error) throw classStudentsRes.error;
+    if(checkinsRes.error) throw checkinsRes.error;
+
+    window.renderProfessorOverviewV28?.({
+      classes:classesRes.data||[],
+      classStudents:classStudentsRes.data||[],
+      checkins:checkinsRes.data||[],
+      students:studentsRes.data||[]
+    });
+
+    window.aplicarDadosSupabase("fitcontrol_professores",[legacyTeacher(teacher)]);
+    window.aplicarDadosSupabase("fitcontrol_alunos",(studentsRes.data||[]).map(legacyStudent));
+    window.aplicarDadosSupabase("fitcontrol_fichas_treino",(trainingsRes.data||[]).map(p=>({
+      id:p.id,alunoId:p.student_id,professorId:p.teacher_id||"",objetivo:p.objective||"",nivel:p.level||"Iniciante",
+      inicio:p.valid_from||"",validade:p.valid_until||"",diasSemana:Number(p.days_per_week||3),status:p.active?"Ativa":"Inativa",
+      observacoes:p.notes||"",
+      exercicios:(p.training_items||[]).sort((a,b)=>a.position-b.position).map(x=>({
+        id:x.id,nome:x.technique,grupo:x.muscle_group||"Jiu-Jitsu",series:Number(x.sets||1),
+        repeticoes:x.repetitions||"",carga:x.load||"",descanso:x.rest||"",videoUrl:x.video_url||""
+      }))
+    })));
+    window.aplicarDadosSupabase("champion_team_indicacoes_faixa",(recsRes.data||[]).map(legacyRecommendation));
+  }
+
+  async function deleteMissing(table,ids,academyId){
+    let q = client.from(table).select("id").eq("academy_id",academyId);
+    const {data,error}=await q;
+    if(error) throw error;
+    const keep=new Set(ids.map(String));
+    const remove=(data||[]).map(x=>x.id).filter(id=>!keep.has(String(id)));
+    if(remove.length){
+      const {error:delError}=await client.from(table).delete().in("id",remove);
+      if(delError) throw delError;
+    }
+  }
+
+  async function saveAppData(key,items){
+    const a=await getAcademy();
+    const {error}=await client.from("app_data").upsert({
+      academy_id:a.id,
+      key,
+      items:Array.isArray(items)?items:[],
+      updated_by:user.id,
+      updated_at:new Date().toISOString()
+    },{onConflict:"academy_id,key"});
+    if(error) throw error;
+  }
+
+  async function saveCore(key,items){
+    const a = await getAcademy();
+    items = Array.isArray(items)?items:[];
+
+    if(key==="fitcontrol_alunos"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,profile_id:x.authUid||null,full_name:x.nome,cpf:x.cpf||null,email:x.email||null,
+        phone:x.telefone||null,birth_date:x.nascimento||null,belt:x.faixa||"Branca",degree:Number(x.grau||0),
+        status:String(x.status).toLowerCase()==="ativo"?"active":"inactive",updated_at:new Date().toISOString()
+      }));
+      if(rows.length){ const {error}=await client.from("students").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("students",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="fitcontrol_professores"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,profile_id:x.authUid||null,full_name:x.nome,cpf:x.cpf||null,email:x.email||null,
+        phone:x.telefone||null,specialty:x.especialidade||"Jiu-Jitsu",cref:x.cref||null,active:x.status!=="Inativo",
+        updated_at:new Date().toISOString()
+      }));
+      if(rows.length){ const {error}=await client.from("teachers").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("teachers",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="fitcontrol_planos"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,name:x.nome,price:Number(x.valor||0),duration_months:Number(x.duracao||1),
+        active:x.status!=="Inativo",updated_at:new Date().toISOString()
+      }));
+      if(rows.length){ const {error}=await client.from("plans").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("plans",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="fitcontrol_matriculas"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,student_id:x.alunoId,plan_id:x.planoId,start_date:x.inicio,
+        next_due_date:x.vencimento||null,status:statusMembershipDb(x.status),payment_method:x.pagamento||"PIX",
+        updated_at:new Date().toISOString()
+      }));
+      if(rows.length){ const {error}=await client.from("memberships").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("memberships",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="fitcontrol_checkins"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,class_id:x.turmaId||null,student_id:x.alunoId,
+        checkin_date:x.data || new Date().toISOString().slice(0,10),
+        checked_in_at:x.data ? `${x.data}T${x.horario||x.hora||"12:00"}:00` : new Date().toISOString(),
+        photo_url:x.fotoUrl||null,
+        source:x.origem||"admin",
+        validation_status:x.validationStatus||"approved",
+        validation_notes:x.validationNotes||null
+      }));
+      if(rows.length){ const {error}=await client.from("checkins").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("checkins",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="fitcontrol_produtos_loja"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,name:x.nome,description:x.descricao||null,category:x.categoria||null,
+        price:Number(x.preco ?? x.valor ?? 0),stock:Number(x.estoque||0),image_url:x.imagem||x.imagemUrl||null,
+        active:x.status!=="Inativo",featured:!!x.destaque,updated_at:new Date().toISOString()
+      }));
+      if(rows.length){ const {error}=await client.from("products").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("products",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="fitcontrol_notificacoes"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,student_id:x.alunoId||null,title:x.titulo||"Notificação",message:x.mensagem||"",
+        type:x.tipo||"info",read_at:x.lidaEm||null
+      }));
+      if(rows.length){ const {error}=await client.from("notifications").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("notifications",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="champion_team_indicacoes_faixa"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,student_id:x.alunoId,teacher_id:x.professorId,
+        suggested_belt:x.faixaSugerida||"Branca",suggested_degree:Number(x.grauSugerido||0),
+        justification:x.observacao||"Sem observação",
+        status:x.status==="Aprovada"?"approved":x.status==="Recusada"?"rejected":"pending"
+      }));
+      if(rows.length){ const {error}=await client.from("belt_recommendations").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("belt_recommendations",rows.map(x=>x.id),a.id);
+      return;
+    }
+
+    if(key==="fitcontrol_fichas_treino"){
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,student_id:x.alunoId,teacher_id:x.professorId||null,title:x.objetivo||"Treino",
+        objective:x.objetivo||null,notes:x.observacoes||null,valid_from:x.inicio||null,valid_until:x.validade||null,
+        active:x.status!=="Inativa",level:x.nivel||null,days_per_week:Number(x.diasSemana||3),updated_at:new Date().toISOString()
+      }));
+      if(rows.length){ const {error}=await client.from("training_plans").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("training_plans",rows.map(x=>x.id),a.id);
+
+      for(const ficha of items){
+        await client.from("training_items").delete().eq("training_plan_id",ficha.id);
+        const exercises=(ficha.exercicios||[]).map((e,i)=>({
+          training_plan_id:ficha.id,position:i+1,technique:e.nome||"Técnica",muscle_group:e.grupo||"Jiu-Jitsu",
+          sets:Number(e.series||1),repetitions:String(e.repeticoes||""),load:String(e.carga||""),rest:String(e.descanso||""),
+          video_url:e.videoUrl||null
+        }));
+        if(exercises.length){
+          const {error}=await client.from("training_items").insert(exercises);
+          if(error)throw error;
+        }
+      }
+      return;
+    }
+
+    return saveAppData(key,items);
+  }
+
+
+
+  window.supabaseEnsurePixPaymentV31 = async function(paymentId){
+    if(!paymentId) throw new Error("Mensalidade não identificada.");
+    const {data,error}=await client.functions.invoke("billing-pix",{
+      body:{action:"ensure_charge",payment_id:paymentId}
+    });
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    await window.supabaseRefreshCurrentUserV30?.();
+    return data;
+  };
+
+  window.supabaseRunBillingCrmV31 = async function(){
+    if(!profile || !["master_admin","owner"].includes(profile.role)){
+      throw new Error("Somente a administração pode executar a régua de cobrança.");
+    }
+    const {data,error}=await client.rpc("run_billing_crm_internal");
+    if(error) throw error;
+    await loadNormalized();
+    return data;
+  };
+
+  window.supabaseSignedCheckinUrl = async function(path,expiresIn=900){
+    if(!path) return "";
+    if(/^https?:\/\//i.test(path)) return path;
+    const {data,error}=await client.storage
+      .from("checkins")
+      .createSignedUrl(path,expiresIn);
+    if(error) throw error;
+    return data?.signedUrl || "";
+  };
+
+  window.hidratarFotosCheckinV30 = async function(root=document){
+    const nodes=[...root.querySelectorAll("[data-checkin-photo-path]")];
+    await Promise.all(nodes.map(async node=>{
+      const path=node.dataset.checkinPhotoPath;
+      if(!path) return;
+      try{
+        const url=await window.supabaseSignedCheckinUrl(path,900);
+        if(url) node.src=url;
+      }catch(e){
+        console.warn("Não foi possível assinar foto do check-in",e);
+      }
+    }));
+  };
+
+  window.supabaseRegistrarSelfieCheckin = async function({studentId,classId,file}){
+    if(!user || !profile || profile.role!=="student"){
+      throw new Error("Somente o aluno pode registrar este check-in.");
+    }
+    if(!studentId || !classId || !file){
+      throw new Error("Turma e selfie são obrigatórias.");
+    }
+
+    const today=new Date().toISOString().slice(0,10);
+
+    const {data:existing,error:existingError}=await client
+      .from("checkins")
+      .select("id,validation_status")
+      .eq("student_id",studentId)
+      .eq("class_id",classId)
+      .eq("checkin_date",today)
+      .maybeSingle();
+
+    if(existingError) throw existingError;
+    if(existing) throw new Error("Você já realizou o check-in desta turma hoje.");
+
+    const ext=(file.name?.split(".").pop() || file.type?.split("/").pop() || "jpg")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g,"") || "jpg";
+
+    const path=`${user.id}/${today}-${crypto.randomUUID()}.${ext}`;
+
+    const {error:uploadError}=await client.storage
+      .from("checkins")
+      .upload(path,file,{
+        cacheControl:"3600",
+        upsert:false,
+        contentType:file.type || "image/jpeg"
+      });
+    if(uploadError) throw uploadError;
+
+    const a=await getAcademy();
+
+    const {data:created,error:insertError}=await client
+      .from("checkins")
+      .insert({
+        academy_id:a.id,
+        class_id:classId,
+        student_id:studentId,
+        checkin_date:today,
+        checked_in_at:new Date().toISOString(),
+        photo_url:path,
+        source:"student_selfie",
+        validation_status:"pending"
+      })
+      .select("*")
+      .single();
+
+    if(insertError){
+      await client.storage.from("checkins").remove([path]).catch(()=>{});
+      throw insertError;
+    }
+
+    await loadStudentOnly();
+    return created;
+  };
+
+  window.supabaseValidarCheckin = async function(checkinId,statusValue,notes=""){
+    if(!user || !profile || !["master_admin","owner","teacher"].includes(profile.role)){
+      throw new Error("Você não possui permissão para validar presença.");
+    }
+    if(!["approved","rejected"].includes(statusValue)){
+      throw new Error("Status de validação inválido.");
+    }
+
+    const {error}=await client
+      .from("checkins")
+      .update({
+        validation_status:statusValue,
+        validated_by:user.id,
+        validated_at:new Date().toISOString(),
+        validation_notes:String(notes||"").trim() || null
+      })
+      .eq("id",checkinId);
+
+    if(error) throw error;
+
+    if(profile.role==="teacher") await loadTeacherOnly();
+    else await loadNormalized();
+
+    return true;
+  };
+
+  window.supabaseRefreshCurrentUserV30 = async function(){
+    if(!profile) return;
+    if(profile.role==="student") return loadStudentOnly();
+    if(profile.role==="teacher") return loadTeacherOnly();
+    return loadNormalized();
+  };
+
+  window.supabaseCloudSave = async function(key,data){
+    if(!user || !profile) throw new Error("Sessão Supabase ausente.");
+    if(roleToLegacy[profile.role]==="aluno") throw new Error("Aluno não pode editar dados administrativos.");
+
+    if(roleToLegacy[profile.role]==="professor" && !["fitcontrol_fichas_treino","champion_team_indicacoes_faixa"].includes(key)){
+      throw new Error("Professor pode editar apenas treinos e indicações.");
+    }
+
+    status("syncing","Salvando no Supabase...");
+    await saveCore(key,data);
+    status("online",`Supabase conectado · versão ${window.CHAMPION_APP_VERSION}`);
+  };
+
+  window.supabaseCriarUsuario = async function({role,profileId,nome,email,cpf,password}){
+    if(!profile || !["master_admin","owner"].includes(profile.role)){
+      throw new Error("Somente a administração pode criar acessos.");
+    }
+
+    const a=await getAcademy();
+    const dbRole=roleFromLegacy[role] || role;
+    if(!["teacher","student"].includes(dbRole)){
+      throw new Error("Este fluxo cria apenas professor ou aluno.");
+    }
+
+    const invitePayload={
+      profile_id:profileId,
+      full_name:nome,
       cpf:String(cpf||"").replace(/\D/g,""),
-      ativo:true,
-      atualizadoEm:firebase.firestore.FieldValue.serverTimestamp(),
-      atualizadoPor:auth.currentUser.uid
-    },{merge:true});
+      email:String(email||"").trim().toLowerCase()
+    };
+
+    const {error:inviteError}=await client.from("access_invites").insert({
+      academy_id:a.id,
+      email:invitePayload.email,
+      role:dbRole,
+      payload:invitePayload,
+      created_by:user.id
+    });
+    if(inviteError) throw inviteError;
+
+    const secondary=window.supabase.createClient(cfg.url,cfg.anonKey,{
+      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+    });
+
+    const {data,error}=await secondary.auth.signUp({
+      email:invitePayload.email,
+      password:String(password||""),
+      options:{data:{invite_for:"champion-team"}}
+    });
+    if(error) throw error;
+    if(!data.user) throw new Error("O Supabase não criou o usuário.");
+
+    return {uid:data.user.id,email:invitePayload.email};
   };
 
-  window.firebaseMigrarProfessor=async({emailAntigo,senhaAntiga,cpf,nome,profileId})=>{
-    if(currentProfile?.role!=="gestor")throw new Error("Somente o gestor pode migrar acessos.");
-    const secondaryName="migrator-"+Date.now();
-    const secondary=firebase.initializeApp(firebaseConfig,secondaryName);
-    try{
-      const cred=await secondary.auth().signInWithEmailAndPassword(
-        String(emailAntigo||"").trim().toLowerCase(),
-        senhaAntiga
-      );
-      const novoEmail=cpfEmail(cpf,"professor");
-      await cred.user.updateEmail(novoEmail);
-      await cred.user.updatePassword(String(cpf).replace(/\D/g,"").slice(0,6));
-      await db.collection(USERS).doc(cred.user.uid).set({
-        role:"professor",profileId,nome,
-        nomeNormalizado:normalizarNomeLogin(nome),
-        cpf:String(cpf).replace(/\D/g,""),
-        email:novoEmail,
-        contactEmail:String(emailAntigo||"").trim().toLowerCase(),
-        ativo:true,
-        atualizadoEm:firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
-      return {uid:cred.user.uid,email:novoEmail};
-    }catch(e){
-      throw new Error("Não foi possível migrar o acesso antigo: "+errMsg(e));
-    }finally{
-      await secondary.delete();
-    }
+  window.supabaseAtualizarPerfilAcesso = async function({authUid,nome,cpf}){
+    if(!authUid) return;
+    const {error}=await client.from("profiles").update({
+      full_name:nome,
+      cpf:String(cpf||"").replace(/\D/g,""),
+      updated_at:new Date().toISOString()
+    }).eq("id",authUid);
+    if(error) throw error;
   };
 
-  window.firebaseLogin=(identifier,password)=>{
-    if(loginPromise)return loginPromise;
+  window.supabaseMigrarAcessoAluno = async ()=>true;
+  window.supabaseMigrarProfessor = async ()=>true;
+
+  window.supabaseExcluirPerfilAluno = async function(authUid){
+    if(!authUid) return;
+    const {error}=await client.from("profiles").update({
+      active:false,
+      updated_at:new Date().toISOString()
+    }).eq("id",authUid);
+    if(error) throw error;
+  };
+
+  window.supabaseAlterarSenhaUsuario = async function(senhaAtual,novaSenha){
+    if(!user) throw new Error("Sessão inválida.");
+
+    const verifier=window.supabase.createClient(cfg.url,cfg.anonKey,{
+      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+    });
+
+    const {error:verifyError}=await verifier.auth.signInWithPassword({
+      email:user.email,password:senhaAtual
+    });
+    if(verifyError) throw new Error("Senha atual incorreta.");
+
+    const {error}=await client.auth.updateUser({password:novaSenha});
+    if(error) throw error;
+    return true;
+  };
+
+  async function openSession(authUser){
+    user=authUser;
+    profile=await getProfile(user);
+    academy=null;
+
+    const legacyRole=roleToLegacy[profile.role];
+    if(!legacyRole) throw new Error("Perfil não reconhecido.");
+
+    if(profile.role==="student") await loadStudentOnly();
+    else if(profile.role==="teacher") await loadTeacherOnly();
+    else await loadNormalized();
+
+    window.CHAMPION_SUPABASE_READY=true;
+    window.marcarSupabasePronto?.();
+
+    return {
+      user:{uid:user.id,id:user.id,email:user.email},
+      perfil:{
+        role:legacyRole,
+        dbRole:profile.role,
+        profileId:profile.role==="student"
+          ? (JSON.parse(localStorage.getItem("fitcontrol_alunos")||"[]")[0]?.id || "")
+          : profile.role==="teacher"
+            ? (JSON.parse(localStorage.getItem("fitcontrol_professores")||"[]")[0]?.id || "")
+            : "",
+        nome:profile.full_name,
+        ativo:profile.active
+      }
+    };
+  }
+
+  window.supabaseLogin = function(identifier,password){
+    if(loginPromise) return loginPromise;
 
     loginPromise=(async()=>{
-      window.__CHAMPION_LOGIN_EM_ANDAMENTO__=true;
-
       try{
-        if(!app)init();
-
+        init();
         const email=String(identifier||"").trim().toLowerCase();
-        const senha=String(password||"");
+        if(!email.includes("@")) throw new Error("Informe o e-mail cadastrado.");
 
-        if(!email || !email.includes("@")){
-          throw new Error("Informe o e-mail cadastrado.");
-        }
+        status("syncing","Autenticando...");
+        const {data,error}=await client.auth.signInWithPassword({
+          email,password:String(password||"")
+        });
+        if(error) throw error;
 
-        if(!navigator.onLine){
-          throw new Error("O celular está sem internet. Conecte-se e tente novamente.");
-        }
-
-        status("syncing","Autenticando com o Firebase...");
-
-        // Em redes móveis, 8 segundos era insuficiente. O login agora possui
-        // uma tentativa normal e uma repetição automática antes de falhar.
-        let cred;
-        try{
-          cred=await comTimeout(
-            auth.signInWithEmailAndPassword(email,senha),
-            25000,
-            "A conexão móvel está lenta. Tentando novamente..."
-          );
-        }catch(primeiroErro){
-          if(
-            primeiroErro?.code &&
-            !["auth/network-request-failed","auth/internal-error"].includes(primeiroErro.code)
-          ){
-            throw primeiroErro;
-          }
-
-          status("syncing","Conexão lenta · segunda tentativa...");
-          await new Promise(resolve=>setTimeout(resolve,1200));
-          cred=await comTimeout(
-            auth.signInWithEmailAndPassword(email,senha),
-            25000,
-            "O Firebase não respondeu. Verifique a internet e tente novamente."
-          );
-        }
-
-        currentProfile=await comTimeout(
-          profileFor(cred.user),
-          15000,
-          "O login foi aceito, mas o perfil demorou para carregar."
-        );
-
-        unsub.splice(0).forEach(fn=>fn());
-        cache.clear();
-        lastCloudJson.clear();
-        loadingUid=cred.user.uid;
-
-        if(currentProfile.role==="gestor"){
-          // O gestor não precisa esperar todas as coleções para entrar.
-          // O painel abre imediatamente e os dados sincronizam ao fundo.
-          loadManagerInBackground();
-        }else if(currentProfile.role==="professor"){
-          // O professor precisa de poucas coleções para montar seu painel.
-          await comTimeout(
-            loadProfessor(),
-            20000,
-            "O painel do professor está demorando para sincronizar."
-          );
-        }else if(currentProfile.role==="aluno"){
-          // O aluno precisa do documento individual antes de abrir.
-          await comTimeout(
-            loadStudent(cred.user.uid),
-            20000,
-            "O painel do aluno ainda não foi carregado. Tente novamente."
-          );
-        }else{
-          throw new Error("Perfil de acesso inválido.");
-        }
-
-        ready=true;
-        window.CHAMPION_FIREBASE_READY=true;
-        window.marcarFirebasePronto?.();
-
-        if(currentProfile.role!=="gestor"){
-          status("online",`Firebase conectado · versão ${window.CHAMPION_APP_VERSION}`);
-        }
-
-        return {user:cred.user,perfil:currentProfile};
-      }catch(erro){
-        let mensagem;
-
-        if(
-          erro?.code==="auth/invalid-credential" ||
-          erro?.code==="auth/invalid-login-credentials" ||
-          erro?.code==="auth/wrong-password" ||
-          erro?.code==="auth/user-not-found"
-        ){
-          mensagem="E-mail ou senha inválidos.";
-        }else if(erro?.code==="auth/network-request-failed"){
-          mensagem="Falha de internet ao acessar o Firebase. Tente novamente.";
-        }else{
-          mensagem=
-            erro?.message && !String(erro.message).startsWith("Firebase:")
-              ? erro.message
-              : errMsg(erro);
-        }
-
-        status("error",mensagem);
-        throw new Error(mensagem);
+        const session=await openSession(data.user);
+        status("online",`Supabase conectado · versão ${window.CHAMPION_APP_VERSION}`);
+        return session;
+      }catch(e){
+        status("error",err(e));
+        throw new Error(err(e));
       }finally{
-        window.__CHAMPION_LOGIN_EM_ANDAMENTO__=false;
         loginPromise=null;
       }
     })();
@@ -5197,72 +6022,84 @@ atualizarTudo = function() {
     return loginPromise;
   };
 
-  window.firebaseLogout=async()=>{unsub.splice(0).forEach(fn=>fn());cache.clear();currentProfile=null;ready=false;if(auth)await auth.signOut();};
-  window.firebaseReconectar=async()=>{
-    if(!auth?.currentUser)return;
-    currentProfile=await profileFor(auth.currentUser);
-    if(currentProfile.role==="gestor")await loadManager();
-    else if(currentProfile.role==="professor")await loadProfessor();
-    else if(currentProfile.role==="aluno")await loadStudent(auth.currentUser.uid);
-    else throw new Error("Perfil de acesso inválido.");
-    status("online","Firebase reconectado");
+  window.supabaseLogout = async function(){
+    if(client) await client.auth.signOut();
+    user=null; profile=null; academy=null;
   };
 
+  window.supabaseReconectar = async function(){
+    init();
+    const {data,error}=await client.auth.getUser();
+    if(error) throw error;
+    if(!data.user) return;
+    await openSession(data.user);
+    status("online","Supabase reconectado");
+  };
+
+  function setupRealtime(){
+    if(!academy || !profile || profile.role==="student") return;
+
+    channels.forEach(ch=>client.removeChannel(ch));
+    channels=[];
+
+    const tables=[
+      "students","teachers","plans","memberships","checkins","classes","class_students",
+      "training_plans","training_items","products","orders",
+      "order_items","notifications","graduation_history","belt_recommendations"
+    ];
+
+    for(const table of tables){
+      const ch=client
+        .channel(`v27-${table}-${Date.now()}-${Math.random()}`)
+        .on("postgres_changes",{event:"*",schema:"public",table},()=>{
+          clearTimeout(window.__CHAMPION_RT_TIMER__);
+          window.__CHAMPION_RT_TIMER__=setTimeout(()=>{
+            if(profile?.role==="teacher") loadTeacherOnly().catch(console.error);
+            else loadNormalized().catch(console.error);
+          },350);
+        })
+        .subscribe();
+      channels.push(ch);
+    }
+  }
+
   try{
-      window.atualizarStatusFirebase?.("syncing","Inicializando Firebase...");
-      init();
-      window.CHAMPION_FIREBASE_SDK_LOADED=true;status("online",`Firebase pronto para login · versão ${window.CHAMPION_APP_VERSION}`);
-    auth.onAuthStateChanged(async user=>{
-      if(!user){
-        currentProfile=null;
-        ready=false;
-        return;
-      }
+    init();
 
-      if(window.__CHAMPION_LOGIN_EM_ANDAMENTO__)return;
-
+    client.auth.getSession().then(async({data})=>{
+      if(!data.session?.user) return;
       try{
-        currentProfile=await comTimeout(
-          profileFor(user),
-          15000,
-          "Não foi possível restaurar o perfil."
-        );
-
-        if(currentProfile.role==="gestor"){
-          loadManagerInBackground();
-        }else if(currentProfile.role==="professor"){
-          await comTimeout(loadProfessor(),20000,"O painel do professor demorou para carregar.");
-        }else if(currentProfile.role==="aluno"){
-          await comTimeout(loadStudent(user.uid),20000,"O painel do aluno demorou para carregar.");
-        }else{
-          throw new Error("Perfil de acesso inválido.");
-        }
-
-        window.CHAMPION_FIREBASE_READY=true;
-        window.marcarFirebasePronto?.();
-        window.dispatchEvent(
-          new CustomEvent("champion-auth-restored",{
-            detail:{user,perfil:currentProfile}
-          })
-        );
-
-        if(currentProfile.role!=="gestor"){
-          status("online","Firebase conectado · dados sincronizados");
-        }
-      }catch(erro){
-        console.error("Falha ao restaurar sessão:",erro);
-        await auth.signOut();
-        status("error",erro.message||"Não foi possível restaurar a sessão.");
+        const restored=await openSession(data.session.user);
+        window.dispatchEvent(new CustomEvent("champion-auth-restored",{detail:restored}));
+        setupRealtime();
+        status("online",`Supabase conectado · versão ${window.CHAMPION_APP_VERSION}`);
+      }catch(e){
+        console.error(e);
+        await client.auth.signOut();
+        status("error",err(e));
       }
     });
-  }catch(e){status("error",errMsg(e));console.error(e);}
+
+    client.auth.onAuthStateChange((event,session)=>{
+      if(event==="SIGNED_OUT"){
+        user=null;profile=null;academy=null;
+      }
+    });
+  }catch(e){
+    status("error",err(e));
+  }
+
+  const oldLogin=window.supabaseLogin;
+  window.supabaseLogin=async function(identifier,password){
+    const result=await oldLogin(identifier,password);
+    setupRealtime();
+    return result;
+  };
 })();
 
 
-
-
 /* =========================================================
-   MENU HAMBÚRGUER MOBILE — V25
+   MENU HAMBÚRGUER MOBILE — V27
 ========================================================= */
 (function configurarMenuMobileChampionTeam(){
   const sidebar=document.getElementById("appSidebar");
@@ -5338,4 +6175,223 @@ atualizarTudo = function() {
   if(sourceBadge){
     observer.observe(sourceBadge,{subtree:true,childList:true,attributes:true,characterData:true});
   }
+})();
+
+/* =========================================================
+   PREMIUM MOTION UI — V29
+========================================================= */
+(function(){
+  "use strict";
+
+  document.documentElement.classList.add("champion-premium-v29");
+
+  function animateView(view){
+    if(!view) return;
+    view.classList.remove("view-enter");
+    void view.offsetWidth;
+    view.classList.add("view-enter");
+  }
+
+  document.addEventListener("click", (event)=>{
+    const trigger = event.target.closest("[data-view], [data-go-view]");
+    if(!trigger) return;
+
+    requestAnimationFrame(()=>{
+      const active = document.querySelector(".view.active");
+      animateView(active);
+    });
+  });
+
+  window.addEventListener("champion-auth-restored", ()=>{
+    requestAnimationFrame(()=>{
+      animateView(document.querySelector(".view.active"));
+    });
+  });
+
+  // Microinterações somente para dispositivos com ponteiro preciso.
+  if(window.matchMedia("(hover:hover) and (pointer:fine)").matches){
+    document.addEventListener("pointermove",(event)=>{
+      const card = event.target.closest(".card,.panel,.teacher-class-card,.product-card,.video-card");
+      if(!card) return;
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${event.clientX-rect.left}px`);
+      card.style.setProperty("--my", `${event.clientY-rect.top}px`);
+    });
+  }
+})();
+
+
+/* =========================================================
+   CRM DE COBRANÇAS + PIX — V31
+========================================================= */
+(function(){
+  "use strict";
+  const money=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  const todayIso=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+  const diffDays=s=>{if(!s)return 0;const a=new Date(todayIso()+"T12:00:00");const b=new Date(s+"T12:00:00");return Math.round((b-a)/86400000)};
+
+  function meta(p){
+    if(p.status==="paid")return{label:"PAGO",cls:"paid",stage:"Recebido"};
+    const d=diffDays(p.due_date);
+    if(p.status==="overdue"||d<0){const x=Math.abs(d);return{label:`${x} DIA${x===1?"":"S"} EM ATRASO`,cls:"overdue",stage:x>=7?"Cobrança reforçada":"Cobrança de atraso"}}
+    if(d===0)return{label:"VENCE HOJE",cls:"today",stage:"Vencimento"};
+    if(d<=7)return{label:`VENCE EM ${d}D`,cls:"upcoming",stage:d<=1?"Lembrete final":"Pré-vencimento"};
+    return{label:"EM ABERTO",cls:"open",stage:"Aguardando"};
+  }
+
+  function openPayment(list){
+    return (list||[]).filter(p=>!["paid","cancelled","refunded"].includes(p.status)).sort((a,b)=>String(a.due_date).localeCompare(String(b.due_date)))[0]||null;
+  }
+
+  window.renderStudentPaymentHubV31=function(payload={}){
+    const content=document.getElementById("studentPaymentContent");
+    const badge=document.getElementById("studentPaymentStatusBadge");
+    if(!content||!badge)return;
+    const p=openPayment(payload.payments||[]);
+    if(!p){
+      badge.textContent="SEM PENDÊNCIAS";badge.className="student-payment-status paid";
+      content.innerHTML=`<div class="student-payment-clear"><span>✓</span><div><strong>TUDO EM DIA</strong><p>Não existe mensalidade pendente no momento.</p></div></div>`;
+      return;
+    }
+    const m=meta(p);
+    badge.textContent=m.label;badge.className=`student-payment-status ${m.cls}`;
+    const qr=p.pix_qr_code_base64?`<img class="student-pix-qr" src="data:image/png;base64,${p.pix_qr_code_base64}" alt="QR Code Pix">`:`<div class="student-pix-placeholder"><span>PIX</span><small>Gere o código para pagar</small></div>`;
+    content.innerHTML=`
+      <div class="student-payment-summary">
+        <div><span>VALOR</span><strong>${money(p.amount)}</strong></div>
+        <div><span>VENCIMENTO</span><strong>${formatarData(p.due_date)}</strong></div>
+        <div><span>SITUAÇÃO</span><strong class="payment-text-${m.cls}">${m.label}</strong></div>
+      </div>
+      <div class="student-pix-layout">
+        <div class="student-pix-visual">${qr}</div>
+        <div class="student-pix-actions">
+          <span class="section-kicker">PIX</span><h4>PAGUE EM SEGUNDOS</h4>
+          <p>Depois do pagamento, o sistema recebe a confirmação automaticamente pelo provedor.</p>
+          ${p.pix_copy_paste?`<div class="pix-copy-box"><input id="studentPixCopyInput" readonly value="${String(p.pix_copy_paste).replace(/"/g,"&quot;")}"><button type="button" data-copy-pix>COPIAR PIX</button></div>`:""}
+          <button type="button" class="btn btn-primary student-generate-pix" data-generate-pix="${p.id}">${p.pix_copy_paste?"ATUALIZAR PIX":"GERAR PIX PARA PAGAR"}</button>
+          ${p.invoice_url?`<a class="student-invoice-link" href="${p.invoice_url}" target="_blank" rel="noopener">ABRIR COBRANÇA COMPLETA ↗</a>`:""}
+        </div>
+      </div>`;
+  };
+
+  window.renderBillingCrmV31=function(payload={}){
+    const table=document.getElementById("billingCrmTable");if(!table)return;
+    const students=payload.students||[], payments=payload.payments||[], events=payload.events||[];
+    const studentMap=new Map(students.map(s=>[String(s.id),s]));
+    const search=(document.getElementById("billingCrmSearch")?.value||"").trim().toLowerCase();
+    const filter=document.getElementById("billingCrmFilter")?.value||"all";
+    const month=todayIso().slice(0,7);
+    const overdue=payments.filter(p=>p.status==="overdue"||(p.status==="pending"&&diffDays(p.due_date)<0));
+    const today=payments.filter(p=>p.status==="pending"&&diffDays(p.due_date)===0);
+    const upcoming=payments.filter(p=>p.status==="pending"&&diffDays(p.due_date)>0&&diffDays(p.due_date)<=7);
+    const paid=payments.filter(p=>p.status==="paid"&&String(p.paid_at||"").slice(0,7)===month);
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+    set("billingMetricOverdueCount",overdue.length);set("billingMetricOverdueValue",money(overdue.reduce((s,p)=>s+Number(p.amount||0),0)));
+    set("billingMetricTodayCount",today.length);set("billingMetricTodayValue",money(today.reduce((s,p)=>s+Number(p.amount||0),0)));
+    set("billingMetricUpcomingCount",upcoming.length);set("billingMetricUpcomingValue",money(upcoming.reduce((s,p)=>s+Number(p.amount||0),0)));
+    set("billingMetricPaidCount",paid.length);set("billingMetricPaidValue",money(paid.reduce((s,p)=>s+Number(p.amount||0),0)));
+    const badge=document.getElementById("menuBillingBadge");if(badge){badge.textContent=overdue.length;badge.style.display=overdue.length?"":"none"}
+    let rows=payments.slice().sort((a,b)=>String(a.due_date).localeCompare(String(b.due_date))).filter(p=>{
+      const st=studentMap.get(String(p.student_id)), name=String(st?.full_name||"").toLowerCase(), d=diffDays(p.due_date);
+      if(search&&!name.includes(search))return false;
+      if(filter==="overdue")return p.status==="overdue"||(p.status==="pending"&&d<0);
+      if(filter==="today")return p.status==="pending"&&d===0;
+      if(filter==="upcoming")return p.status==="pending"&&d>0&&d<=7;
+      if(filter==="paid")return p.status==="paid";
+      return true;
+    });
+    table.innerHTML=rows.length?rows.map(p=>{const st=studentMap.get(String(p.student_id)),m=meta(p);return`
+      <tr><td><strong>${st?.full_name||"Aluno"}</strong><small>${st?.phone||st?.email||""}</small></td>
+      <td>${formatarData(p.due_date)}</td><td><strong>${money(p.amount)}</strong></td>
+      <td><span class="billing-status ${m.cls}">${m.label}</span></td><td><span class="billing-stage">${m.stage}</span></td>
+      <td><button type="button" class="btn btn-secondary billing-pix-button" data-generate-pix="${p.id}">${p.pix_copy_paste?"PIX GERADO":"GERAR PIX"}</button></td></tr>`}).join(""):'<tr><td colspan="6" class="empty">Nenhuma mensalidade encontrada.</td></tr>';
+    const tl=document.getElementById("billingCrmTimeline");
+    if(tl)tl.innerHTML=events.length?events.slice(0,30).map(e=>`<article class="billing-timeline-item"><span class="billing-timeline-dot"></span><div><strong>${e.title||"Automação de cobrança"}</strong><p>${e.message||""}</p><small>${new Date(e.created_at).toLocaleString("pt-BR")}</small></div></article>`).join(""):'<div class="empty">Nenhuma ação de cobrança registrada.</div>';
+  };
+
+  document.addEventListener("click",async e=>{
+    const g=e.target.closest("[data-generate-pix]");
+    if(g){const id=g.dataset.generatePix,old=g.textContent;g.disabled=true;g.textContent="GERANDO PIX...";try{await window.supabaseEnsurePixPaymentV31(id);mostrarAlerta("Pix pronto para pagamento.");}catch(err){mostrarAlerta(err.message||"Falha ao gerar Pix.","error");}finally{g.disabled=false;g.textContent=old}return}
+    if(e.target.closest("[data-copy-pix]")){const input=document.getElementById("studentPixCopyInput");if(!input)return;try{await navigator.clipboard.writeText(input.value)}catch{input.select();document.execCommand("copy")}mostrarAlerta("Código Pix copiado.");}
+  });
+
+  document.getElementById("billingCrmRunNow")?.addEventListener("click",async()=>{const b=document.getElementById("billingCrmRunNow");b.disabled=true;b.textContent="PROCESSANDO...";try{await window.supabaseRunBillingCrmV31();mostrarAlerta("Régua de cobrança processada.");}catch(e){mostrarAlerta(e.message||"Falha ao processar.","error")}finally{b.disabled=false;b.textContent="EXECUTAR RÉGUA AGORA"}});
+  document.getElementById("billingCrmRefresh")?.addEventListener("click",()=>window.supabaseRefreshCurrentUserV30?.().catch(e=>mostrarAlerta(e.message,"error")));
+  document.getElementById("billingCrmSearch")?.addEventListener("input",()=>window.renderBillingCrmV31?.(window.CHAMPION_BILLING_CRM_DATA||{}));
+  document.getElementById("billingCrmFilter")?.addEventListener("change",()=>window.renderBillingCrmV31?.(window.CHAMPION_BILLING_CRM_DATA||{}));
+})();
+
+
+/* =========================================================
+   PORTAL DO ALUNO — NAVEGAÇÃO INTERNA MOBILE — V32
+========================================================= */
+(function configurarNavegacaoInternaAlunoV32(){
+  const nav = document.getElementById("studentPortalNav");
+  if(!nav) return;
+
+  const links = [...nav.querySelectorAll("[data-student-target]")];
+  const sidebar = document.getElementById("appSidebar");
+  const backdrop = document.getElementById("mobileMenuBackdrop");
+  const mobileButton = document.getElementById("mobileMenuButton");
+
+  function fecharMenuAluno(){
+    if(window.innerWidth > 860) return;
+    sidebar?.classList.remove("mobile-open");
+    backdrop?.classList.remove("show");
+    document.body.classList.remove("mobile-menu-open");
+    mobileButton?.classList.remove("active");
+    mobileButton?.setAttribute("aria-expanded","false");
+  }
+
+  function marcarAtivo(targetId){
+    links.forEach(link=>{
+      const ativo = link.dataset.studentTarget === targetId;
+      link.classList.toggle("active", ativo);
+      if(ativo) link.setAttribute("aria-current","location");
+      else link.removeAttribute("aria-current");
+    });
+  }
+
+  links.forEach(link=>{
+    link.addEventListener("click",event=>{
+      event.preventDefault();
+      const id = link.dataset.studentTarget;
+      const target = document.getElementById(id);
+      if(!target) return;
+
+      marcarAtivo(id);
+      fecharMenuAluno();
+
+      requestAnimationFrame(()=>{
+        const headerOffset = window.innerWidth <= 860 ? 76 : 18;
+        const top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+        window.scrollTo({top, behavior:"smooth"});
+
+        target.classList.remove("student-section-pulse");
+        void target.offsetWidth;
+        target.classList.add("student-section-pulse");
+        window.setTimeout(()=>target.classList.remove("student-section-pulse"),900);
+      });
+    });
+  });
+
+  const sections = links.map(link=>document.getElementById(link.dataset.studentTarget)).filter(Boolean);
+
+  if("IntersectionObserver" in window && sections.length){
+    const observer = new IntersectionObserver(entries=>{
+      const visible = entries
+        .filter(entry=>entry.isIntersecting)
+        .sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+
+      if(visible?.target?.id) marcarAtivo(visible.target.id);
+    },{
+      root:null,
+      rootMargin:"-18% 0px -62% 0px",
+      threshold:[0,.08,.2,.4,.7]
+    });
+
+    sections.forEach(section=>observer.observe(section));
+  }
+
+  marcarAtivo("studentPaymentSection");
 })();

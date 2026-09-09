@@ -36,7 +36,7 @@
         </div>
       </div>
       <div class="login-card">
-        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Gestor, professor e aluno entram com e-mail e senha.</p></div>
+        <div class="login-card-header"><span class="mini-badge">ACESSO SEGURO</span><h3>Entrar no sistema</h3><p>Master, proprietário, professor e aluno entram com e-mail e senha.</p></div>
         <form id="loginForm">
           <div class="field"><label for="loginEmail">E-mail do gestor/professor ou CPF do aluno</label><input id="loginEmail" type="text" value="admin@fitcontrol.com" autocomplete="username" required /></div>
           <div class="field"><label for="loginSenha">Senha</label><div class="password-wrap"><input id="loginSenha" type="password" value="123456" required /><button type="button" id="togglePassword" class="password-toggle">Mostrar</button></div></div>
@@ -94,7 +94,58 @@
         <button data-view="videos"><span class="menu-icon">🎥</span><span>Vídeos</span></button>
         <button data-view="loja"><span class="menu-icon">🛒</span><span>Gestão da loja</span></button>
         <button data-view="areaAluno"><span class="menu-icon">👤</span><span>Área do aluno</span></button>
+
+        <div id="studentPortalNav" class="student-portal-nav" aria-label="Acessos rápidos da área do aluno">
+          <div class="student-portal-nav-heading">
+            <span>PORTAL DO ALUNO</span>
+            <small>Acessos rápidos</small>
+          </div>
+
+          <a href="#studentPaymentSection" data-student-target="studentPaymentSection" class="student-portal-link">
+            <span class="student-portal-icon">💳</span>
+            <span class="student-portal-copy"><strong>Mensalidade</strong><small>Pix e situação financeira</small></span>
+            <span class="student-portal-arrow">›</span>
+          </a>
+
+          <a href="#studentSelfieCheckinSection" data-student-target="studentSelfieCheckinSection" class="student-portal-link">
+            <span class="student-portal-icon">📸</span>
+            <span class="student-portal-copy"><strong>Presença com foto</strong><small>Registrar selfie do treino</small></span>
+            <span class="student-portal-arrow">›</span>
+          </a>
+
+          <a href="#studentCheckinHistorySection" data-student-target="studentCheckinHistorySection" class="student-portal-link">
+            <span class="student-portal-icon">✅</span>
+            <span class="student-portal-copy"><strong>Check-ins</strong><small>Histórico de presenças</small></span>
+            <span class="student-portal-arrow">›</span>
+          </a>
+
+          <a href="#studentStoreSection" data-student-target="studentStoreSection" class="student-portal-link">
+            <span class="student-portal-icon">🛍️</span>
+            <span class="student-portal-copy"><strong>Loja da academia</strong><small>Produtos e promoções</small></span>
+            <span class="student-portal-arrow">›</span>
+          </a>
+
+          <a href="#studentNotificationsSection" data-student-target="studentNotificationsSection" class="student-portal-link">
+            <span class="student-portal-icon">🔔</span>
+            <span class="student-portal-copy"><strong>Notificações</strong><small>Avisos e cobranças</small></span>
+            <span class="student-portal-arrow">›</span>
+          </a>
+
+          <a href="#studentOrdersSection" data-student-target="studentOrdersSection" class="student-portal-link">
+            <span class="student-portal-icon">📦</span>
+            <span class="student-portal-copy"><strong>Pedidos</strong><small>Compras e retiradas</small></span>
+            <span class="student-portal-arrow">›</span>
+          </a>
+
+          <a href="#studentSettingsSection" data-student-target="studentSettingsSection" class="student-portal-link">
+            <span class="student-portal-icon">⚙️</span>
+            <span class="student-portal-copy"><strong>Ajustes</strong><small>Alterar senha de acesso</small></span>
+            <span class="student-portal-arrow">›</span>
+          </a>
+        </div>
+
         <button data-view="notificacoes"><span class="menu-icon">🔔</span><span>Notificações</span><span id="menuNotificationBadge" class="menu-notification-badge">0</span></button>
+        <button data-view="billingCrm"><span class="menu-icon">💳</span><span>CRM de cobranças</span><span id="menuBillingBadge" class="menu-notification-badge">0</span></button>
         <button data-view="graduacoes"><span class="menu-icon">🏆</span><span>Graduações</span><span id="menuGraduacaoBadge" class="menu-notification-badge">0</span></button>
         <button data-view="checkin"><span class="menu-icon">✅</span><span>Check-in</span></button>
       </nav>
@@ -643,6 +694,66 @@
         </div>
       </section>
 <section id="treinos" class="view">
+
+        <div id="teacherOverview" class="teacher-overview" hidden>
+          <div class="teacher-overview-head">
+            <div>
+              <span class="section-kicker">PAINEL DO PROFESSOR</span>
+              <h3>MINHAS TURMAS E PRESENÇAS</h3>
+              <p>Horários, alunos vinculados e presença registrada por check-in.</p>
+            </div>
+            <span class="teacher-access-badge">ACESSO PROFESSOR</span>
+          </div>
+
+          <div class="teacher-overview-grid">
+            <article class="teacher-metric-card">
+              <span class="teacher-metric-label">TURMAS</span>
+              <strong id="teacherClassesCount">0</strong>
+              <small>Turmas sob sua responsabilidade</small>
+            </article>
+
+            <article class="teacher-metric-card">
+              <span class="teacher-metric-label">ALUNOS</span>
+              <strong id="teacherStudentsCount">0</strong>
+              <small>Alunos vinculados às suas turmas</small>
+            </article>
+
+            <article class="teacher-metric-card">
+              <span class="teacher-metric-label">CHECK-INS HOJE</span>
+              <strong id="teacherCheckinsToday">0</strong>
+              <small>Presenças confirmadas hoje</small>
+            </article>
+          </div>
+
+
+          <div class="teacher-validation-panel">
+            <div class="teacher-panel-title">
+              <div>
+                <span class="section-kicker">VALIDAÇÃO DE PRESENÇA</span>
+                <h4>SELFIES DE CHECK-IN</h4>
+                <p>Confirme se o aluno realmente participou da aula. Apenas você e a administração podem validar.</p>
+              </div>
+              <span id="teacherPendingCheckinsCount" class="teacher-access-badge">0 PENDENTES</span>
+            </div>
+
+            <div id="teacherCheckinValidationList" class="teacher-checkin-validation-list">
+              <div class="teacher-empty-state">Nenhum check-in com selfie aguardando validação.</div>
+            </div>
+          </div>
+
+          <div class="teacher-schedule-panel">
+            <div class="teacher-panel-title">
+              <div>
+                <span class="section-kicker">AGENDA</span>
+                <h4>MINHAS TURMAS</h4>
+              </div>
+            </div>
+            <div id="teacherScheduleList" class="teacher-schedule-list">
+              <div class="teacher-empty-state">Nenhuma turma vinculada ao professor.</div>
+            </div>
+          </div>
+        </div>
+
         <div class="module-hero workout-hero">
           <div>
             <span class="module-kicker">PLANEJAMENTO INDIVIDUAL</span>
@@ -1059,8 +1170,84 @@
       </article>
     </div>
 
+
+
+    <section id="studentPaymentSection" class="student-payment-hub panel student-scroll-section">
+      <div class="student-payment-head">
+        <div>
+          <span class="section-kicker">MENSALIDADE</span>
+          <h3>PAGAMENTO RÁPIDO</h3>
+          <p>Consulte sua mensalidade, gere o Pix e acompanhe a confirmação sem sair do aplicativo.</p>
+        </div>
+        <span id="studentPaymentStatusBadge" class="student-payment-status pending">CARREGANDO</span>
+      </div>
+      <div id="studentPaymentContent" class="student-payment-content">
+        <div class="student-payment-loading">Carregando sua mensalidade...</div>
+      </div>
+    </section>
+
+    <section id="studentSelfieCheckinSection" class="student-selfie-checkin panel student-scroll-section">
+      <div class="panel-header">
+        <div>
+          <span class="section-kicker">PRESENÇA COM FOTO</span>
+          <h3>CHECK-IN COM SELFIE</h3>
+          <p>Tire uma selfie no momento do treino. A presença ficará pendente até a validação do professor ou da administração.</p>
+        </div>
+        <span id="studentCheckinStatusBadge" class="student-checkin-badge">PRONTO PARA CHECK-IN</span>
+      </div>
+
+      <div class="student-checkin-layout">
+        <div class="student-camera-card">
+          <div id="studentSelfiePreview" class="student-selfie-preview">
+            <div class="student-selfie-placeholder">
+              <span>📷</span>
+              <strong>SUA SELFIE APARECE AQUI</strong>
+              <small>A foto é privada e só pode ser vista por você, pelo professor da turma e pela administração.</small>
+            </div>
+          </div>
+
+          <label for="studentSelfieInput" class="student-camera-trigger">
+            <span>📸</span>
+            <strong>ABRIR CÂMERA / ESCOLHER FOTO</strong>
+          </label>
+          <input id="studentSelfieInput" type="file" accept="image/jpeg,image/png,image/webp" capture="user" hidden>
+        </div>
+
+        <div class="student-checkin-form">
+          <div class="field">
+            <label for="studentCheckinClass">Turma / aula</label>
+            <select id="studentCheckinClass">
+              <option value="">Selecione sua turma</option>
+            </select>
+          </div>
+
+          <div class="student-checkin-rules">
+            <div><span>01</span><p>Selecione a sua turma.</p></div>
+            <div><span>02</span><p>Tire uma selfie atual no local do treino.</p></div>
+            <div><span>03</span><p>Envie e aguarde a validação do professor.</p></div>
+          </div>
+
+          <button id="studentSelfieCheckinButton" type="button" class="btn btn-primary student-selfie-submit">
+            ENVIAR SELFIE E CONFIRMAR CHECK-IN
+          </button>
+
+          <p id="studentSelfieCheckinMessage" class="student-checkin-message"></p>
+        </div>
+      </div>
+
+      <div id="studentCheckinHistorySection" class="student-checkin-history-wrap student-scroll-section">
+        <div class="student-checkin-history-head">
+          <div>
+            <span class="section-kicker">MEUS CHECK-INS</span>
+            <h4>ÚLTIMAS PRESENÇAS</h4>
+          </div>
+        </div>
+        <div id="studentCheckinHistory" class="student-checkin-history"></div>
+      </div>
+    </section>
+
     <div class="student-area-grid">
-      <div class="panel">
+      <div id="studentStoreSection" class="panel student-scroll-section">
         <div class="panel-header">
           <div>
             <h3>Loja da academia</h3>
@@ -1112,7 +1299,7 @@
     </div>
 
     <div class="student-area-grid">
-      <div class="panel">
+      <div id="studentNotificationsSection" class="panel student-scroll-section">
         <div class="panel-header">
           <div>
             <h3>Minhas notificações</h3>
@@ -1123,7 +1310,7 @@
         <div id="studentNotificationsList" class="notification-list"></div>
       </div>
 
-      <div class="panel">
+      <div id="studentOrdersSection" class="panel student-scroll-section">
         <div class="panel-header">
           <div>
             <h3>Meus pedidos</h3>
@@ -1136,7 +1323,7 @@
     </div>
   </div>
 
-        <section class="student-password-panel password-panel-aluno">
+        <section id="studentSettingsSection" class="student-password-panel password-panel-aluno student-scroll-section">
           <div class="student-password-heading">
             <div>
               <span class="student-password-kicker">SEGURANÇA DA CONTA</span>
@@ -1167,6 +1354,72 @@
         </section>
 
 </section>
+
+<section id="billingCrm" class="view">
+  <div class="view-heading">
+    <div>
+      <span class="section-kicker">AUTOMAÇÃO FINANCEIRA</span>
+      <h2>CRM DE COBRANÇAS</h2>
+      <p>Cobranças automáticas, régua de inadimplência e Pix em um único fluxo.</p>
+    </div>
+    <div class="billing-crm-actions">
+      <button id="billingCrmRunNow" class="btn btn-primary" type="button">EXECUTAR RÉGUA AGORA</button>
+      <button id="billingCrmRefresh" class="btn btn-secondary" type="button">ATUALIZAR</button>
+    </div>
+  </div>
+
+  <section class="billing-automation-hero">
+    <div>
+      <span class="section-kicker">COBRANÇA AUTOMÁTICA</span>
+      <h3>MENOS TEMPO COBRANDO.<br><em>MAIS TEMPO GERINDO.</em></h3>
+      <p>O sistema identifica vencimentos, registra atrasos, cria lembretes e deixa o Pix disponível para pagamento.</p>
+    </div>
+    <div class="billing-automation-flow">
+      <span>D-5</span><i>→</i><span>D-1</span><i>→</i><span>D0</span><i>→</i><span>D+1</span><i>→</i><span>D+7</span>
+    </div>
+  </section>
+
+  <div class="billing-metrics">
+    <article><span>EM ATRASO</span><strong id="billingMetricOverdueCount">0</strong><small id="billingMetricOverdueValue">R$ 0,00</small></article>
+    <article><span>VENCE HOJE</span><strong id="billingMetricTodayCount">0</strong><small id="billingMetricTodayValue">R$ 0,00</small></article>
+    <article><span>PRÓX. 7 DIAS</span><strong id="billingMetricUpcomingCount">0</strong><small id="billingMetricUpcomingValue">R$ 0,00</small></article>
+    <article><span>RECEBIDO NO MÊS</span><strong id="billingMetricPaidCount">0</strong><small id="billingMetricPaidValue">R$ 0,00</small></article>
+  </div>
+
+  <section class="panel billing-crm-panel">
+    <div class="panel-header">
+      <div>
+        <span class="section-kicker">CARTEIRA DE COBRANÇA</span>
+        <h3>ALUNOS E MENSALIDADES</h3>
+        <p>Prioridade automática por atraso e vencimento.</p>
+      </div>
+      <div class="billing-crm-filters">
+        <input id="billingCrmSearch" placeholder="Buscar aluno..." />
+        <select id="billingCrmFilter">
+          <option value="all">Todos</option>
+          <option value="overdue">Em atraso</option>
+          <option value="today">Vence hoje</option>
+          <option value="upcoming">Próximos 7 dias</option>
+          <option value="paid">Pagos</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="billing-crm-table">
+        <thead><tr><th>Aluno</th><th>Vencimento</th><th>Valor</th><th>Situação</th><th>Régua</th><th>Pix</th></tr></thead>
+        <tbody id="billingCrmTable"><tr><td colspan="6" class="empty">Carregando cobranças...</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel billing-timeline-panel">
+    <div class="panel-header">
+      <div><span class="section-kicker">HISTÓRICO</span><h3>ATIVIDADE DA RÉGUA</h3><p>Registro das ações automáticas de cobrança.</p></div>
+    </div>
+    <div id="billingCrmTimeline" class="billing-timeline"><div class="empty">Nenhuma ação de cobrança registrada.</div></div>
+  </section>
+</section>
+
 <section id="notificacoes" class="view">
   <div class="module-hero"><div><span class="module-kicker">CENTRAL DE ALERTAS</span><h3>Vendas, promoções e mensalidades.</h3><p>Avisos para administrador e alunos.</p></div><div class="module-stat"><strong id="totalNotificacoesNaoLidas">0</strong><span>NÃO LIDAS</span></div></div>
   <div class="notification-layout">
@@ -1375,8 +1628,11 @@
                 <tr>
                   <th>Aluno</th>
                   <th>CPF</th>
+                  <th>Foto</th>
                   <th>Data</th>
                   <th>Horário</th>
+                  <th>Status</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody id="tabelaCheckins"></tbody>
@@ -1397,10 +1653,10 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V25</div>
-  <div id="firebaseStatus" class="firebase-status firebase-connecting" role="status" aria-live="polite">
-    <span class="firebase-status-dot"></span>
-    <span id="firebaseStatusText">Conectando ao Firebase...</span><button id="firebaseRetryButton" class="firebase-retry-button" type="button" hidden>Tentar novamente</button>
+  <div id="appVersionBadge" class="app-version-badge">V32</div>
+  <div id="supabaseStatus" class="supabase-status supabase-connecting" role="status" aria-live="polite">
+    <span class="supabase-status-dot"></span>
+    <span id="supabaseStatusText">Conectando ao Supabase...</span><button id="supabaseRetryButton" class="supabase-retry-button" type="button" hidden>Tentar novamente</button>
   </div>
 
 
@@ -1477,10 +1733,8 @@
       </small>
     </div>
   </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="script.js?v=25"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js?v=26"></script>
+  <script src="script.js?v=32"></script>
 </body>
 </html>
