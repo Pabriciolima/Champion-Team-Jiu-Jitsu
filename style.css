@@ -5490,3 +5490,185 @@ html.champion-premium-v29 *::-webkit-scrollbar-thumb {
     animation: none !important;
   }
 }
+
+
+/* =========================================================
+   ALERTAS / TOAST PREMIUM — V33
+   Corrige baixa visibilidade no mobile após selfie/check-in.
+========================================================= */
+.alert {
+  position: fixed !important;
+  top: 22px !important;
+  right: 22px !important;
+  bottom: auto !important;
+  left: auto !important;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+
+  width: auto !important;
+  min-width: 310px !important;
+  max-width: min(440px, calc(100vw - 32px)) !important;
+  min-height: 58px !important;
+  padding: 13px 16px 13px 14px !important;
+
+  border-radius: 16px !important;
+  border: 1px solid rgba(255,255,255,.13) !important;
+  background: rgba(16,19,22,.97) !important;
+  color: #fff !important;
+
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translateY(-12px) scale(.97) !important;
+  pointer-events: none !important;
+
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.55),
+    0 8px 24px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.05) !important;
+
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+
+  z-index: 2147483000 !important;
+
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.4 !important;
+  letter-spacing: .005em !important;
+
+  transition:
+    opacity .25s ease,
+    visibility .25s ease,
+    transform .32s cubic-bezier(.2,.8,.2,1) !important;
+}
+
+.alert::before {
+  content: "✓";
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  font-size: 17px;
+  font-weight: 950;
+  background: rgba(72,224,126,.13);
+  color: #63ff8c;
+  border: 1px solid rgba(99,255,140,.20);
+}
+
+.alert::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  border-radius: 0 0 16px 16px;
+  transform-origin: left center;
+  background: linear-gradient(90deg,#63ff8c,#b8ff28);
+}
+
+.alert.show {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+.alert.show::after {
+  animation: championToastTimerV33 4.55s linear forwards;
+}
+
+.alert.success {
+  background:
+    radial-gradient(circle at 0 50%,rgba(72,224,126,.09),transparent 36%),
+    rgba(16,19,22,.97) !important;
+  border-color: rgba(72,224,126,.20) !important;
+  border-left: 1px solid rgba(72,224,126,.20) !important;
+}
+
+.alert.error {
+  background:
+    radial-gradient(circle at 0 50%,rgba(255,50,65,.12),transparent 40%),
+    rgba(20,16,18,.98) !important;
+  border-color: rgba(255,50,65,.27) !important;
+  color: #fff !important;
+}
+
+.alert.error::before {
+  content: "!";
+  background: rgba(255,50,65,.13);
+  color: #ff6570;
+  border-color: rgba(255,50,65,.22);
+}
+
+.alert.error::after {
+  background: linear-gradient(90deg,#ff3341,#ff6973);
+}
+
+@keyframes championToastTimerV33 {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* MOBILE:
+   Toast fica abaixo do conteúdo e acima da navegação do navegador,
+   evitando ser escondido pelo header fixo / notch. */
+@media (max-width: 860px) {
+  .alert {
+    top: auto !important;
+    right: 12px !important;
+    bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 62px !important;
+
+    padding: 13px 14px !important;
+    border-radius: 17px !important;
+
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+
+    transform: translateY(18px) scale(.97) !important;
+
+    box-shadow:
+      0 22px 60px rgba(0,0,0,.68),
+      0 8px 20px rgba(0,0,0,.38),
+      inset 0 1px 0 rgba(255,255,255,.06) !important;
+  }
+
+  .alert.show {
+    transform: translateY(0) scale(1) !important;
+  }
+
+  .alert::before {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .alert::after {
+    border-radius: 0 0 17px 17px;
+  }
+}
+
+/* Em telas muito pequenas evita sobreposição com o badge do Supabase */
+@media (max-width: 430px) {
+  .alert {
+    bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert,
+  .alert::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

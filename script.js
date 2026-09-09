@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "32";
+window.CHAMPION_APP_VERSION = "33";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -147,13 +147,17 @@ function gerarId() {
 
     function mostrarAlerta(mensagem, tipo = "success") {
       const alerta = document.getElementById("alert");
+      if (!alerta) return;
+
       alerta.textContent = mensagem;
       alerta.className = `alert ${tipo} show`;
+      alerta.setAttribute("role", tipo === "error" ? "alert" : "status");
+      alerta.setAttribute("aria-live", tipo === "error" ? "assertive" : "polite");
 
       clearTimeout(window.alertTimer);
       window.alertTimer = setTimeout(() => {
         alerta.classList.remove("show");
-      }, 3500);
+      }, 4600);
     }
 
 
