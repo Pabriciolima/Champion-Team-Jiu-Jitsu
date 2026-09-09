@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "33";
+window.CHAMPION_APP_VERSION = "34";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -6398,4 +6398,59 @@ document.addEventListener("click", async (event)=>{
   }
 
   marcarAtivo("studentPaymentSection");
+})();
+
+/* MENU MOBILE DO PROFESSOR — V34 */
+(function(){
+  const nav=document.getElementById("teacherPortalNav");
+  if(!nav)return;
+  const links=[...nav.querySelectorAll("[data-teacher-target]")];
+  const sidebar=document.getElementById("appSidebar");
+  const backdrop=document.getElementById("mobileMenuBackdrop");
+  const mobileButton=document.getElementById("mobileMenuButton");
+
+  function closeMenu(){
+    if(window.innerWidth>860)return;
+    sidebar?.classList.remove("mobile-open");
+    backdrop?.classList.remove("show");
+    document.body.classList.remove("mobile-menu-open");
+    mobileButton?.classList.remove("active");
+    mobileButton?.setAttribute("aria-expanded","false");
+  }
+
+  function active(id){
+    links.forEach(link=>{
+      const on=link.dataset.teacherTarget===id;
+      link.classList.toggle("active",on);
+      on?link.setAttribute("aria-current","location"):link.removeAttribute("aria-current");
+    });
+  }
+
+  links.forEach(link=>{
+    link.addEventListener("click",e=>{
+      e.preventDefault();
+      const id=link.dataset.teacherTarget;
+      const target=document.getElementById(id)||document.getElementById("treinos");
+      if(!target)return;
+      active(id);
+      closeMenu();
+      requestAnimationFrame(()=>{
+        const offset=window.innerWidth<=860?76:18;
+        window.scrollTo({top:target.getBoundingClientRect().top+window.scrollY-offset,behavior:"smooth"});
+        target.classList.remove("teacher-section-pulse");
+        void target.offsetWidth;
+        target.classList.add("teacher-section-pulse");
+        setTimeout(()=>target.classList.remove("teacher-section-pulse"),900);
+      });
+    });
+  });
+
+  const sections=links.map(l=>document.getElementById(l.dataset.teacherTarget)).filter(Boolean);
+  if("IntersectionObserver"in window){
+    const observer=new IntersectionObserver(entries=>{
+      const v=entries.filter(x=>x.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+      if(v?.target?.id)active(v.target.id);
+    },{rootMargin:"-18% 0px -62% 0px",threshold:[0,.08,.2,.4,.7]});
+    sections.forEach(s=>observer.observe(s));
+  }
 })();

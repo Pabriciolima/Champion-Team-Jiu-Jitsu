@@ -91,6 +91,20 @@
         <button data-view="matriculas"><span class="menu-icon">🔥</span><span>Matrículas</span></button>
         <button data-view="professores"><span class="menu-icon">🧑‍🏫</span><span>Professores</span></button>
         <button data-view="treinos"><span class="menu-icon">🥋</span><span>Treinos de jiu-jitsu</span></button>
+
+        <div id="teacherPortalNav" class="teacher-portal-nav" aria-label="Acessos rápidos do professor">
+          <div class="teacher-portal-nav-heading">
+            <span>PORTAL DO PROFESSOR</span>
+            <small>Acessos rápidos</small>
+          </div>
+          <a href="#teacherOverviewSection" data-teacher-target="teacherOverviewSection" class="teacher-portal-link"><span class="teacher-portal-icon">📊</span><span class="teacher-portal-copy"><strong>Visão da turma</strong><small>Horários, alunos e presença</small></span><span class="teacher-portal-arrow">›</span></a>
+          <a href="#teacherCheckinsSection" data-teacher-target="teacherCheckinsSection" class="teacher-portal-link"><span class="teacher-portal-icon">📸</span><span class="teacher-portal-copy"><strong>Validar check-ins</strong><small>Selfies pendentes da turma</small></span><span class="teacher-portal-arrow">›</span></a>
+          <a href="#teacherTrainingSection" data-teacher-target="teacherTrainingSection" class="teacher-portal-link"><span class="teacher-portal-icon">🥋</span><span class="teacher-portal-copy"><strong>Criar treino</strong><small>Montar treino para os alunos</small></span><span class="teacher-portal-arrow">›</span></a>
+          <a href="#teacherTrainingListSection" data-teacher-target="teacherTrainingListSection" class="teacher-portal-link"><span class="teacher-portal-icon">📋</span><span class="teacher-portal-copy"><strong>Treinos cadastrados</strong><small>Consultar e editar fichas</small></span><span class="teacher-portal-arrow">›</span></a>
+          <a href="#teacherGraduationSection" data-teacher-target="teacherGraduationSection" class="teacher-portal-link"><span class="teacher-portal-icon">🏆</span><span class="teacher-portal-copy"><strong>Indicar graduação</strong><small>Sugerir faixa e grau</small></span><span class="teacher-portal-arrow">›</span></a>
+          <a href="#teacherSettingsSection" data-teacher-target="teacherSettingsSection" class="teacher-portal-link"><span class="teacher-portal-icon">⚙️</span><span class="teacher-portal-copy"><strong>Ajustes</strong><small>Alterar senha de acesso</small></span><span class="teacher-portal-arrow">›</span></a>
+        </div>
+
         <button data-view="videos"><span class="menu-icon">🎥</span><span>Vídeos</span></button>
         <button data-view="loja"><span class="menu-icon">🛒</span><span>Gestão da loja</span></button>
         <button data-view="areaAluno"><span class="menu-icon">👤</span><span>Área do aluno</span></button>
@@ -697,7 +711,7 @@
 
         <div id="teacherOverview" class="teacher-overview" hidden>
           <div class="teacher-overview-head">
-            <div>
+            <div id="teacherOverviewSection" class="teacher-scroll-section">
               <span class="section-kicker">PAINEL DO PROFESSOR</span>
               <h3>MINHAS TURMAS E PRESENÇAS</h3>
               <p>Horários, alunos vinculados e presença registrada por check-in.</p>
@@ -728,7 +742,7 @@
 
           <div class="teacher-validation-panel">
             <div class="teacher-panel-title">
-              <div>
+              <div id="teacherCheckinsSection" class="teacher-scroll-section">
                 <span class="section-kicker">VALIDAÇÃO DE PRESENÇA</span>
                 <h4>SELFIES DE CHECK-IN</h4>
                 <p>Confirme se o aluno realmente participou da aula. Apenas você e a administração podem validar.</p>
@@ -1653,7 +1667,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V33</div>
+  <div id="appVersionBadge" class="app-version-badge">V34</div>
   <div id="supabaseStatus" class="supabase-status supabase-connecting" role="status" aria-live="polite">
     <span class="supabase-status-dot"></span>
     <span id="supabaseStatusText">Conectando ao Supabase...</span><button id="supabaseRetryButton" class="supabase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1735,6 +1749,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=26"></script>
-  <script src="script.js?v=33"></script>
+  <script src="script.js?v=34"></script>
 </body>
 </html>
