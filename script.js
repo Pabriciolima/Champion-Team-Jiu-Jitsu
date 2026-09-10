@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "36";
+window.CHAMPION_APP_VERSION = "36.1";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -3539,8 +3539,57 @@ function apagarNotificacao(id){notificacoes=notificacoes.filter(n=>n.id!==id);sa
 document.getElementById("gerarAlertasMensalidade")?.addEventListener("click",()=>{let c=0,hoje=new Date();matriculas.forEach(m=>{if(m.status!=="Ativo")return;let d=Math.ceil((new Date(m.vencimento+"T00:00:00")-hoje)/86400000);if(d<=7){criarNotificacao({tipo:d<0?"Renovação":"Mensalidade",titulo:d<0?"Plano vencido":"Mensalidade próxima",mensagem:d<0?`Seu plano venceu em ${formatarData(m.vencimento)}.`:`Sua mensalidade vence em ${formatarData(m.vencimento)}.`,publico:"Aluno específico",alunoId:m.alunoId});c++}});mostrarAlerta(c?`${c} alerta(s) gerado(s).`:"Nenhum alerta necessário.")});
 document.getElementById("marcarTodasNotificacoes")?.addEventListener("click",()=>{notificacoes=notificacoes.map(n=>({...n,lida:true}));salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()});
 document.getElementById("topNotificationButton")?.addEventListener("click",()=>document.querySelector('[data-view="notificacoes"]')?.click());
+
+/* =========================================================
+   HOTFIX V36.1
+   Restaura funções auxiliares removidas acidentalmente na V36.
+   Sem estas funções, atualizarExtras() interrompia o script
+   antes da inicialização do bridge Supabase.
+========================================================= */
+
+function preencherAlunosExtras(){
+  ["carrinhoAluno","notificacaoAluno"].forEach(id=>{
+    const s=document.getElementById(id);
+    if(!s)return;
+    const valorAtual=s.value;
+    s.innerHTML=
+      '<option value="">Selecione o aluno</option>'+
+      alunos
+        .filter(a=>a.status==="Ativo")
+        .map(a=>`<option value="${a.id}">${escaparHtml(a.nome)}</option>`)
+        .join("");
+    s.value=valorAtual;
+  });
+}
+
+function excluirProdutoLoja(id){
+  if(!confirm("Excluir produto?"))return;
+
+  produtosLoja=produtosLoja.filter(p=>p.id!==id);
+  carrinhoLoja=carrinhoLoja.filter(i=>i.produtoId!==id);
+
+  salvar(PRODUTOS_STORAGE_KEY,produtosLoja);
+  salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);
+
+  renderizarProdutos();
+  renderizarCarrinho();
+}
+
 function atualizarExtras(){renderizarVideos();renderizarProdutos();preencherAlunosExtras();renderizarCarrinho();renderizarPedidos();renderizarNotificacoes()}
-const atualizarTudoAnteriorExtras=atualizarTudo;atualizarTudo=function(){atualizarTudoAnteriorExtras();atualizarExtras()};atualizarExtras();
+const atualizarTudoAnteriorExtras=atualizarTudo;
+atualizarTudo=function(){
+  atualizarTudoAnteriorExtras();
+  try{
+    atualizarExtras();
+  }catch(error){
+    console.error("Falha em atualizar extras:",error);
+  }
+};
+try{
+  atualizarExtras();
+}catch(error){
+  console.error("Falha inicial em atualizar extras:",error);
+}
 window.excluirVideo=excluirVideo;window.adicionarCarrinho=adicionarCarrinho;window.excluirProdutoLoja=excluirProdutoLoja;window.removerCarrinho=removerCarrinho;window.lerNotificacao=lerNotificacao;window.apagarNotificacao=apagarNotificacao;
 
 const modelosJiuJitsu=[
