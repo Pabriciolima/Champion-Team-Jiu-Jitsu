@@ -1,0 +1,10 @@
+-- V35 já aplicada no projeto Champion Team SaaS.
+-- Estrutura criada:
+-- checkins.photo_expires_at
+-- checkins.photo_deleted_at
+-- trigger automático: foto expira 30 dias após checked_in_at
+-- Edge Function criada: cleanup-checkin-photos
+--
+-- IMPORTANTE:
+-- o histórico do check-in NÃO é apagado.
+-- após a limpeza, apenas photo_url fica NULL e photo_deleted_at registra a remoção.

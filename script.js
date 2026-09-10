@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "34";
+window.CHAMPION_APP_VERSION = "35";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -3311,7 +3311,9 @@ function statusCheckinLabelV30(status){
 window.renderStudentSelfieCheckinV30 = async function(payload={}){
   const student=payload.student;
   const classes=Array.isArray(payload.classes)?payload.classes:[];
-  const dbCheckins=Array.isArray(payload.checkins)?payload.checkins:[];
+  const dbCheckins=(Array.isArray(payload.checkins)?payload.checkins:[])
+    .slice()
+    .sort((a,b)=>new Date(b.checked_in_at||b.created_at||0)-new Date(a.checked_in_at||a.created_at||0));
   const select=document.getElementById("studentCheckinClass");
   const history=document.getElementById("studentCheckinHistory");
   const badge=document.getElementById("studentCheckinStatusBadge");
@@ -3335,28 +3337,104 @@ window.renderStudentSelfieCheckinV30 = async function(payload={}){
   }
 
   history.innerHTML=dbCheckins.length
-    ? dbCheckins.slice(0,6).map(c=>{
+    ? dbCheckins.map((c,index)=>{
         const meta=statusCheckinLabelV30(c.validation_status);
         const cls=classes.find(x=>String(x.id)===String(c.class_id));
+        const date=String(c.checkin_date||c.checked_in_at||"").slice(0,10);
+        const time=String(c.checked_in_at||"").slice(11,16);
+        const hasPhoto=!!c.photo_url;
+        const isLatest=index===0;
+
+        if(isLatest){
+          return `
+            <article class="student-checkin-history-card student-checkin-latest">
+              <div class="student-checkin-history-photo ${hasPhoto?"is-clickable":""}"
+                   ${hasPhoto?`data-open-checkin-photo="${c.photo_url}" role="button" tabindex="0" aria-label="Abrir foto do último check-in"`:""}>
+                ${hasPhoto
+                  ? `<img data-checkin-photo-path="${c.photo_url}" alt="Selfie do último check-in">`
+                  : `<div class="student-checkin-no-photo">✓</div>`
+                }
+              </div>
+              <div class="student-checkin-history-content">
+                <span class="student-checkin-latest-label">ÚLTIMO CHECK-IN</span>
+                <strong>${escaparHtml(cls?.name || "Check-in")}</strong>
+                <span>${formatarData(date)} • ${time}</span>
+                <small class="student-checkin-status ${meta.className}">${meta.label}</small>
+              </div>
+            </article>
+          `;
+        }
+
         return `
-          <article class="student-checkin-history-card">
-            <div class="student-checkin-history-photo">
-              ${c.photo_url
-                ? `<img data-checkin-photo-path="${c.photo_url}" alt="Selfie do check-in">`
-                : `<div class="student-checkin-no-photo">✓</div>`
-              }
+          <article class="student-checkin-history-card student-checkin-compact">
+            <div class="student-checkin-compact-date">
+              <strong>${formatarData(date)}</strong>
+              <span>${time}</span>
             </div>
-            <div class="student-checkin-history-content">
-              <strong>${cls?.name || "Check-in"}</strong>
-              <span>${formatarData(String(c.checkin_date||c.checked_in_at||"").slice(0,10))} • ${String(c.checked_in_at||"").slice(11,16)}</span>
-              <small class="student-checkin-status ${meta.className}">${meta.label}</small>
-            </div>
+            <small class="student-checkin-status ${meta.className}">${meta.label}</small>
+            ${hasPhoto ? `
+              <button type="button" class="student-checkin-photo-button"
+                      data-open-checkin-photo="${c.photo_url}"
+                      aria-label="Abrir foto deste check-in" title="Ver foto">
+                📷
+              </button>` : `
+              <span class="student-checkin-photo-expired" title="Foto removida após 30 dias">—</span>`
+            }
           </article>
         `;
       }).join("")
     : '<div class="empty">Você ainda não realizou check-in com selfie.</div>';
 
   await window.hidratarFotosCheckinV30?.(history);
+  window.bindCheckinPhotoViewerV35?.(history);
+};
+
+window.openCheckinPhotoV35 = async function(path){
+  if(!path) return;
+  try{
+    const url=await window.supabaseSignedCheckinUrl(path,300);
+    if(!url) throw new Error("Foto indisponível.");
+
+    let modal=document.getElementById("checkinPhotoViewerV35");
+    if(!modal){
+      modal=document.createElement("div");
+      modal.id="checkinPhotoViewerV35";
+      modal.className="checkin-photo-viewer-v35";
+      modal.innerHTML=`
+        <div class="checkin-photo-viewer-backdrop" data-close-checkin-photo></div>
+        <div class="checkin-photo-viewer-dialog" role="dialog" aria-modal="true" aria-label="Foto do check-in">
+          <button type="button" class="checkin-photo-viewer-close" data-close-checkin-photo aria-label="Fechar">×</button>
+          <div class="checkin-photo-viewer-head">
+            <span>📷 REGISTRO DE PRESENÇA</span>
+            <small>Foto privada do check-in</small>
+          </div>
+          <img alt="Foto do check-in">
+        </div>`;
+      document.body.appendChild(modal);
+      modal.addEventListener("click",e=>{
+        if(e.target.closest("[data-close-checkin-photo]")) modal.classList.remove("show");
+      });
+      document.addEventListener("keydown",e=>{
+        if(e.key==="Escape") modal.classList.remove("show");
+      });
+    }
+    modal.querySelector("img").src=url;
+    modal.classList.add("show");
+  }catch(e){
+    window.mostrarAlertaPremium?.("Foto indisponível","Esta foto pode ter ultrapassado o período de retenção de 30 dias.","erro");
+  }
+};
+
+window.bindCheckinPhotoViewerV35 = function(root=document){
+  root.querySelectorAll("[data-open-checkin-photo]").forEach(el=>{
+    if(el.dataset.viewerBound==="1") return;
+    el.dataset.viewerBound="1";
+    const open=()=>window.openCheckinPhotoV35(el.dataset.openCheckinPhoto);
+    el.addEventListener("click",open);
+    el.addEventListener("keydown",e=>{
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); }
+    });
+  });
 };
 
 document.getElementById("studentSelfieInput")?.addEventListener("change",(event)=>{

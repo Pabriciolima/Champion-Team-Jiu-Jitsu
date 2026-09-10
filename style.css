@@ -5699,3 +5699,59 @@ html.champion-premium-v29 *::-webkit-scrollbar-thumb {
   55%{box-shadow:0 0 0 5px rgba(255,37,51,.07),0 22px 60px rgba(0,0,0,.28)}
   100%{box-shadow:0 0 0 0 rgba(255,37,51,0),var(--premium-shadow)}
 }
+
+/* CHECK-INS — HISTÓRICO INTELIGENTE + RETENÇÃO 30 DIAS — V35 */
+.student-checkin-history{grid-template-columns:1fr!important}
+.student-checkin-latest{
+  min-height:88px;
+  background:linear-gradient(135deg,rgba(255,37,51,.055),rgba(255,255,255,.018));
+  border-color:rgba(255,37,51,.18);
+}
+.student-checkin-latest-label{
+  color:var(--premium-red)!important;
+  font-size:7.5px!important;
+  font-weight:950;
+  letter-spacing:.14em;
+}
+.student-checkin-history-photo.is-clickable{cursor:pointer;transition:.2s var(--premium-ease)}
+.student-checkin-history-photo.is-clickable:hover{transform:scale(1.035);border-color:rgba(255,37,51,.45)}
+.student-checkin-compact{
+  display:grid;
+  grid-template-columns:minmax(120px,1fr) auto 38px;
+  align-items:center;
+  min-height:54px;
+  padding:9px 11px;
+}
+.student-checkin-compact-date{display:flex;flex-direction:column;gap:3px}
+.student-checkin-compact-date strong{color:#fff;font-size:11px}
+.student-checkin-compact-date span{color:#7f8c97;font-size:9px}
+.student-checkin-photo-button{
+  width:34px;height:34px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.025);cursor:pointer;
+  transition:.2s var(--premium-ease);
+}
+.student-checkin-photo-button:hover{border-color:rgba(255,37,51,.35);background:rgba(255,37,51,.08);transform:translateY(-1px)}
+.student-checkin-photo-expired{display:grid;place-items:center;color:#3e4850;font-size:14px}
+.checkin-photo-viewer-v35{position:fixed;inset:0;z-index:999999;display:none;place-items:center;padding:18px}
+.checkin-photo-viewer-v35.show{display:grid}
+.checkin-photo-viewer-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.86);backdrop-filter:blur(12px)}
+.checkin-photo-viewer-dialog{
+  position:relative;z-index:1;width:min(520px,94vw);max-height:88vh;padding:14px;
+  border:1px solid rgba(255,255,255,.10);border-radius:22px;
+  background:#101418;box-shadow:0 30px 90px rgba(0,0,0,.65);
+}
+.checkin-photo-viewer-dialog img{display:block;width:100%;max-height:72vh;object-fit:contain;border-radius:16px;background:#07090b}
+.checkin-photo-viewer-head{display:flex;justify-content:space-between;align-items:center;padding:3px 44px 12px 3px}
+.checkin-photo-viewer-head span{color:#fff;font-size:9px;font-weight:950;letter-spacing:.10em}
+.checkin-photo-viewer-head small{color:#6f7b85;font-size:8px}
+.checkin-photo-viewer-close{
+  position:absolute;right:12px;top:10px;z-index:2;width:32px;height:32px;border-radius:10px;
+  border:1px solid rgba(255,37,51,.20);background:rgba(255,37,51,.08);color:#fff;font-size:20px;cursor:pointer
+}
+@media(max-width:560px){
+  .student-checkin-compact{grid-template-columns:1fr auto 36px}
+  .student-checkin-status{font-size:7px}
+  .checkin-photo-viewer-v35{padding:10px}
+  .checkin-photo-viewer-dialog{padding:10px;border-radius:18px}
+}
