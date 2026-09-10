@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.0";
+  window.CHAMPION_APP_VERSION = "38.1";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.0";
+  if (versionBadge) versionBadge.textContent = "V38.1";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -179,7 +179,6 @@
   document.addEventListener("click", (event) => {
     const card = event.target.closest("[data-v38-read]");
     if (card) markRead(card.dataset.v38Read, card);
-    if (document.body.classList.contains("sidebar-open") && !event.target.closest(".sidebar") && !event.target.closest("[data-v38-more]")) document.body.classList.remove("sidebar-open");
   });
   document.addEventListener("keydown", (event) => {
     const card = event.target.closest("[data-v38-read]");
@@ -289,20 +288,7 @@
   }
 
   function renderBottomNav() {
-    if (!roleMode()) return;
-    let nav = document.getElementById("v38BottomNav");
-    if (!nav) { nav = document.createElement("nav"); nav.id = "v38BottomNav"; nav.className = "v38-bottom-nav"; nav.setAttribute("aria-label", "Navegação rápida"); document.body.appendChild(nav); }
-    nav.innerHTML = navItems().map(([icon, label, target], index) => `<button type="button" class="${index === 0 ? "active" : ""}" data-v38-target="${target}" ${target === "more" ? "data-v38-more" : ""}><span>${icon}</span>${label}</button>`).join("");
-    nav.onclick = (event) => {
-      const button = event.target.closest("[data-v38-target]"); if (!button) return;
-      const target = button.dataset.v38Target;
-      if (target === "more") { document.body.classList.toggle("sidebar-open"); return; }
-      if (target === "logout") { document.getElementById("logoutButton")?.click(); return; }
-      const section = document.getElementById(target);
-      const menuButton = document.querySelector(`.menu button[data-view="${target}"]`);
-      if (menuButton) menuButton.click(); else section?.scrollIntoView({ behavior: "smooth", block: "start" });
-      nav.querySelectorAll("button").forEach(x => x.classList.toggle("active", x === button));
-    };
+    document.getElementById("v38BottomNav")?.remove();
   }
 
   async function setup() {
