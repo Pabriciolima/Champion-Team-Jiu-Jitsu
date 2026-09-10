@@ -6090,3 +6090,24 @@ html.champion-premium-v29 *::-webkit-scrollbar-thumb {
   padding-top:24px;
   border-top:1px solid rgba(148,163,184,.18);
 }
+
+/* V37.11 - notificacoes individuais, leves e orientadas a mobile */
+.notification-layout{grid-template-columns:minmax(420px,1fr) minmax(360px,.9fr);align-items:start}
+.notification-inbox-panel{min-height:360px}
+.notification-card{position:relative;border-radius:16px;background:linear-gradient(145deg,#12171c,#0d1115);box-shadow:0 8px 24px rgba(0,0,0,.16);transition:opacity .22s ease,transform .22s ease,border-color .22s ease}
+.notification-card.unread{border-left:1px solid var(--border);border-color:rgba(255,36,55,.4)}
+.notification-card.high-priority{box-shadow:inset 3px 0 0 var(--primary),0 8px 24px rgba(0,0,0,.18)}
+.recipient-notification{cursor:pointer;grid-template-columns:46px 1fr 10px;min-height:104px}
+.recipient-notification:hover,.recipient-notification:focus-visible{transform:translateY(-2px);border-color:var(--primary);outline:none}
+.notification-dismissing{opacity:0;transform:translateX(24px);pointer-events:none}
+.notification-icon{border:0;border-radius:13px;background:rgba(255,255,255,.055);font-size:20px}
+.notification-content{min-width:0}.notification-content strong{display:block;margin:4px 0;font-size:14px}.notification-content p{margin:4px 0 8px;line-height:1.5;color:#aab2ba}
+.notification-category{display:inline-flex;color:#ff6976;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.notification-card-top{display:flex;align-items:center;gap:8px}.priority-pill{padding:3px 6px;border-radius:99px;background:rgba(255,36,55,.13);color:#ff6976;font-size:8px;font-weight:900}
+.notification-unread-dot{align-self:center;width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 5px rgba(255,36,55,.1)}
+.delivery-progress{height:4px;margin:10px 0 6px;border-radius:99px;background:#242a30;overflow:hidden}.delivery-progress span{display:block;height:100%;border-radius:inherit;background:#57d38c}
+.notification-empty-modern{display:grid;justify-items:center;text-align:center;padding:42px 18px;color:#7f8992}.notification-empty-modern>span{width:48px;height:48px;display:grid;place-items:center;margin-bottom:12px;border-radius:50%;background:rgba(87,211,140,.1);color:#57d38c;font-size:23px}.notification-empty-modern strong{color:#d9dee3;font-size:16px}.notification-empty-modern p{margin:6px 0 0;font-size:11px}
+.field-hint{display:block;margin-top:7px;color:#707b85;font-size:9px}.hidden{display:none!important}
+body.professor-mode .notification-layout{grid-template-columns:minmax(0,680px);justify-content:center}body.professor-mode .notification-compose-panel{display:none!important}
+@media(max-width:1100px){.notification-layout{grid-template-columns:1fr}}
+@media(max-width:700px){.notification-card{border-radius:14px}.recipient-notification{grid-template-columns:42px 1fr 8px;padding:13px;gap:10px}.notification-compose-panel .form-grid{grid-template-columns:1fr}.notification-layout{display:flex;flex-direction:column}.notification-layout>.panel{width:100%}}
