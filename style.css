@@ -6057,3 +6057,8 @@ html.champion-premium-v29 *::-webkit-scrollbar-thumb {
   line-height:1.25;
 }
 .order-no-action-v376{color:var(--text-muted,#94a3b8)}
+.student-email-heading-v377{
+  margin-top:28px;
+  padding-top:24px;
+  border-top:1px solid rgba(148,163,184,.18);
+}

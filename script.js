@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "37.5";
+window.CHAMPION_APP_VERSION = "37.7";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -568,6 +568,7 @@ window.addEventListener("offline", () => {
           <td><span class="status ${aluno.status.toLowerCase()}">${aluno.status}</span></td>
           <td>
             <button class="btn btn-secondary" onclick="editarAluno('${aluno.id}')">Editar</button>
+            <button class="btn btn-secondary" onclick="redefinirAcessoAlunoV377('${aluno.id}')">Redefinir acesso</button>
             <button class="btn btn-danger" onclick="excluirAluno('${aluno.id}')">Excluir</button>
           </td>
         </tr>
@@ -5520,6 +5521,44 @@ configurarFormularioAlterarSenha({
   confirmarSenhaId: "confirmarNovaSenhaAluno"
 });
 
+document.getElementById("formAlterarEmailAluno")?.addEventListener("submit",async(event)=>{
+  event.preventDefault();
+  const senhaAtual=document.getElementById("senhaAtualEmailAluno")?.value||"";
+  const novoEmail=String(document.getElementById("novoEmailAluno")?.value||"").trim().toLowerCase();
+  const confirmarEmail=String(document.getElementById("confirmarNovoEmailAluno")?.value||"").trim().toLowerCase();
+  const botao=event.submitter;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novoEmail)) return mostrarAlerta("Informe um novo e-mail válido.","error");
+  if(novoEmail!==confirmarEmail) return mostrarAlerta("A confirmação do novo e-mail não confere.","error");
+  try{
+    if(botao){botao.disabled=true;botao.textContent="ATUALIZANDO..."}
+    await window.supabaseAlterarEmailUsuarioV377?.(senhaAtual,novoEmail);
+    event.target.reset();
+    mostrarAlerta("E-mail de acesso atualizado. Use o novo e-mail no próximo login.");
+  }catch(error){
+    mostrarAlerta(error?.message||"Não foi possível atualizar o e-mail.","error");
+  }finally{
+    if(botao){botao.disabled=false;botao.textContent="ATUALIZAR E-MAIL"}
+  }
+});
+
+async function redefinirAcessoAlunoV377(id){
+  const aluno=alunos.find(item=>String(item.id)===String(id));
+  if(!aluno) return mostrarAlerta("Aluno não encontrado.","error");
+  const senhaInicial=senhaPadraoCpf(aluno.cpf);
+  if(senhaInicial.length<6) return mostrarAlerta("O aluno precisa ter um CPF válido para redefinir o acesso.","error");
+  if(!confirm(`Redefinir o acesso de ${aluno.nome}? A senha voltará para os 6 primeiros números do CPF.`)) return;
+  try{
+    const conta=await window.supabaseRedefinirAcessoAlunoV377?.(aluno);
+    aluno.authUid=conta?.uid||aluno.authUid||"";
+    salvar(STORAGE_KEYS.alunos,alunos);
+    mostrarAlerta(`Acesso redefinido. Login: ${aluno.email} • Senha inicial: ${senhaInicial}`);
+  }catch(error){
+    mostrarAlerta(error?.message||"Não foi possível redefinir o acesso.","error");
+  }
+}
+
+window.redefinirAcessoAlunoV377=redefinirAcessoAlunoV377;
+
 configurarFormularioAlterarSenha({
   formId: "formAlterarSenhaProfessor",
   senhaAtualId: "senhaAtualProfessor",
@@ -6780,28 +6819,26 @@ document.addEventListener("click", async (event)=>{
       email:String(email||"").trim().toLowerCase()
     };
 
-    const {error:inviteError}=await client.from("access_invites").insert({
+    const {data:invite,error:inviteError}=await client.from("access_invites").insert({
       academy_id:a.id,
       email:invitePayload.email,
       role:dbRole,
       payload:invitePayload,
       created_by:user.id
-    });
+    }).select("id").single();
     if(inviteError) throw inviteError;
-
-    const secondary=window.supabase.createClient(cfg.url,cfg.anonKey,{
-      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
-    });
-
-    const {data,error}=await secondary.auth.signUp({
-      email:invitePayload.email,
-      password:String(password||""),
-      options:{data:{invite_for:"champion-team"}}
-    });
-    if(error) throw error;
-    if(!data.user) throw new Error("O Supabase não criou o usuário.");
-
-    return {uid:data.user.id,email:invitePayload.email};
+    try{
+      const {data,error}=await client.functions.invoke("user-access",{body:{
+        action:"create_or_repair",role:dbRole,entity_id:profileId,full_name:nome,
+        cpf:invitePayload.cpf,email:invitePayload.email,password:String(password||"")
+      }});
+      if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao criar o acesso."));
+      if(data?.error) throw new Error(data.error);
+      return {uid:data.uid,email:data.email};
+    }catch(error){
+      if(invite?.id) await client.from("access_invites").delete().eq("id",invite.id).catch(()=>{});
+      throw error;
+    }
   };
 
   window.supabaseAtualizarPerfilAcesso = async function({authUid,nome,cpf}){
@@ -6814,7 +6851,15 @@ document.addEventListener("click", async (event)=>{
     if(error) throw error;
   };
 
-  window.supabaseMigrarAcessoAluno = async ()=>true;
+  window.supabaseMigrarAcessoAluno = async function({authUid,cpf,emailNovo,nome,profileId}){
+    const {data,error}=await client.functions.invoke("user-access",{body:{
+      action:"create_or_repair",role:"student",entity_id:profileId,auth_uid:authUid,
+      full_name:nome,cpf,email:emailNovo
+    }});
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao atualizar o login do aluno."));
+    if(data?.error) throw new Error(data.error);
+    return data;
+  };
   window.supabaseMigrarProfessor = async ()=>true;
 
   window.supabaseExcluirPerfilAluno = async function(authUid){
@@ -6828,19 +6873,39 @@ document.addEventListener("click", async (event)=>{
 
   window.supabaseAlterarSenhaUsuario = async function(senhaAtual,novaSenha){
     if(!user) throw new Error("Sessão inválida.");
+    const {data,error}=await client.functions.invoke("user-access",{body:{
+      action:"update_self_credentials",current_password:senhaAtual,new_password:novaSenha
+    }});
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao atualizar a senha."));
+    if(data?.error) throw new Error(data.error);
+    return data;
+  };
 
-    const verifier=window.supabase.createClient(cfg.url,cfg.anonKey,{
-      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
-    });
+  window.supabaseAlterarEmailUsuarioV377 = async function(senhaAtual,novoEmail){
+    if(!user) throw new Error("Sessão inválida.");
+    const {data,error}=await client.functions.invoke("user-access",{body:{
+      action:"update_self_credentials",current_password:senhaAtual,new_email:novoEmail
+    }});
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao atualizar o e-mail."));
+    if(data?.error) throw new Error(data.error);
+    const refreshed=await client.auth.refreshSession();
+    if(refreshed.data?.user) user=refreshed.data.user;
+    profile=await getProfile(user);
+    await loadStudentOnly();
+    return data;
+  };
 
-    const {error:verifyError}=await verifier.auth.signInWithPassword({
-      email:user.email,password:senhaAtual
-    });
-    if(verifyError) throw new Error("Senha atual incorreta.");
-
-    const {error}=await client.auth.updateUser({password:novaSenha});
-    if(error) throw error;
-    return true;
+  window.supabaseRedefinirAcessoAlunoV377 = async function(aluno){
+    if(!profile||!["master_admin","owner"].includes(profile.role)) throw new Error("Somente a administração pode redefinir acessos.");
+    const password=String(aluno?.cpf||"").replace(/\D/g,"").slice(0,6);
+    const {data,error}=await client.functions.invoke("user-access",{body:{
+      action:"create_or_repair",role:"student",entity_id:aluno.id,auth_uid:aluno.authUid||"",
+      full_name:aluno.nome,cpf:aluno.cpf,email:aluno.email,password
+    }});
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao redefinir o acesso."));
+    if(data?.error) throw new Error(data.error);
+    await loadNormalized();
+    return data;
   };
 
   async function openSession(authUser){
