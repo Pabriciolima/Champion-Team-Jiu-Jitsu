@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "36.2";
+window.CHAMPION_APP_VERSION = "36.3";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -340,22 +340,50 @@ window.addEventListener("offline", () => {
       alunos: ["Alunos", "Cadastro e gestão dos alunos"],
       planos: ["Planos", "Planos comerciais da academia"],
       matriculas: ["Matrículas", "Vínculos entre alunos e planos"],
-      checkin: ["Check-in", "Controle de entrada dos alunos"],
-      graduacoes: ["Gestão de Graduações", "Faixas, graus, histórico e exames"]
+      professores: ["Professores", "Equipe técnica e profissionais da academia"],
+      treinos: ["Treinos de jiu-jitsu", "Planejamento técnico"],
+      videos: ["Vídeos", "Treino do dia e técnicas demonstrativas"],
+      loja: ["Gestão da loja", "Produtos, estoque e pedidos"],
+      areaAluno: ["Área do aluno", "Acesso individual, loja, notificações e pedidos"],
+      billingCrm: ["CRM de cobranças", "Mensalidades, atrasos e automações de cobrança"],
+      notificacoes: ["Notificações", "Vendas, promoções e mensalidades"],
+      graduacoes: ["Gestão de Graduações", "Faixas, graus, histórico e exames"],
+      checkin: ["Check-in", "Controle de entrada dos alunos"]
     };
 
     document.querySelectorAll(".menu button").forEach((botao) => {
       botao.addEventListener("click", () => {
+        const view = botao.dataset.view;
+        const destino = document.getElementById(view);
+
+        // Segurança: um botão sem destino não pode derrubar o sistema inteiro.
+        if (!view || !destino) {
+          console.warn("Navegação ignorada: view inexistente", view);
+          return;
+        }
+
         document.querySelectorAll(".menu button").forEach((item) => item.classList.remove("active"));
-        document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
+        document.querySelectorAll(".view").forEach((secao) => secao.classList.remove("active"));
 
         botao.classList.add("active");
-        const view = botao.dataset.view;
-        document.getElementById(view).classList.add("active");
-        document.getElementById("pageTitle").textContent = textosPaginas[view][0];
-        document.getElementById("pageSubtitle").textContent = textosPaginas[view][1];
+        destino.classList.add("active");
 
-        atualizarTudo();
+        const texto = textosPaginas[view] || [
+          destino.dataset.title || "Champion Team",
+          destino.dataset.subtitle || ""
+        ];
+
+        const pageTitle = document.getElementById("pageTitle");
+        const pageSubtitle = document.getElementById("pageSubtitle");
+
+        if (pageTitle) pageTitle.textContent = texto[0] || "Champion Team";
+        if (pageSubtitle) pageSubtitle.textContent = texto[1] || "";
+
+        try {
+          atualizarTudo();
+        } catch (error) {
+          console.error("Falha ao atualizar a tela após navegação:", error);
+        }
       });
     });
 
@@ -1819,16 +1847,6 @@ const FICHAS_STORAGE_KEY = "fitcontrol_fichas_treino";
 let professores = carregar(PROFESSORES_STORAGE_KEY);
 let fichasTreino = carregar(FICHAS_STORAGE_KEY);
 
-textosPaginas.professores = [
-  "Professores",
-  "Equipe técnica e profissionais da academia"
-];
-
-textosPaginas.treinos = [
-  "Fichas de treino",
-  "Planejamento individual de exercícios"
-];
-
 function salvarProfessores() {
   salvar(PROFESSORES_STORAGE_KEY, professores);
 }
@@ -3234,7 +3252,6 @@ renderizarModelosAutomaticosTreino();
 
 const VIDEOS_STORAGE_KEY="fitcontrol_videos_jiujitsu",PRODUTOS_STORAGE_KEY="fitcontrol_produtos_loja",PEDIDOS_STORAGE_KEY="fitcontrol_pedidos_loja",NOTIFICACOES_STORAGE_KEY="fitcontrol_notificacoes",CARRINHO_STORAGE_KEY="fitcontrol_carrinho";
 let videosTreino=carregar(VIDEOS_STORAGE_KEY),produtosLoja=carregar(PRODUTOS_STORAGE_KEY),pedidosLoja=carregar(PEDIDOS_STORAGE_KEY),notificacoes=carregar(NOTIFICACOES_STORAGE_KEY),carrinhoLoja=carregar(CARRINHO_STORAGE_KEY);
-textosPaginas.videos=["Vídeos","Treino do dia e técnicas demonstrativas"];textosPaginas.loja=["Loja","Produtos e pedidos"];textosPaginas.notificacoes=["Notificações","Vendas, promoções e mensalidades"];textosPaginas.treinos=["Treinos de jiu-jitsu","Planejamento técnico"];
 function criarNotificacao(o){notificacoes.unshift({id:gerarId(),tipo:o.tipo||"Geral",titulo:o.titulo,mensagem:o.mensagem,publico:o.publico||"Administrador",alunoId:o.alunoId||"",lida:false,criadaEm:new Date().toISOString()});salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
 
 function videoEmbed(u){
@@ -3955,11 +3972,6 @@ let alunoLogadoId =
   "";
 
 let carrinhoAluno = [];
-
-textosPaginas.areaAluno = [
-  "Área do aluno",
-  "Acesso individual, loja, notificações e pedidos"
-];
 
 function obterAlunoLogado() {
   return alunos.find(
@@ -6999,3 +7011,15 @@ document.addEventListener("click", async (event)=>{
     sections.forEach(s=>observer.observe(s));
   }
 })();
+
+
+/* =========================================================
+   HOTFIX DE NAVEGAÇÃO — V36.3
+   Evita quebra global quando uma view não possui título mapeado.
+========================================================= */
+window.addEventListener("error", (event) => {
+  const msg = String(event?.error?.message || event?.message || "");
+  if (msg.includes("textosPaginas") || msg.includes("can't access property 0")) {
+    console.error("Falha de navegação capturada sem interromper o app:", msg);
+  }
+});
