@@ -196,6 +196,42 @@ Deno.serve(async(req)=>{
       .single();
     if(studentError) throw studentError;
 
+    if(action==="check_payment"){
+      const orderId=String(body.order_id||"");
+      const {data:order,error}=await admin.from("orders")
+        .select("id,academy_id,student_id,status,code,payment_option,provider_payment_id,invoice_url,remaining_balance")
+        .eq("id",orderId)
+        .eq("student_id",student.id)
+        .single();
+      if(error) throw error;
+      if(["paid","deposit_paid","ready","delivered"].includes(order.status)){
+        return json({ok:true,status:order.status,paid:true,newly_confirmed:false});
+      }
+      if(!order.provider_payment_id){
+        return json({ok:true,status:order.status,paid:false,newly_confirmed:false});
+      }
+
+      const payment=await asaas(`/payments/${order.provider_payment_id}`,{method:"GET"});
+      const paid=["RECEIVED","CONFIRMED","RECEIVED_IN_CASH"].includes(String(payment?.status||"").toUpperCase());
+      if(!paid) return json({ok:true,status:order.status,provider_status:payment?.status||null,paid:false,newly_confirmed:false});
+
+      const paidAt=payment?.confirmedDate||payment?.paymentDate||payment?.clientPaymentDate||null;
+      const {data:result,error:reconcileError}=await admin.rpc("reconcile_store_order_payment",{
+        p_order_id:order.id,
+        p_provider_paid_at:paidAt,
+        p_source:"student_polling"
+      });
+      if(reconcileError) throw reconcileError;
+      if(result?.newly_confirmed){
+        const deposit=order.payment_option==="pix_deposit";
+        await admin.from("notifications").insert([
+          {academy_id:order.academy_id,student_id:order.student_id,audience:"student",title:deposit?"Sinal do pedido confirmado ✅":"Pagamento do pedido confirmado ✅",message:deposit?`Recebemos o sinal do pedido ${order.code||""}. Restante na retirada: R$ ${Number(order.remaining_balance||0).toFixed(2).replace('.',',')}.`:`Seu pedido ${order.code||""} foi pago e a academia já foi avisada.`,type:"success"},
+          {academy_id:order.academy_id,student_id:null,audience:"admin",title:deposit?"Sinal de venda recebido ✅":"Venda paga via Pix ✅",message:deposit?`${student.full_name} pagou o sinal do pedido ${order.code||""}. Restante na retirada: R$ ${Number(order.remaining_balance||0).toFixed(2).replace('.',',')}.`:`Pedido ${order.code||""} de ${student.full_name} confirmado automaticamente pelo Asaas.`,type:"success"}
+        ]);
+      }
+      return json({ok:true,...result,paid:result?.ok===true,provider_status:payment?.status||null});
+    }
+
     if(action==="expire_order"){
       const orderId=String(body.order_id||"");
       const {data:order,error}=await admin.from("orders")

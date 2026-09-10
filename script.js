@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "37.7";
+window.CHAMPION_APP_VERSION = "37.8";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -4568,7 +4568,7 @@ function abrirPixPedidoV375(data){
       </div>
 
       <div id="pixStatusV37" class="pix-status-v37 waiting"><span></span> Aguardando confirmação automática do Asaas...</div>
-      <small>A confirmação chega pelo webhook. Não é necessário enviar comprovante.</small>
+      <small>A confirmação é consultada automaticamente no Asaas. Não é necessário enviar comprovante.</small>
     </div>`;
   document.body.appendChild(modal);
 
@@ -4593,6 +4593,18 @@ function abrirPixPedidoV375(data){
 
     if(left<=0){
       clearInterval(championPixTimerV37); clearInterval(championPixPollV37);
+      try{
+        const checked=await window.supabaseCheckStorePaymentV378?.(data.order_id);
+        if(["paid","deposit_paid"].includes(checked?.status)){
+          const st=document.getElementById("pixStatusV37");
+          if(st){st.className="pix-status-v37 paid";st.innerHTML="<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓"}
+          const c=document.getElementById("pixCountdownV37");if(c)c.textContent="PAGO";
+          await window.supabaseRefreshCurrentUserV30?.();
+          renderizarAreaAluno();
+          mostrarAlerta("Pagamento confirmado! A academia já foi notificada.");
+          return;
+        }
+      }catch(e){console.warn("Verificação final do PIX:",e)}
       const st=document.getElementById("pixStatusV37");
       if(st){st.className="pix-status-v37 expired";st.innerHTML="<span></span> Reserva expirada. Os itens foram liberados."}
       try{await window.supabaseExpireStoreOrderV37?.(data.order_id)}catch(e){console.warn(e)}
@@ -4605,7 +4617,7 @@ function abrirPixPedidoV375(data){
 
   const poll=async()=>{
     try{
-      const order=await window.supabaseGetStoreOrderV375?.(data.order_id);
+      const order=await window.supabaseCheckStorePaymentV378?.(data.order_id);
       if(["paid","deposit_paid"].includes(order?.status)){
         clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
         const st=document.getElementById("pixStatusV37");
@@ -6562,6 +6574,16 @@ document.addEventListener("click", async (event)=>{
     if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao liberar a reserva."));
     if(data?.error) throw new Error(data.error);
     await loadStudentOnly();
+    return data;
+  };
+
+  window.supabaseCheckStorePaymentV378 = async function(orderId){
+    if(!orderId) throw new Error("Pedido não identificado.");
+    const {data,error}=await client.functions.invoke("store-checkout",{
+      body:{action:"check_payment",order_id:orderId}
+    });
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao consultar o pagamento no Asaas."));
+    if(data?.error) throw new Error(data.error);
     return data;
   };
 

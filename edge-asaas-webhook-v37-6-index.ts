@@ -8,7 +8,8 @@ Deno.serve(async(req)=>{
     if(req.method!=="POST") return json({ok:true});
     const expected=Deno.env.get("ASAAS_WEBHOOK_TOKEN")||"";
     const received=req.headers.get("asaas-access-token")||req.headers.get("x-webhook-token")||"";
-    if(expected&&received!==expected) return new Response("unauthorized",{status:401});
+    if(!expected) return new Response("webhook secret not configured",{status:503});
+    if(received!==expected) return new Response("unauthorized",{status:401});
 
     const body=await req.json();
     const eventId=String(body.id||"");
@@ -39,19 +40,22 @@ Deno.serve(async(req)=>{
       if(error||!order) return json({ok:true,ignored:"order_not_found"});
 
       if(["PAYMENT_RECEIVED","PAYMENT_CONFIRMED"].includes(event)){
-        if(order.status==="cancelled"){
+        const {data:confirmed,error:confirmError}=await admin.rpc("reconcile_store_order_payment",{
+          p_order_id:orderId,
+          p_provider_paid_at:payment.confirmedDate||payment.paymentDate||payment.clientPaymentDate||null,
+          p_source:"asaas_webhook"
+        });
+        if(confirmError) throw confirmError;
+        if(!confirmed?.ok){
           await admin.from("notifications").insert({
             academy_id:order.academy_id,student_id:null,audience:"admin",
-            title:"Pagamento recebido após cancelamento",
-            message:`O Asaas confirmou o pagamento do pedido ${order.code||""} após o cancelamento. Verifique a cobrança antes de entregar o item.`,
+            title:"Pagamento recebido após cancelamento manual",
+            message:`O Asaas confirmou o pagamento do pedido ${order.code||""}, mas ele havia sido cancelado manualmente. Verifique a cobrança antes de entregar o item.`,
             type:"warning"
           });
-          return json({ok:true,type:"order",status:"late_payment"});
+          return json({ok:true,type:"order",status:confirmed?.status||"late_payment"});
         }
-
-        const {data:confirmed,error:confirmError}=await admin.rpc("confirm_store_order",{p_order_id:orderId});
-        if(confirmError) throw confirmError;
-        const finalStatus=String(confirmed||order.status);
+        const finalStatus=String(confirmed?.status||order.status);
         const deposit=order.payment_option==="pix_deposit";
         const studentName=order.students?.full_name||"Aluno";
         await admin.from("orders").update({
@@ -59,7 +63,7 @@ Deno.serve(async(req)=>{
           invoice_url:payment.invoiceUrl||order.invoice_url,
           updated_at:new Date().toISOString()
         }).eq("id",orderId);
-        await admin.from("notifications").insert([
+        if(confirmed?.newly_confirmed) await admin.from("notifications").insert([
           {academy_id:order.academy_id,student_id:order.student_id,audience:"student",title:deposit?"Sinal do pedido confirmado ✅":"Pagamento do pedido confirmado ✅",message:deposit?`Recebemos o sinal do pedido ${order.code||""}. Restante na retirada: R$ ${Number(order.remaining_balance||0).toFixed(2).replace('.',',')}.`:`Seu pedido ${order.code||""} foi pago e a academia já foi avisada.`,type:"success"},
           {academy_id:order.academy_id,student_id:null,audience:"admin",title:deposit?"Sinal de venda recebido ✅":"Venda paga via Pix ✅",message:deposit?`${studentName} pagou o sinal do pedido ${order.code||""}. Restante na retirada: R$ ${Number(order.remaining_balance||0).toFixed(2).replace('.',',')}.`:`Pedido ${order.code||""} de ${studentName} confirmado automaticamente pelo Asaas.`,type:"success"}
         ]);
