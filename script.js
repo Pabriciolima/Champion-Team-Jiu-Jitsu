@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "37.8";
+window.CHAMPION_APP_VERSION = "37.9";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -6290,6 +6290,19 @@ document.addEventListener("click", async (event)=>{
 
     const failed=[membershipsRes,plansRes,paymentsRes,checkinsRes,productsRes,ordersRes,notificationsRes,gradRes,recRes,trainingsRes,classStudentsRes].find(x=>x.error);
     if(failed) throw failed.error;
+
+    const generatedOpenPayments=(paymentsRes.data||[]).filter(payment=>
+      ["pending","overdue"].includes(payment.status)&&payment.external_id
+    );
+    if(generatedOpenPayments.length){
+      const checks=await Promise.allSettled(generatedOpenPayments.map(payment=>
+        client.functions.invoke("billing-pix",{body:{action:"check_payment",payment_id:payment.id}})
+      ));
+      if(checks.some(check=>check.status==="fulfilled"&&check.value?.data?.status==="paid")){
+        const refreshed=await client.from("payments").select("*").eq("student_id",sid);
+        if(!refreshed.error) paymentsRes.data=refreshed.data||[];
+      }
+    }
 
     const classIds = (classStudentsRes.data||[]).map(x=>x.class_id).filter(Boolean);
     let studentClasses = [];
