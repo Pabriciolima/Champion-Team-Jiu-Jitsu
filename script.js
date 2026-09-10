@@ -3660,7 +3660,40 @@ document.getElementById("finalizarCompra")?.addEventListener("click",()=>{
   renderizarProdutos();renderizarCarrinho();renderizarPedidos();
   mostrarAlerta("Pagamento aprovado em modo demonstrativo.");
 });
-function renderizarPedidos(){if(!document.getElementById("tabelaPedidosLoja"))return;const statusLabel=s=>({pending:"AGUARDANDO PIX",paid:"PAGO",deposit_paid:"SINAL PAGO",ready:"PRONTO",delivered:"ENTREGUE",cancelled:"CANCELADO"}[s]||String(s||"PENDENTE").toUpperCase());tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr><td><strong>${escaparHtml(p.codigo||String(p.id).slice(0,8))}</strong><br><small class="order-status-v37 ${p.status||"pending"}">${statusLabel(p.status)}</small></td><td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td><td>${(p.itens||[]).map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td><td>${escaparHtml(p.pagamento||"PIX")}</td><td><strong>${formatarMoeda(p.total)}</strong></td><td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Nenhum pedido.</td></tr>';if(document.getElementById("totalPedidosModulo"))totalPedidosModulo.textContent=pedidosLoja.length}
+function renderizarPedidos(){
+  if(!document.getElementById("tabelaPedidosLoja"))return;
+  const statusLabel=s=>({pending:"AGUARDANDO PIX",paid:"PAGO",deposit_paid:"SINAL PAGO",ready:"PRONTO",delivered:"ENTREGUE",cancelled:"CANCELADO"}[s]||String(s||"PENDENTE").toUpperCase());
+  tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr>
+    <td><strong>${escaparHtml(p.codigo||String(p.id).slice(0,8))}</strong><br><small class="order-status-v37 ${p.status||"pending"}">${statusLabel(p.status)}</small>${p.status==="cancelled"&&p.motivoCancelamento?`<br><small class="order-cancel-reason-v376">${escaparHtml(p.motivoCancelamento)}</small>`:""}</td>
+    <td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td>
+    <td>${(p.itens||[]).map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td>
+    <td>${escaparHtml(p.pagamento||"PIX")}</td>
+    <td><strong>${formatarMoeda(p.total)}</strong></td>
+    <td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td>
+    <td>${p.status==="pending"?`<button type="button" class="btn btn-danger btn-cancel-reservation-v376" onclick="cancelarReservaPedidoV376('${p.id}')">CANCELAR RESERVA</button>`:'<span class="order-no-action-v376">—</span>'}</td>
+  </tr>`).join(""):'<tr><td colspan="7" class="empty">Nenhum pedido.</td></tr>';
+  if(document.getElementById("totalPedidosModulo"))totalPedidosModulo.textContent=pedidosLoja.length;
+}
+
+async function cancelarReservaPedidoV376(orderId){
+  const pedido=pedidosLoja.find(item=>String(item.id)===String(orderId));
+  if(!pedido||pedido.status!=="pending") return mostrarAlerta("Esta reserva não está mais aguardando PIX.","error");
+  if(!confirm(`Cancelar a reserva ${pedido.codigo}? O pedido continuará no histórico para auditoria.`)) return;
+  const button=document.querySelector(`[onclick="cancelarReservaPedidoV376('${orderId}')"]`);
+  const old=button?.textContent;
+  if(button){button.disabled=true;button.textContent="CANCELANDO..."}
+  try{
+    const result=await window.supabaseCancelStoreOrderV376?.(orderId);
+    if(!result?.ok) throw new Error("Não foi possível cancelar a reserva.");
+    mostrarAlerta(result.legacy_stock_restored
+      ?`Reserva cancelada. ${Number(result.restored_quantity||0)} unidade(s) devolvida(s) ao estoque.`
+      :"Reserva cancelada e quantidade liberada imediatamente.");
+  }catch(error){
+    console.error("Cancelamento V37.6",error);
+    mostrarAlerta(error?.message||"Não foi possível cancelar a reserva.","error");
+    if(button){button.disabled=false;button.textContent=old||"CANCELAR RESERVA"}
+  }
+}
 document.getElementById("formNotificacao")?.addEventListener("submit",e=>{e.preventDefault();if(notificacaoPublico.value==="Aluno específico"&&!notificacaoAluno.value)return mostrarAlerta("Selecione o aluno.","error");criarNotificacao({tipo:notificacaoTipo.value,titulo:notificacaoTitulo.value.trim(),mensagem:notificacaoMensagem.value.trim(),publico:notificacaoPublico.value,alunoId:notificacaoAluno.value});formNotificacao.reset();renderizarNotificacoes();mostrarAlerta("Notificação enviada.")});
 function renderizarNotificacoes(){if(!document.getElementById("listaNotificacoes"))return;listaNotificacoes.innerHTML=notificacoes.length?notificacoes.map(n=>`<article class="notification-card ${n.lida?"":"unread"}"><div class="notification-icon">🔔</div><div class="notification-content"><strong>${escaparHtml(n.titulo)}</strong><p>${escaparHtml(n.mensagem)}</p><small>${n.tipo} • ${new Date(n.criadaEm).toLocaleString("pt-BR")}</small></div><div class="notification-actions">${n.lida?"":`<button onclick="lerNotificacao('${n.id}')">Lida</button>`}<button onclick="apagarNotificacao('${n.id}')">Excluir</button></div></article>`).join(""):'<div class="empty">Nenhuma notificação.</div>';let q=notificacoes.filter(n=>!n.lida).length;[menuNotificationBadge,topNotificationBadge].forEach(x=>{x.textContent=q;x.classList.toggle("show",q>0)});totalNotificacoesNaoLidas.textContent=q}
 function lerNotificacao(id){notificacoes=notificacoes.map(n=>n.id===id?{...n,lida:true}:n);salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
@@ -3719,7 +3752,7 @@ try{
 }catch(error){
   console.error("Falha inicial em atualizar extras:",error);
 }
-window.excluirVideo=excluirVideo;window.adicionarCarrinho=adicionarCarrinho;window.excluirProdutoLoja=excluirProdutoLoja;window.removerCarrinho=removerCarrinho;window.lerNotificacao=lerNotificacao;window.apagarNotificacao=apagarNotificacao;
+window.excluirVideo=excluirVideo;window.adicionarCarrinho=adicionarCarrinho;window.excluirProdutoLoja=excluirProdutoLoja;window.removerCarrinho=removerCarrinho;window.lerNotificacao=lerNotificacao;window.apagarNotificacao=apagarNotificacao;window.cancelarReservaPedidoV376=cancelarReservaPedidoV376;
 
 const modelosJiuJitsu=[
 {id:"jj_fundamentos_branca",nome:"Fundamentos — Faixa branca",categoria:"Fundamentos",objetivo:"Fundamentos",nivel:"Faixa branca",frequencia:3,duracao:"60 min",icone:"🥋",descricao:"Base, postura, movimentação e segurança.",observacoes:"Priorizar técnica e controle.",exercicios:[
@@ -6130,6 +6163,9 @@ document.addEventListener("click", async (event)=>{
       saldoRetirada:Number(o.remaining_balance||0),
       providerPaymentId:o.provider_payment_id||"",
       pixExpiraEm:o.pix_expires_at||"",
+      canceladoEm:o.cancelled_at||"",
+      motivoCancelamento:o.cancellation_reason||"",
+      estoqueLegadoRestaurado:!!o.legacy_stock_restored,
       criadoEm:o.created_at,
       itens:(o.order_items||[]).map(i=>({
         produtoId:i.product_id,
@@ -6487,6 +6523,22 @@ document.addEventListener("click", async (event)=>{
     if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao liberar a reserva."));
     if(data?.error) throw new Error(data.error);
     await loadStudentOnly();
+    return data;
+  };
+
+  window.supabaseCancelStoreOrderV376 = async function(orderId){
+    if(!orderId) throw new Error("Pedido não identificado.");
+    if(!profile||!["master_admin","owner"].includes(profile.role)){
+      throw new Error("Somente a administração pode cancelar reservas.");
+    }
+    const {data,error}=await client.functions.invoke("store-checkout",{
+      body:{action:"cancel_order",order_id:orderId}
+    });
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao cancelar a reserva."));
+    if(data?.error) throw new Error(data.error);
+    await loadNormalized();
+    renderizarProdutos();
+    renderizarPedidos();
     return data;
   };
 
