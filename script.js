@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "35";
+window.CHAMPION_APP_VERSION = "36";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -3236,20 +3236,301 @@ const VIDEOS_STORAGE_KEY="fitcontrol_videos_jiujitsu",PRODUTOS_STORAGE_KEY="fitc
 let videosTreino=carregar(VIDEOS_STORAGE_KEY),produtosLoja=carregar(PRODUTOS_STORAGE_KEY),pedidosLoja=carregar(PEDIDOS_STORAGE_KEY),notificacoes=carregar(NOTIFICACOES_STORAGE_KEY),carrinhoLoja=carregar(CARRINHO_STORAGE_KEY);
 textosPaginas.videos=["Vídeos","Treino do dia e técnicas demonstrativas"];textosPaginas.loja=["Loja","Produtos e pedidos"];textosPaginas.notificacoes=["Notificações","Vendas, promoções e mensalidades"];textosPaginas.treinos=["Treinos de jiu-jitsu","Planejamento técnico"];
 function criarNotificacao(o){notificacoes.unshift({id:gerarId(),tipo:o.tipo||"Geral",titulo:o.titulo,mensagem:o.mensagem,publico:o.publico||"Administrador",alunoId:o.alunoId||"",lida:false,criadaEm:new Date().toISOString()});salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
-function videoEmbed(u){try{let x=new URL(u);if(x.hostname.includes("youtube.com"))return`https://www.youtube.com/embed/${x.searchParams.get("v")}`;if(x.hostname.includes("youtu.be"))return`https://www.youtube.com/embed/${x.pathname.slice(1)}`;if(x.hostname.includes("vimeo.com"))return`https://player.vimeo.com/video/${x.pathname.split("/").pop()}`;return u}catch{return u}}
-document.getElementById("formVideoTreino")?.addEventListener("submit",e=>{e.preventDefault();let id=videoTreinoId.value,d={id:id||gerarId(),titulo:videoTitulo.value.trim(),categoria:videoCategoria.value,nivel:videoNivel.value,status:videoStatus.value,url:videoUrl.value.trim(),descricao:videoDescricao.value.trim()};videosTreino=id?videosTreino.map(v=>v.id===id?d:v):[d,...videosTreino];salvar(VIDEOS_STORAGE_KEY,videosTreino);if(!id)criarNotificacao({tipo:"Treino",titulo:d.categoria==="Treino do dia"?"Novo treino do dia":"Novo vídeo",mensagem:d.titulo+" foi publicado.",publico:"Todos os alunos"});formVideoTreino.reset();videoTreinoId.value="";renderizarVideos();mostrarAlerta("Vídeo salvo.")});
-function renderizarVideos(){if(!document.getElementById("listaVideosTreino"))return;listaVideosTreino.innerHTML=videosTreino.length?videosTreino.map(v=>`<article class="video-card"><div class="video-preview"><iframe src="${escaparHtml(videoEmbed(v.url))}" allowfullscreen></iframe></div><div class="video-card-content"><h4>${escaparHtml(v.titulo)}</h4><p>${escaparHtml(v.categoria)} • ${escaparHtml(v.nivel)}</p><p>${escaparHtml(v.descricao||"")}</p><div class="actions"><button class="btn btn-danger" onclick="excluirVideo('${v.id}')">Excluir</button></div></div></article>`).join(""):'<div class="empty">Nenhum vídeo.</div>';totalVideosModulo.textContent=videosTreino.length}
-function excluirVideo(id){if(confirm("Excluir vídeo?")){videosTreino=videosTreino.filter(v=>v.id!==id);salvar(VIDEOS_STORAGE_KEY,videosTreino);renderizarVideos()}}
-document.getElementById("cancelarVideoTreino")?.addEventListener("click",()=>formVideoTreino.reset());
+
+function videoEmbed(u){
+  try{
+    let x=new URL(u);
+    if(x.hostname.includes("youtube.com"))return`https://www.youtube.com/embed/${x.searchParams.get("v")}`;
+    if(x.hostname.includes("youtu.be"))return`https://www.youtube.com/embed/${x.pathname.slice(1)}`;
+    if(x.hostname.includes("vimeo.com"))return`https://player.vimeo.com/video/${x.pathname.split("/").pop()}`;
+    return u;
+  }catch{return u}
+}
+
+function resetVideoMediaV36(){
+  const file=document.getElementById("videoArquivo");
+  const path=document.getElementById("videoStoragePath");
+  const preview=document.getElementById("videoUploadPreview");
+  if(file) file.value="";
+  if(path) path.value="";
+  if(preview){preview.innerHTML="";preview.classList.add("hidden")}
+}
+
+document.getElementById("videoArquivo")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  const preview=document.getElementById("videoUploadPreview");
+  if(!preview)return;
+  if(!file){preview.innerHTML="";preview.classList.add("hidden");return}
+  preview.classList.remove("hidden");
+  preview.innerHTML=`<div class="media-file-pill"><span>🎬</span><div><strong>${escaparHtml(file.name)}</strong><small>${(file.size/1024/1024).toFixed(1)} MB • será enviado ao salvar</small></div></div>`;
+});
+
+document.getElementById("formVideoTreino")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const btn=e.submitter || e.target.querySelector('button[type="submit"],.btn-primary');
+  const old=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="SALVANDO..."}
+
+  try{
+    const id=videoTreinoId.value;
+    const existing=id?videosTreino.find(v=>v.id===id):null;
+    const file=document.getElementById("videoArquivo")?.files?.[0];
+    const typedUrl=videoUrl.value.trim();
+
+    if(!typedUrl && !file && !existing?.storagePath && !existing?.url){
+      throw new Error("Adicione uma URL ou anexe um arquivo de vídeo.");
+    }
+
+    let storagePath=existing?.storagePath||"";
+    let mediaType=existing?.mediaType||"url";
+    let finalUrl=typedUrl || existing?.url || "";
+
+    if(file){
+      const uploaded=await window.supabaseUploadTrainingVideoV36?.(file);
+      if(!uploaded?.path) throw new Error("Não foi possível armazenar o vídeo.");
+      storagePath=uploaded.path;
+      mediaType="upload";
+      finalUrl="";
+    }else if(typedUrl){
+      mediaType="url";
+      storagePath="";
+      finalUrl=typedUrl;
+    }
+
+    const d={
+      id:id||gerarId(),
+      titulo:videoTitulo.value.trim(),
+      categoria:videoCategoria.value,
+      nivel:videoNivel.value,
+      status:videoStatus.value,
+      url:finalUrl,
+      storagePath,
+      mediaType,
+      descricao:videoDescricao.value.trim()
+    };
+
+    videosTreino=id?videosTreino.map(v=>v.id===id?d:v):[d,...videosTreino];
+    await Promise.resolve(salvar(VIDEOS_STORAGE_KEY,videosTreino));
+
+    if(!id)criarNotificacao({
+      tipo:"Treino",
+      titulo:d.categoria==="Treino do dia"?"Novo treino do dia":"Novo vídeo",
+      mensagem:d.titulo+" foi publicado.",
+      publico:"Todos os alunos"
+    });
+
+    formVideoTreino.reset();
+    videoTreinoId.value="";
+    resetVideoMediaV36();
+    renderizarVideos();
+    mostrarAlerta("Vídeo salvo na nuvem.");
+  }catch(err){
+    mostrarAlerta(err.message||"Falha ao salvar vídeo.","error");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old||"Salvar vídeo"}
+  }
+});
+
+async function hidratarVideosUploadV36(root=document){
+  const nodes=[...root.querySelectorAll("[data-training-video-path]")];
+  await Promise.all(nodes.map(async video=>{
+    const path=video.dataset.trainingVideoPath;
+    if(!path)return;
+    try{
+      const url=await window.supabaseSignedTrainingVideoUrlV36?.(path,3600);
+      if(url){
+        video.src=url;
+        video.load();
+      }
+    }catch(e){
+      console.warn("Falha ao carregar vídeo armazenado",e);
+    }
+  }));
+}
+
+function renderizarVideos(){
+  if(!document.getElementById("listaVideosTreino"))return;
+  listaVideosTreino.innerHTML=videosTreino.length?videosTreino.map(v=>{
+    const uploaded=v.mediaType==="upload" && v.storagePath;
+    const media=uploaded
+      ? `<video class="uploaded-training-video" controls preload="metadata" data-training-video-path="${escaparHtml(v.storagePath)}"></video>`
+      : `<iframe src="${escaparHtml(videoEmbed(v.url||""))}" allowfullscreen loading="lazy"></iframe>`;
+    return `<article class="video-card">
+      <div class="video-preview">${media}</div>
+      <div class="video-card-content">
+        <h4>${escaparHtml(v.titulo)}</h4>
+        <p>${escaparHtml(v.categoria)} • ${escaparHtml(v.nivel)}</p>
+        <p>${escaparHtml(v.descricao||"")}</p>
+        <div class="media-origin-badge">${uploaded?"ARQUIVO NO SUPABASE":"LINK EXTERNO"}</div>
+        <div class="actions"><button class="btn btn-danger" onclick="excluirVideo('${v.id}')">Excluir</button></div>
+      </div>
+    </article>`;
+  }).join(""):'<div class="empty">Nenhum vídeo.</div>';
+  totalVideosModulo.textContent=videosTreino.length;
+  hidratarVideosUploadV36(listaVideosTreino);
+}
+
+function excluirVideo(id){
+  if(confirm("Excluir vídeo?")){
+    videosTreino=videosTreino.filter(v=>v.id!==id);
+    salvar(VIDEOS_STORAGE_KEY,videosTreino);
+    renderizarVideos();
+  }
+}
+document.getElementById("cancelarVideoTreino")?.addEventListener("click",()=>{
+  formVideoTreino.reset();
+  resetVideoMediaV36();
+});
+
 function precoProduto(p){return p.precoPromocional>0&&p.precoPromocional<p.preco?p.precoPromocional:p.preco}
-document.getElementById("formProduto")?.addEventListener("submit",e=>{e.preventDefault();let id=produtoId.value,d={id:id||gerarId(),nome:produtoNome.value.trim(),categoria:produtoCategoria.value,preco:+produtoPreco.value,precoPromocional:+produtoPrecoPromocional.value||0,estoque:+produtoEstoque.value,status:produtoStatus.value,imagem:produtoImagem.value.trim(),descricao:produtoDescricao.value.trim()};produtosLoja=id?produtosLoja.map(p=>p.id===id?d:p):[d,...produtosLoja];salvar(PRODUTOS_STORAGE_KEY,produtosLoja);if(!id&&d.precoPromocional>0&&d.precoPromocional<d.preco)criarNotificacao({tipo:"Promoção",titulo:"Promoção: "+d.nome,mensagem:`Produto por ${formatarMoeda(d.precoPromocional)}.`,publico:"Todos os alunos"});formProduto.reset();produtoId.value="";produtoEstoque.value=1;renderizarProdutos();mostrarAlerta("Produto salvo.")});
-function renderizarProdutos(){if(!document.getElementById("listaProdutos"))return;listaProdutos.innerHTML=produtosLoja.length?produtosLoja.map(p=>`<article class="product-card"><div class="product-image">${p.imagem?`<img src="${escaparHtml(p.imagem)}">`:"🥋"}</div><div class="product-card-content"><h4>${escaparHtml(p.nome)}</h4><p>${escaparHtml(p.descricao||"")}</p><p><strong class="product-price">${formatarMoeda(precoProduto(p))}</strong>${precoProduto(p)<p.preco?`<span class="product-old-price">${formatarMoeda(p.preco)}</span>`:""}</p><div class="actions"><button class="btn btn-primary" onclick="adicionarCarrinho('${p.id}')">Comprar</button><button class="btn btn-danger" onclick="excluirProdutoLoja('${p.id}')">Excluir</button></div></div></article>`).join(""):'<div class="empty">Nenhum produto.</div>';totalProdutosModulo.textContent=produtosLoja.length}
-function adicionarCarrinho(id){let p=produtosLoja.find(x=>x.id===id),i=carrinhoLoja.find(x=>x.produtoId===id);if(!p||p.estoque<=0)return mostrarAlerta("Produto indisponível.","error");i?i.quantidade++:carrinhoLoja.push({produtoId:id,quantidade:1});salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);renderizarCarrinho()}
-function excluirProdutoLoja(id){if(confirm("Excluir produto?")){produtosLoja=produtosLoja.filter(p=>p.id!==id);carrinhoLoja=carrinhoLoja.filter(i=>i.produtoId!==id);salvar(PRODUTOS_STORAGE_KEY,produtosLoja);salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);renderizarProdutos();renderizarCarrinho()}}
-function removerCarrinho(id){carrinhoLoja=carrinhoLoja.filter(i=>i.produtoId!==id);salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);renderizarCarrinho()}
-function renderizarCarrinho(){if(!document.getElementById("listaCarrinho"))return;let t=0,q=0;listaCarrinho.innerHTML=carrinhoLoja.length?carrinhoLoja.map(i=>{let p=produtosLoja.find(x=>x.id===i.produtoId);if(!p)return"";let s=precoProduto(p)*i.quantidade;t+=s;q+=i.quantidade;return`<div class="cart-item"><div><strong>${escaparHtml(p.nome)}</strong><small>${i.quantidade} x ${formatarMoeda(precoProduto(p))}</small></div><button onclick="removerCarrinho('${p.id}')">×</button></div>`}).join(""):'<div class="empty">Carrinho vazio.</div>';carrinhoTotal.textContent=formatarMoeda(t);cartItemCount.textContent=q}
-function preencherAlunosExtras(){["carrinhoAluno","notificacaoAluno"].forEach(id=>{let s=document.getElementById(id);if(!s)return;let v=s.value;s.innerHTML='<option value="">Selecione o aluno</option>'+alunos.filter(a=>a.status==="Ativo").map(a=>`<option value="${a.id}">${escaparHtml(a.nome)}</option>`).join("");s.value=v})}
-document.getElementById("finalizarCompra")?.addEventListener("click",()=>{let alunoId=carrinhoAluno.value;if(!alunoId||!carrinhoLoja.length)return mostrarAlerta("Selecione o aluno e adicione produtos.","error");let aluno=alunos.find(a=>a.id===alunoId),itens=[],total=0;for(let i of carrinhoLoja){let p=produtosLoja.find(x=>x.id===i.produtoId);if(!p||i.quantidade>p.estoque)return mostrarAlerta("Estoque insuficiente.","error");itens.push({nome:p.nome,quantidade:i.quantidade,preco:precoProduto(p)});total+=precoProduto(p)*i.quantidade;p.estoque-=i.quantidade}let ped={id:gerarId(),codigo:"PED-"+String(pedidosLoja.length+1).padStart(4,"0"),alunoId,itens,total,pagamento:formaPagamentoLoja.value,criadoEm:new Date().toISOString()};pedidosLoja.unshift(ped);carrinhoLoja=[];salvar(PEDIDOS_STORAGE_KEY,pedidosLoja);salvar(PRODUTOS_STORAGE_KEY,produtosLoja);salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);criarNotificacao({tipo:"Venda",titulo:"Nova venda realizada",mensagem:`${aluno.nome} comprou ${formatarMoeda(total)}.`,publico:"Administrador"});criarNotificacao({tipo:"Venda",titulo:"Pedido confirmado",mensagem:`Pedido ${ped.codigo} confirmado.`,publico:"Aluno específico",alunoId});renderizarProdutos();renderizarCarrinho();renderizarPedidos();mostrarAlerta("Pagamento aprovado em modo demonstrativo.")});
+
+function resetProdutoMediaV36(){
+  const file=document.getElementById("produtoImagemArquivo");
+  const preview=document.getElementById("produtoImagemPreview");
+  if(file)file.value="";
+  if(preview){preview.innerHTML="";preview.classList.add("hidden")}
+}
+
+document.getElementById("produtoImagemArquivo")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  const preview=document.getElementById("produtoImagemPreview");
+  if(!preview)return;
+  if(!file){preview.innerHTML="";preview.classList.add("hidden");return}
+  const objectUrl=URL.createObjectURL(file);
+  preview.classList.remove("hidden");
+  preview.innerHTML=`<div class="product-image-upload-preview">
+    <img src="${objectUrl}" alt="Prévia da foto do produto">
+    <div><strong>${escaparHtml(file.name)}</strong><small>${(file.size/1024/1024).toFixed(1)} MB • será enviada ao salvar</small></div>
+  </div>`;
+});
+
+document.getElementById("formProduto")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const btn=e.submitter || e.target.querySelector('button[type="submit"],.btn-primary');
+  const old=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="SALVANDO..."}
+
+  try{
+    const id=produtoId.value;
+    const existing=id?produtosLoja.find(p=>p.id===id):null;
+    const file=document.getElementById("produtoImagemArquivo")?.files?.[0];
+
+    let imagem=produtoImagem.value.trim() || existing?.imagem || "";
+    let imagePath=existing?.imagePath || "";
+
+    if(file){
+      const uploaded=await window.supabaseUploadProductImageV36?.(file);
+      if(!uploaded?.publicUrl) throw new Error("Não foi possível armazenar a foto.");
+      imagem=uploaded.publicUrl;
+      imagePath=uploaded.path||"";
+    }
+
+    const d={
+      id:id||gerarId(),
+      nome:produtoNome.value.trim(),
+      categoria:produtoCategoria.value,
+      preco:+produtoPreco.value,
+      precoPromocional:+produtoPrecoPromocional.value||0,
+      estoque:+produtoEstoque.value,
+      status:produtoStatus.value,
+      imagem,
+      imagePath,
+      descricao:produtoDescricao.value.trim()
+    };
+
+    // IMPORTANTE: estoque zero não apaga a mídia.
+    // Ao reabastecer o mesmo cadastro, a imagem volta automaticamente.
+    produtosLoja=id?produtosLoja.map(p=>p.id===id?d:p):[d,...produtosLoja];
+    await Promise.resolve(salvar(PRODUTOS_STORAGE_KEY,produtosLoja));
+
+    if(!id&&d.precoPromocional>0&&d.precoPromocional<d.preco){
+      criarNotificacao({
+        tipo:"Promoção",
+        titulo:"Promoção: "+d.nome,
+        mensagem:`Produto por ${formatarMoeda(d.precoPromocional)}.`,
+        publico:"Todos os alunos"
+      });
+    }
+
+    formProduto.reset();
+    produtoId.value="";
+    produtoEstoque.value=1;
+    resetProdutoMediaV36();
+    renderizarProdutos();
+    mostrarAlerta(d.estoque>0?"Produto salvo com foto na nuvem.":"Produto salvo sem estoque. A foto foi preservada para reposição.");
+  }catch(err){
+    mostrarAlerta(err.message||"Falha ao salvar produto.","error");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old||"Salvar produto"}
+  }
+});
+
+function renderizarProdutos(){
+  if(!document.getElementById("listaProdutos"))return;
+  listaProdutos.innerHTML=produtosLoja.length?produtosLoja.map(p=>{
+    const semEstoque=Number(p.estoque||0)<=0;
+    return `<article class="product-card ${semEstoque?"product-out-of-stock":""}">
+      <div class="product-image">${p.imagem?`<img src="${escaparHtml(p.imagem)}" loading="lazy">`:"🥋"}</div>
+      <div class="product-card-content">
+        <div class="product-stock-badge ${semEstoque?"out":"in"}">${semEstoque?"SEM ESTOQUE":"ESTOQUE: "+p.estoque}</div>
+        <h4>${escaparHtml(p.nome)}</h4>
+        <p>${escaparHtml(p.descricao||"")}</p>
+        <p><strong class="product-price">${formatarMoeda(precoProduto(p))}</strong>${precoProduto(p)<p.preco?`<span class="product-old-price">${formatarMoeda(p.preco)}</span>`:""}</p>
+        ${semEstoque?`<small class="product-photo-retained">Foto preservada para quando este item voltar ao estoque.</small>`:""}
+        <div class="actions">
+          <button class="btn btn-primary" onclick="adicionarCarrinho('${p.id}')" ${semEstoque?"disabled":""}>${semEstoque?"Indisponível":"Comprar"}</button>
+          <button class="btn btn-danger" onclick="excluirProdutoLoja('${p.id}')">Excluir</button>
+        </div>
+      </div>
+    </article>`;
+  }).join(""):'<div class="empty">Nenhum produto.</div>';
+  totalProdutosModulo.textContent=produtosLoja.length;
+}
+
+function adicionarCarrinho(id){
+  const p=produtosLoja.find(x=>x.id===id);
+  if(!p||Number(p.estoque||0)<=0)return mostrarAlerta("Produto sem estoque.","error");
+  let i=carrinhoLoja.find(x=>x.produtoId===id);
+  if(i){if(i.quantidade>=p.estoque)return mostrarAlerta("Limite do estoque.","error");i.quantidade++}
+  else carrinhoLoja.push({produtoId:id,quantidade:1});
+  salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);
+  renderizarCarrinho();
+  mostrarAlerta("Produto adicionado.");
+}
+function removerCarrinho(id){carrinhoLoja=carrinhoLoja.filter(x=>x.produtoId!==id);salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);renderizarCarrinho()}
+function renderizarCarrinho(){
+  if(!document.getElementById("itensCarrinho"))return;
+  itensCarrinho.innerHTML=carrinhoLoja.length?carrinhoLoja.map(i=>{
+    let p=produtosLoja.find(x=>x.id===i.produtoId);
+    return p?`<div class="cart-item"><div><strong>${escaparHtml(p.nome)}</strong><small>${i.quantidade} x ${formatarMoeda(precoProduto(p))}</small></div><button onclick="removerCarrinho('${i.produtoId}')">×</button></div>`:""
+  }).join(""):'<div class="empty">Seu carrinho está vazio.</div>';
+  let t=carrinhoLoja.reduce((s,i)=>{let p=produtosLoja.find(x=>x.id===i.produtoId);return s+(p?precoProduto(p)*i.quantidade:0)},0);
+  totalCarrinho.textContent=formatarMoeda(t);contadorCarrinho.textContent=carrinhoLoja.reduce((s,i)=>s+i.quantidade,0)
+}
+document.getElementById("finalizarCompra")?.addEventListener("click",()=>{
+  if(!carrinhoLoja.length)return mostrarAlerta("Carrinho vazio.","error");
+  let alunoId=alunoPortalId.value;
+  let aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno)return mostrarAlerta("Acesse a área do aluno.","error");
+  let itens=[],total=0;
+  for(let i of carrinhoLoja){
+    let p=produtosLoja.find(x=>x.id===i.produtoId);
+    if(!p||i.quantidade>p.estoque)return mostrarAlerta("Estoque insuficiente.","error");
+    itens.push({nome:p.nome,quantidade:i.quantidade,preco:precoProduto(p)});
+    total+=precoProduto(p)*i.quantidade;
+    p.estoque-=i.quantidade;
+  }
+  let ped={id:gerarId(),codigo:"PED-"+String(pedidosLoja.length+1).padStart(4,"0"),alunoId,itens,total,pagamento:formaPagamentoLoja.value,criadoEm:new Date().toISOString()};
+  pedidosLoja.unshift(ped);
+  carrinhoLoja=[];
+  salvar(PEDIDOS_STORAGE_KEY,pedidosLoja);
+  salvar(PRODUTOS_STORAGE_KEY,produtosLoja);
+  salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);
+  criarNotificacao({tipo:"Venda",titulo:"Nova venda realizada",mensagem:`${aluno.nome} comprou ${formatarMoeda(total)}.`,publico:"Administrador"});
+  criarNotificacao({tipo:"Venda",titulo:"Pedido confirmado",mensagem:`Pedido ${ped.codigo} confirmado.`,publico:"Aluno específico",alunoId});
+  renderizarProdutos();renderizarCarrinho();renderizarPedidos();
+  mostrarAlerta("Pagamento aprovado em modo demonstrativo.");
+});
 function renderizarPedidos(){if(!document.getElementById("tabelaPedidosLoja"))return;tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr><td>${p.codigo}</td><td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td><td>${p.itens.map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td><td>${p.pagamento}</td><td>${formatarMoeda(p.total)}</td><td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Nenhum pedido.</td></tr>';totalPedidosModulo.textContent=pedidosLoja.length}
 document.getElementById("formNotificacao")?.addEventListener("submit",e=>{e.preventDefault();if(notificacaoPublico.value==="Aluno específico"&&!notificacaoAluno.value)return mostrarAlerta("Selecione o aluno.","error");criarNotificacao({tipo:notificacaoTipo.value,titulo:notificacaoTitulo.value.trim(),mensagem:notificacaoMensagem.value.trim(),publico:notificacaoPublico.value,alunoId:notificacaoAluno.value});formNotificacao.reset();renderizarNotificacoes();mostrarAlerta("Notificação enviada.")});
 function renderizarNotificacoes(){if(!document.getElementById("listaNotificacoes"))return;listaNotificacoes.innerHTML=notificacoes.length?notificacoes.map(n=>`<article class="notification-card ${n.lida?"":"unread"}"><div class="notification-icon">🔔</div><div class="notification-content"><strong>${escaparHtml(n.titulo)}</strong><p>${escaparHtml(n.mensagem)}</p><small>${n.tipo} • ${new Date(n.criadaEm).toLocaleString("pt-BR")}</small></div><div class="notification-actions">${n.lida?"":`<button onclick="lerNotificacao('${n.id}')">Lida</button>`}<button onclick="apagarNotificacao('${n.id}')">Excluir</button></div></article>`).join(""):'<div class="empty">Nenhuma notificação.</div>';let q=notificacoes.filter(n=>!n.lida).length;[menuNotificationBadge,topNotificationBadge].forEach(x=>{x.textContent=q;x.classList.toggle("show",q>0)});totalNotificacoesNaoLidas.textContent=q}
@@ -5335,6 +5616,7 @@ document.addEventListener("click", async (event)=>{
       preco:Number(r.price || 0),
       estoque:Number(r.stock || 0),
       imagem:r.image_url || "",
+      imagePath:r.image_storage_path || "",
       status:r.active ? "Ativo" : "Inativo",
       destaque:!!r.featured
     };
@@ -5829,6 +6111,56 @@ document.addEventListener("click", async (event)=>{
     if(error) throw error;
     await loadNormalized();
     return data;
+  };
+
+
+  window.supabaseUploadProductImageV36 = async function(file){
+    if(!client || !user || !profile) throw new Error("Sessão do Supabase indisponível.");
+    if(!["master_admin","owner"].includes(profile.role)) throw new Error("Somente a administração pode enviar fotos de produtos.");
+    if(!file) throw new Error("Selecione uma imagem.");
+    if(file.size>10*1024*1024) throw new Error("A imagem deve ter no máximo 10 MB.");
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type)) throw new Error("Use JPG, PNG ou WEBP.");
+
+    const a=await getAcademy();
+    const ext=(file.name?.split(".").pop()||file.type.split("/").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+    const path=`${a.id}/catalog/${crypto.randomUUID()}.${ext}`;
+
+    const {error}=await client.storage.from("products").upload(path,file,{
+      cacheControl:"86400",
+      upsert:false,
+      contentType:file.type
+    });
+    if(error) throw error;
+
+    const publicUrl=client.storage.from("products").getPublicUrl(path).data?.publicUrl||"";
+    return {path,publicUrl};
+  };
+
+  window.supabaseUploadTrainingVideoV36 = async function(file){
+    if(!client || !user || !profile) throw new Error("Sessão do Supabase indisponível.");
+    if(!["master_admin","owner"].includes(profile.role)) throw new Error("Somente a administração pode enviar vídeos.");
+    if(!file) throw new Error("Selecione um vídeo.");
+    if(file.size>200*1024*1024) throw new Error("O vídeo deve ter no máximo 200 MB.");
+    if(!["video/mp4","video/webm","video/quicktime"].includes(file.type)) throw new Error("Use MP4, WEBM ou MOV.");
+
+    const a=await getAcademy();
+    const ext=(file.name?.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"")||"mp4";
+    const path=`${a.id}/library/${crypto.randomUUID()}.${ext}`;
+
+    const {error}=await client.storage.from("training-videos").upload(path,file,{
+      cacheControl:"3600",
+      upsert:false,
+      contentType:file.type
+    });
+    if(error) throw error;
+    return {path};
+  };
+
+  window.supabaseSignedTrainingVideoUrlV36 = async function(path,expiresIn=3600){
+    if(!path) return "";
+    const {data,error}=await client.storage.from("training-videos").createSignedUrl(path,expiresIn);
+    if(error) throw error;
+    return data?.signedUrl||"";
   };
 
   window.supabaseSignedCheckinUrl = async function(path,expiresIn=900){

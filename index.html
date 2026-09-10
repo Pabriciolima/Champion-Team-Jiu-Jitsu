@@ -1067,7 +1067,23 @@
         <div class="field"><label>Categoria</label><select id="videoCategoria" required><option value="">Selecione</option><option>Treino do dia</option><option>Fundamentos</option><option>Guarda</option><option>Passagem de guarda</option><option>Quedas</option><option>Raspagens</option><option>Finalizações</option><option>Defesa pessoal</option><option>Competição</option></select></div>
         <div class="field"><label>Nível</label><select id="videoNivel"><option>Todos</option><option>Faixa branca</option><option>Faixa azul</option><option>Faixa roxa</option><option>Faixa marrom</option><option>Faixa preta</option></select></div>
         <div class="field"><label>Status</label><select id="videoStatus"><option>Publicado</option><option>Rascunho</option></select></div>
-        <div class="field full"><label>URL do vídeo</label><input id="videoUrl" type="url" required placeholder="https://youtube.com/..."></div>
+        <div class="field full">
+          <label>Vídeo</label>
+          <div class="media-source-grid">
+            <div class="media-source-card">
+              <span class="media-source-label">LINK EXTERNO</span>
+              <input id="videoUrl" type="url" placeholder="https://youtube.com/...">
+              <small>YouTube, Vimeo ou link direto.</small>
+            </div>
+            <div class="media-source-card media-source-upload">
+              <span class="media-source-label">ANEXAR ARQUIVO</span>
+              <input id="videoArquivo" type="file" accept="video/mp4,video/webm,video/quicktime">
+              <small>MP4, WEBM ou MOV. Recomendado até 200 MB.</small>
+            </div>
+          </div>
+          <input type="hidden" id="videoStoragePath">
+          <div id="videoUploadPreview" class="media-upload-preview hidden"></div>
+        </div>
         <div class="field full"><label>Descrição</label><textarea id="videoDescricao" rows="3"></textarea></div>
       </div>
       <div class="actions"><button class="btn btn-primary">Salvar vídeo</button><button id="cancelarVideoTreino" type="button" class="btn btn-secondary">Cancelar</button></div>
@@ -1087,7 +1103,24 @@
         <div class="field"><label>Preço promocional</label><input id="produtoPrecoPromocional" type="number" step="0.01" min="0"></div>
         <div class="field"><label>Estoque</label><input id="produtoEstoque" type="number" min="0" value="1" required></div>
         <div class="field"><label>Status</label><select id="produtoStatus"><option>Ativo</option><option>Inativo</option></select></div>
-        <div class="field full"><label>Imagem (URL)</label><input id="produtoImagem" type="url"></div>
+        <div class="field full">
+          <label>Imagem do produto</label>
+          <div class="media-source-grid">
+            <div class="media-source-card">
+              <span class="media-source-label">LINK EXTERNO</span>
+              <input id="produtoImagem" type="url" placeholder="https://...">
+              <small>Opcional. Pode continuar usando uma URL.</small>
+            </div>
+            <div class="media-source-card media-source-upload">
+              <span class="media-source-label">ANEXAR FOTO</span>
+              <input id="produtoImagemArquivo" type="file" accept="image/jpeg,image/png,image/webp">
+              <small>JPG, PNG ou WEBP. Até 10 MB.</small>
+            </div>
+          </div>
+          <input type="hidden" id="produtoImagemStoragePath">
+          <div id="produtoImagemPreview" class="media-upload-preview hidden"></div>
+          <small class="media-retention-note">A foto permanece salva mesmo quando o estoque chega a 0 e volta automaticamente quando o item é reabastecido.</small>
+        </div>
         <div class="field full"><label>Descrição</label><textarea id="produtoDescricao" rows="3"></textarea></div>
       </div><div class="actions"><button class="btn btn-primary">Salvar produto</button><button id="cancelarProduto" type="button" class="btn btn-secondary">Cancelar</button></div></form>
     </div>
@@ -1667,7 +1700,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V35</div>
+  <div id="appVersionBadge" class="app-version-badge">V36</div>
   <div id="supabaseStatus" class="supabase-status supabase-connecting" role="status" aria-live="polite">
     <span class="supabase-status-dot"></span>
     <span id="supabaseStatusText">Conectando ao Supabase...</span><button id="supabaseRetryButton" class="supabase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1749,6 +1782,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=26"></script>
-  <script src="script.js?v=35"></script>
+  <script src="script.js?v=36"></script>
 </body>
 </html>
