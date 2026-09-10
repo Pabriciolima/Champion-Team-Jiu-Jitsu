@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "36.3";
+window.CHAMPION_APP_VERSION = "36.4";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -3442,12 +3442,27 @@ document.getElementById("formProduto")?.addEventListener("submit",async e=>{
       imagePath=uploaded.path||"";
     }
 
+    const precoBase=Number(produtoPreco.value||0);
+    const precoPromo=Number(produtoPrecoPromocional.value||0);
+
+    if(precoBase<=0){
+      throw new Error("Informe um preço principal maior que zero.");
+    }
+
+    if(precoPromo<0){
+      throw new Error("O preço promocional não pode ser negativo.");
+    }
+
+    if(precoPromo>0 && precoPromo>=precoBase){
+      throw new Error("O preço promocional deve ser menor que o preço principal.");
+    }
+
     const d={
       id:id||gerarId(),
       nome:produtoNome.value.trim(),
       categoria:produtoCategoria.value,
-      preco:+produtoPreco.value,
-      precoPromocional:+produtoPrecoPromocional.value||0,
+      preco:precoBase,
+      precoPromocional:precoPromo,
       estoque:+produtoEstoque.value,
       status:produtoStatus.value,
       imagem,
@@ -3460,13 +3475,23 @@ document.getElementById("formProduto")?.addEventListener("submit",async e=>{
     produtosLoja=id?produtosLoja.map(p=>p.id===id?d:p):[d,...produtosLoja];
     await Promise.resolve(salvar(PRODUTOS_STORAGE_KEY,produtosLoja));
 
-    if(!id&&d.precoPromocional>0&&d.precoPromocional<d.preco){
-      criarNotificacao({
-        tipo:"Promoção",
-        titulo:"Promoção: "+d.nome,
-        mensagem:`Produto por ${formatarMoeda(d.precoPromocional)}.`,
-        publico:"Todos os alunos"
-      });
+    // Mantém a tela coerente com o valor que será usado na compra.
+    // A sincronização normalizada agora persiste promotional_price no Supabase.
+    const produtoSalvo=produtosLoja.find(p=>String(p.id)===String(d.id));
+    if(produtoSalvo){
+      produtoSalvo.precoPromocional=Number(d.precoPromocional||0);
+    }
+
+    if(d.precoPromocional>0&&d.precoPromocional<d.preco){
+      const promoMudou=!existing || Number(existing.precoPromocional||0)!==Number(d.precoPromocional);
+      if(promoMudou){
+        criarNotificacao({
+          tipo:"Promoção",
+          titulo:"Promoção: "+d.nome,
+          mensagem:`Agora por ${formatarMoeda(d.precoPromocional)}.`,
+          publico:"Todos os alunos"
+        });
+      }
     }
 
     formProduto.reset();
@@ -3568,9 +3593,10 @@ function renderizarProdutos(){
         <h4>${escaparHtml(p.nome)}</h4>
         <p>${escaparHtml(p.descricao||"")}</p>
 
-        <p>
-          <strong class="product-price">${formatarMoeda(precoProduto(p))}</strong>
+        <p class="product-price-wrap">
           ${precoProduto(p)<p.preco?`<span class="product-old-price">${formatarMoeda(p.preco)}</span>`:""}
+          <strong class="product-price">${formatarMoeda(precoProduto(p))}</strong>
+          ${precoProduto(p)<p.preco?`<span class="product-discount-badge">PROMO</span>`:""}
         </p>
 
         ${semEstoque?`
@@ -5761,6 +5787,7 @@ document.addEventListener("click", async (event)=>{
       descricao:r.description || "",
       categoria:r.category || "",
       preco:Number(r.price || 0),
+      precoPromocional:Number(r.promotional_price || 0),
       estoque:Number(r.stock || 0),
       imagem:r.image_url || "",
       imagePath:r.image_storage_path || "",
@@ -6180,8 +6207,14 @@ document.addEventListener("click", async (event)=>{
     if(key==="fitcontrol_produtos_loja"){
       const rows=items.map(x=>({
         id:x.id,academy_id:a.id,name:x.nome,description:x.descricao||null,category:x.categoria||null,
-        price:Number(x.preco ?? x.valor ?? 0),stock:Number(x.estoque||0),image_url:x.imagem||x.imagemUrl||null,
-        active:x.status!=="Inativo",featured:!!x.destaque,updated_at:new Date().toISOString()
+        price:Number(x.preco ?? x.valor ?? 0),
+        promotional_price:Number(x.precoPromocional||0) > 0 ? Number(x.precoPromocional) : null,
+        stock:Number(x.estoque||0),
+        image_url:x.imagem||x.imagemUrl||null,
+        image_storage_path:x.imagePath||null,
+        active:x.status!=="Inativo",
+        featured:!!x.destaque,
+        updated_at:new Date().toISOString()
       }));
       if(rows.length){ const {error}=await client.from("products").upsert(rows,{onConflict:"id"}); if(error)throw error; }
       await deleteMissing("products",rows.map(x=>x.id),a.id);

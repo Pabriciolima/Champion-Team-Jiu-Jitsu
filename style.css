@@ -5914,3 +5914,39 @@ html.champion-premium-v29 *::-webkit-scrollbar-thumb {
     grid-template-columns:1fr 1fr;
   }
 }
+
+
+/* =========================================================
+   LOJA — PREÇO PROMOCIONAL PERSISTENTE — V36.4
+========================================================= */
+.product-price-wrap{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.product-old-price{
+  color:#6f7981!important;
+  font-size:12px!important;
+  text-decoration:line-through;
+  order:0;
+}
+.product-price{
+  color:#ff2b38!important;
+  order:1;
+}
+.product-discount-badge{
+  order:2;
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:3px 7px;
+  border:1px solid rgba(99,232,139,.18);
+  border-radius:999px;
+  background:rgba(99,232,139,.06);
+  color:#63e88b;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.11em;
+}
