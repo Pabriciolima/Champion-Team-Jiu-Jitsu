@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 71843)
-Total output lines: 7532
-
 
 window.addEventListener("error", (event) => {
   console.error("Erro global Champion Team:", event.error || event.message);
@@ -23,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "37.11";
+window.CHAMPION_APP_VERSION = "37.10";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -1388,7 +1385,7 @@ function aplicarPermissoesPerfil(role){
       "treinos","videos","loja","areaAluno","notificacoes",
       "graduacoes","checkin","billingCrm"
     ],
-    professor: ["treinos","notificacoes"],
+    professor: ["treinos"],
     aluno: ["areaAluno"]
   };
 
@@ -1418,7 +1415,7 @@ function aplicarPermissoesPerfil(role){
 
   const topNotificationButton = document.getElementById("topNotificationButton");
   if (topNotificationButton) {
-    const mostrarNotificacoes = role === "gestor" || role === "professor";
+    const mostrarNotificacoes = role === "gestor";
     topNotificationButton.hidden = !mostrarNotificacoes;
     topNotificationButton.style.setProperty(
       "display",
@@ -2997,7 +2994,2088 @@ const modelosAutomaticosTreino = [
       { nome: "Caminhada na esteira", grupo: "Cardiorrespiratório", series: 1, repeticoes: "10 min", carga: "Leve", descanso: "-" },
       { nome: "Polichinelo", grupo: "Corpo inteiro", series: 3, repeticoes: "30s", carga: "Corporal", descanso: "30s" },
       { nome: "Agachamento corporal", grupo: "Pernas", series: 3, repeticoes: "15", carga: "Corporal", descanso: "30s" },
-      { nome: "Remada no TRX", grupo: "Costas", series: 3, repeticoes: "12", carga: "Cor…21843 tokens truncated…inicial + alunos
+      { nome: "Remada no TRX", grupo: "Costas", series: 3, repeticoes: "12", carga: "Corporal", descanso: "30s" },
+      { nome: "Step no banco", grupo: "Pernas", series: 3, repeticoes: "12 cada", carga: "Corporal", descanso: "30s" },
+      { nome: "Mountain climber", grupo: "Corpo inteiro", series: 3, repeticoes: "30s", carga: "Corporal", descanso: "30s" },
+      { nome: "Prancha", grupo: "Abdômen", series: 3, repeticoes: "30s", carga: "Corporal", descanso: "30s" },
+      { nome: "Bicicleta ergométrica", grupo: "Cardiorrespiratório", series: 1, repeticoes: "10 min", carga: "Leve", descanso: "-" }
+    ]
+  },
+  {
+    id: "resistencia_intermediario",
+    nome: "Resistência — Intermediário",
+    categoria: "Resistência",
+    objetivo: "Resistência",
+    nivel: "Intermediário",
+    frequencia: 4,
+    duracao: "55–70 minutos",
+    icone: "❤️",
+    descricao:
+      "Treino com repetições mais altas e pausas curtas para resistência muscular e cardiovascular.",
+    observacoes:
+      "Utilizar cargas leves a moderadas e preservar a qualidade do movimento mesmo com fadiga.",
+    exercicios: [
+      { nome: "Agachamento goblet", grupo: "Pernas", series: 4, repeticoes: "15-20", carga: "Moderada", descanso: "40s" },
+      { nome: "Flexão de braço", grupo: "Peito", series: 4, repeticoes: "Máximo técnico", carga: "Corporal", descanso: "40s" },
+      { nome: "Remada baixa", grupo: "Costas", series: 4, repeticoes: "15", carga: "Moderada", descanso: "40s" },
+      { nome: "Avanço alternado", grupo: "Pernas", series: 4, repeticoes: "15 cada", carga: "Leve", descanso: "40s" },
+      { nome: "Elevação lateral", grupo: "Ombros", series: 4, repeticoes: "15-20", carga: "Leve", descanso: "35s" },
+      { nome: "Burpee adaptado", grupo: "Corpo inteiro", series: 4, repeticoes: "10", carga: "Corporal", descanso: "45s" },
+      { nome: "Abdominal bicicleta", grupo: "Abdômen", series: 4, repeticoes: "20", carga: "Corporal", descanso: "35s" }
+    ]
+  },
+  {
+    id: "mobilidade_iniciante",
+    nome: "Mobilidade — Iniciante",
+    categoria: "Mobilidade",
+    objetivo: "Mobilidade",
+    nivel: "Iniciante",
+    frequencia: 3,
+    duracao: "30–45 minutos",
+    icone: "🧘",
+    descricao:
+      "Rotina de mobilidade, estabilidade e alongamento ativo para melhorar movimentos e prevenir desconfortos.",
+    observacoes:
+      "Executar lentamente, sem dor e respeitando os limites individuais. Não forçar amplitudes.",
+    exercicios: [
+      { nome: "Mobilidade de tornozelo", grupo: "Pernas", series: 3, repeticoes: "10 cada", carga: "Corporal", descanso: "20s" },
+      { nome: "Alongamento dinâmico de quadril", grupo: "Pernas", series: 3, repeticoes: "10 cada", carga: "Corporal", descanso: "20s" },
+      { nome: "Rotação torácica", grupo: "Costas", series: 3, repeticoes: "10 cada", carga: "Corporal", descanso: "20s" },
+      { nome: "Mobilidade de ombros com bastão", grupo: "Ombros", series: 3, repeticoes: "12", carga: "Leve", descanso: "20s" },
+      { nome: "Ponte de glúteos", grupo: "Glúteos", series: 3, repeticoes: "15", carga: "Corporal", descanso: "30s" },
+      { nome: "Bird dog", grupo: "Abdômen", series: 3, repeticoes: "10 cada", carga: "Corporal", descanso: "30s" },
+      { nome: "Prancha lateral", grupo: "Abdômen", series: 3, repeticoes: "25s cada", carga: "Corporal", descanso: "30s" }
+    ]
+  }
+];
+
+let filtroModeloTreinoAtual = "Todos";
+let modeloAutomaticoSelecionadoId = "";
+
+function renderizarModelosAutomaticosTreino() {
+  const container = document.getElementById("modelosAutomaticosTreino");
+  if (!container) return;
+
+  const modelosFiltrados = modelosAutomaticosTreino.filter(
+    (modelo) =>
+      filtroModeloTreinoAtual === "Todos" ||
+      modelo.categoria === filtroModeloTreinoAtual
+  );
+
+  container.innerHTML = modelosFiltrados.map((modelo) => `
+    <article
+      class="automatic-template-card ${
+        modeloAutomaticoSelecionadoId === modelo.id ? "selected" : ""
+      }"
+      data-template-card-id="${modelo.id}"
+    >
+      <div class="template-card-top">
+        <div class="template-icon">${modelo.icone}</div>
+        <span class="template-level">${escaparHtml(modelo.nivel)}</span>
+      </div>
+
+      <h5>${escaparHtml(modelo.nome)}</h5>
+      <span class="template-category">${escaparHtml(modelo.categoria)}</span>
+
+      <p class="template-description">
+        ${escaparHtml(modelo.descricao)}
+      </p>
+
+      <div class="template-metadata">
+        <div>
+          <small>Frequência</small>
+          <strong>${modelo.frequencia}x por semana</strong>
+        </div>
+
+        <div>
+          <small>Duração média</small>
+          <strong>${escaparHtml(modelo.duracao)}</strong>
+        </div>
+
+        <div>
+          <small>Exercícios</small>
+          <strong>${modelo.exercicios.length} exercícios</strong>
+        </div>
+
+        <div>
+          <small>Nível</small>
+          <strong>${escaparHtml(modelo.nivel)}</strong>
+        </div>
+      </div>
+
+      <button
+        class="use-template-button"
+        type="button"
+        data-use-template-id="${modelo.id}"
+      >
+        ${
+          modeloAutomaticoSelecionadoId === modelo.id
+            ? "Modelo aplicado"
+            : "Usar este modelo"
+        }
+      </button>
+    </article>
+  `).join("");
+
+  container
+    .querySelectorAll("[data-use-template-id]")
+    .forEach((botao) => {
+      botao.addEventListener("click", () => {
+        aplicarModeloAutomaticoTreino(botao.dataset.useTemplateId);
+      });
+    });
+}
+
+function aplicarModeloAutomaticoTreino(modeloId) {
+  const modelo = modelosAutomaticosTreino.find(
+    (item) => item.id === modeloId
+  );
+
+  if (!modelo) {
+    mostrarAlerta("O modelo selecionado não foi encontrado.", "error");
+    return;
+  }
+
+  const lista = document.getElementById("listaExercicios");
+
+  if (
+    lista?.children.length > 0 &&
+    !confirm(
+      "Os exercícios atuais serão substituídos pelo modelo selecionado. Deseja continuar?"
+    )
+  ) {
+    return;
+  }
+
+  modeloAutomaticoSelecionadoId = modelo.id;
+
+  document.getElementById("fichaObjetivo").value = modelo.objetivo;
+  document.getElementById("fichaNivel").value = modelo.nivel;
+  document.getElementById("fichaDiasSemana").value =
+    String(modelo.frequencia);
+  document.getElementById("fichaObservacoes").value =
+    modelo.observacoes;
+
+  if (lista) {
+    lista.innerHTML = "";
+  }
+
+  modelo.exercicios.forEach((exercicio) => {
+    criarLinhaExercicio({
+      ...exercicio
+    });
+  });
+
+  const aviso = document.getElementById("modeloSelecionadoAviso");
+  const nome = document.getElementById("nomeModeloSelecionado");
+  const detalhes = document.getElementById(
+    "detalhesModeloSelecionado"
+  );
+
+  if (aviso) aviso.classList.add("show");
+  if (nome) nome.textContent = modelo.nome;
+  if (detalhes) {
+    detalhes.textContent =
+      `${modelo.exercicios.length} exercícios carregados • ` +
+      `${modelo.frequencia} vezes por semana • ${modelo.duracao}`;
+  }
+
+  renderizarModelosAutomaticosTreino();
+
+  document
+    .querySelector(".exercise-builder")
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  mostrarAlerta(
+    `Modelo "${modelo.nome}" aplicado. Agora personalize os exercícios.`
+  );
+}
+
+function usarFichaTreinoEmBranco() {
+  const lista = document.getElementById("listaExercicios");
+
+  if (
+    lista?.children.length > 0 &&
+    !confirm(
+      "Deseja limpar todos os exercícios e começar uma ficha em branco?"
+    )
+  ) {
+    return;
+  }
+
+  modeloAutomaticoSelecionadoId = "";
+
+  if (lista) {
+    lista.innerHTML = "";
+  }
+
+  criarLinhaExercicio();
+
+  const aviso = document.getElementById("modeloSelecionadoAviso");
+  const nome = document.getElementById("nomeModeloSelecionado");
+  const detalhes = document.getElementById(
+    "detalhesModeloSelecionado"
+  );
+
+  if (aviso) aviso.classList.remove("show");
+  if (nome) nome.textContent = "Nenhum modelo selecionado";
+  if (detalhes) {
+    detalhes.textContent =
+      "Escolha um modelo ou monte a ficha do zero.";
+  }
+
+  renderizarModelosAutomaticosTreino();
+  mostrarAlerta("Ficha em branco preparada.");
+}
+
+document
+  .querySelectorAll("[data-template-filter]")
+  .forEach((botao) => {
+    botao.addEventListener("click", () => {
+      filtroModeloTreinoAtual =
+        botao.dataset.templateFilter || "Todos";
+
+      document
+        .querySelectorAll("[data-template-filter]")
+        .forEach((item) => {
+          item.classList.toggle("active", item === botao);
+        });
+
+      renderizarModelosAutomaticosTreino();
+    });
+  });
+
+document
+  .getElementById("limparModeloAutomatico")
+  ?.addEventListener("click", usarFichaTreinoEmBranco);
+
+renderizarModelosAutomaticosTreino();
+
+const VIDEOS_STORAGE_KEY="fitcontrol_videos_jiujitsu",PRODUTOS_STORAGE_KEY="fitcontrol_produtos_loja",PEDIDOS_STORAGE_KEY="fitcontrol_pedidos_loja",NOTIFICACOES_STORAGE_KEY="fitcontrol_notificacoes",CARRINHO_STORAGE_KEY="fitcontrol_carrinho";
+let videosTreino=carregar(VIDEOS_STORAGE_KEY),produtosLoja=carregar(PRODUTOS_STORAGE_KEY),pedidosLoja=carregar(PEDIDOS_STORAGE_KEY),notificacoes=carregar(NOTIFICACOES_STORAGE_KEY),carrinhoLoja=carregar(CARRINHO_STORAGE_KEY);
+function criarNotificacao(o){notificacoes.unshift({id:gerarId(),tipo:o.tipo||"Geral",titulo:o.titulo,mensagem:o.mensagem,publico:o.publico||"Administrador",alunoId:o.alunoId||"",lida:false,criadaEm:new Date().toISOString()});salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
+
+function videoEmbed(u){
+  try{
+    let x=new URL(u);
+    if(x.hostname.includes("youtube.com"))return`https://www.youtube.com/embed/${x.searchParams.get("v")}`;
+    if(x.hostname.includes("youtu.be"))return`https://www.youtube.com/embed/${x.pathname.slice(1)}`;
+    if(x.hostname.includes("vimeo.com"))return`https://player.vimeo.com/video/${x.pathname.split("/").pop()}`;
+    return u;
+  }catch{return u}
+}
+
+function resetVideoMediaV36(){
+  const file=document.getElementById("videoArquivo");
+  const path=document.getElementById("videoStoragePath");
+  const preview=document.getElementById("videoUploadPreview");
+  if(file) file.value="";
+  if(path) path.value="";
+  if(preview){preview.innerHTML="";preview.classList.add("hidden")}
+}
+
+document.getElementById("videoArquivo")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  const preview=document.getElementById("videoUploadPreview");
+  if(!preview)return;
+  if(!file){preview.innerHTML="";preview.classList.add("hidden");return}
+  preview.classList.remove("hidden");
+  preview.innerHTML=`<div class="media-file-pill"><span>🎬</span><div><strong>${escaparHtml(file.name)}</strong><small>${(file.size/1024/1024).toFixed(1)} MB • será enviado ao salvar</small></div></div>`;
+});
+
+document.getElementById("formVideoTreino")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const btn=e.submitter || e.target.querySelector('button[type="submit"],.btn-primary');
+  const old=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="SALVANDO..."}
+
+  try{
+    const id=videoTreinoId.value;
+    const existing=id?videosTreino.find(v=>v.id===id):null;
+    const file=document.getElementById("videoArquivo")?.files?.[0];
+    const typedUrl=videoUrl.value.trim();
+
+    if(!typedUrl && !file && !existing?.storagePath && !existing?.url){
+      throw new Error("Adicione uma URL ou anexe um arquivo de vídeo.");
+    }
+
+    let storagePath=existing?.storagePath||"";
+    let mediaType=existing?.mediaType||"url";
+    let finalUrl=typedUrl || existing?.url || "";
+
+    if(file){
+      const uploaded=await window.supabaseUploadTrainingVideoV36?.(file);
+      if(!uploaded?.path) throw new Error("Não foi possível armazenar o vídeo.");
+      storagePath=uploaded.path;
+      mediaType="upload";
+      finalUrl="";
+    }else if(typedUrl){
+      mediaType="url";
+      storagePath="";
+      finalUrl=typedUrl;
+    }
+
+    const d={
+      id:id||gerarId(),
+      titulo:videoTitulo.value.trim(),
+      categoria:videoCategoria.value,
+      nivel:videoNivel.value,
+      status:videoStatus.value,
+      url:finalUrl,
+      storagePath,
+      mediaType,
+      descricao:videoDescricao.value.trim()
+    };
+
+    videosTreino=id?videosTreino.map(v=>v.id===id?d:v):[d,...videosTreino];
+    await Promise.resolve(salvar(VIDEOS_STORAGE_KEY,videosTreino));
+
+    if(!id)criarNotificacao({
+      tipo:"Treino",
+      titulo:d.categoria==="Treino do dia"?"Novo treino do dia":"Novo vídeo",
+      mensagem:d.titulo+" foi publicado.",
+      publico:"Todos os alunos"
+    });
+
+    formVideoTreino.reset();
+    videoTreinoId.value="";
+    resetVideoMediaV36();
+    renderizarVideos();
+    mostrarAlerta("Vídeo salvo na nuvem.");
+  }catch(err){
+    mostrarAlerta(err.message||"Falha ao salvar vídeo.","error");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old||"Salvar vídeo"}
+  }
+});
+
+async function hidratarVideosUploadV36(root=document){
+  const nodes=[...root.querySelectorAll("[data-training-video-path]")];
+  await Promise.all(nodes.map(async video=>{
+    const path=video.dataset.trainingVideoPath;
+    if(!path)return;
+    try{
+      const url=await window.supabaseSignedTrainingVideoUrlV36?.(path,3600);
+      if(url){
+        video.src=url;
+        video.load();
+      }
+    }catch(e){
+      console.warn("Falha ao carregar vídeo armazenado",e);
+    }
+  }));
+}
+
+function renderizarVideos(){
+  if(!document.getElementById("listaVideosTreino"))return;
+  listaVideosTreino.innerHTML=videosTreino.length?videosTreino.map(v=>{
+    const uploaded=v.mediaType==="upload" && v.storagePath;
+    const media=uploaded
+      ? `<video class="uploaded-training-video" controls preload="metadata" data-training-video-path="${escaparHtml(v.storagePath)}"></video>`
+      : `<iframe src="${escaparHtml(videoEmbed(v.url||""))}" allowfullscreen loading="lazy"></iframe>`;
+    return `<article class="video-card">
+      <div class="video-preview">${media}</div>
+      <div class="video-card-content">
+        <h4>${escaparHtml(v.titulo)}</h4>
+        <p>${escaparHtml(v.categoria)} • ${escaparHtml(v.nivel)}</p>
+        <p>${escaparHtml(v.descricao||"")}</p>
+        <div class="media-origin-badge">${uploaded?"ARQUIVO NO SUPABASE":"LINK EXTERNO"}</div>
+        <div class="actions"><button class="btn btn-danger" onclick="excluirVideo('${v.id}')">Excluir</button></div>
+      </div>
+    </article>`;
+  }).join(""):'<div class="empty">Nenhum vídeo.</div>';
+  totalVideosModulo.textContent=videosTreino.length;
+  hidratarVideosUploadV36(listaVideosTreino);
+}
+
+function excluirVideo(id){
+  if(confirm("Excluir vídeo?")){
+    videosTreino=videosTreino.filter(v=>v.id!==id);
+    salvar(VIDEOS_STORAGE_KEY,videosTreino);
+    renderizarVideos();
+  }
+}
+document.getElementById("cancelarVideoTreino")?.addEventListener("click",()=>{
+  formVideoTreino.reset();
+  resetVideoMediaV36();
+});
+
+function precoProduto(p){return p.precoPromocional>0&&p.precoPromocional<p.preco?p.precoPromocional:p.preco}
+
+function resetProdutoMediaV36(){
+  const file=document.getElementById("produtoImagemArquivo");
+  const preview=document.getElementById("produtoImagemPreview");
+  if(file)file.value="";
+  if(preview){preview.innerHTML="";preview.classList.add("hidden")}
+}
+
+document.getElementById("produtoImagemArquivo")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  const preview=document.getElementById("produtoImagemPreview");
+  if(!preview)return;
+  if(!file){preview.innerHTML="";preview.classList.add("hidden");return}
+  const objectUrl=URL.createObjectURL(file);
+  preview.classList.remove("hidden");
+  preview.innerHTML=`<div class="product-image-upload-preview">
+    <img src="${objectUrl}" alt="Prévia da foto do produto">
+    <div><strong>${escaparHtml(file.name)}</strong><small>${(file.size/1024/1024).toFixed(1)} MB • será enviada ao salvar</small></div>
+  </div>`;
+});
+
+document.getElementById("formProduto")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const btn=e.submitter || e.target.querySelector('button[type="submit"],.btn-primary');
+  const old=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="SALVANDO..."}
+
+  try{
+    const id=produtoId.value;
+    const existing=id?produtosLoja.find(p=>p.id===id):null;
+    const file=document.getElementById("produtoImagemArquivo")?.files?.[0];
+
+    let imagem=produtoImagem.value.trim() || existing?.imagem || "";
+    let imagePath=existing?.imagePath || "";
+
+    if(file){
+      const uploaded=await window.supabaseUploadProductImageV36?.(file);
+      if(!uploaded?.publicUrl) throw new Error("Não foi possível armazenar a foto.");
+      imagem=uploaded.publicUrl;
+      imagePath=uploaded.path||"";
+    }
+
+    const precoBase=Number(produtoPreco.value||0);
+    const precoPromo=Number(produtoPrecoPromocional.value||0);
+
+    if(precoBase<=0){
+      throw new Error("Informe um preço principal maior que zero.");
+    }
+
+    if(precoPromo<0){
+      throw new Error("O preço promocional não pode ser negativo.");
+    }
+
+    if(precoPromo>0 && precoPromo>=precoBase){
+      throw new Error("O preço promocional deve ser menor que o preço principal.");
+    }
+
+    const d={
+      id:id||gerarId(),
+      nome:produtoNome.value.trim(),
+      categoria:produtoCategoria.value,
+      preco:precoBase,
+      precoPromocional:precoPromo,
+      estoque:+produtoEstoque.value,
+      status:produtoStatus.value,
+      imagem,
+      imagePath,
+      descricao:produtoDescricao.value.trim()
+    };
+
+    // IMPORTANTE: estoque zero não apaga a mídia.
+    // Ao reabastecer o mesmo cadastro, a imagem volta automaticamente.
+    produtosLoja=id?produtosLoja.map(p=>p.id===id?d:p):[d,...produtosLoja];
+    await Promise.resolve(salvar(PRODUTOS_STORAGE_KEY,produtosLoja));
+
+    // Mantém a tela coerente com o valor que será usado na compra.
+    // A sincronização normalizada agora persiste promotional_price no Supabase.
+    const produtoSalvo=produtosLoja.find(p=>String(p.id)===String(d.id));
+    if(produtoSalvo){
+      produtoSalvo.precoPromocional=Number(d.precoPromocional||0);
+    }
+
+    if(d.precoPromocional>0&&d.precoPromocional<d.preco){
+      const promoMudou=!existing || Number(existing.precoPromocional||0)!==Number(d.precoPromocional);
+      if(promoMudou){
+        criarNotificacao({
+          tipo:"Promoção",
+          titulo:"Promoção: "+d.nome,
+          mensagem:`Agora por ${formatarMoeda(d.precoPromocional)}.`,
+          publico:"Todos os alunos"
+        });
+      }
+    }
+
+    formProduto.reset();
+    produtoId.value="";
+    produtoEstoque.value=1;
+    resetProdutoMediaV36();
+    renderizarProdutos();
+    mostrarAlerta(d.estoque>0?"Produto salvo com foto na nuvem.":"Produto salvo sem estoque. A foto foi preservada para reposição.");
+  }catch(err){
+    mostrarAlerta(err.message||"Falha ao salvar produto.","error");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old||"Salvar produto"}
+  }
+});
+
+
+function usuarioEhAlunoV362(){
+  return document.body.classList.contains("student-mode");
+}
+
+function usuarioEhProfessorV362(){
+  return document.body.classList.contains("professor-mode");
+}
+
+function usuarioEhGestaoV362(){
+  return !usuarioEhAlunoV362() && !usuarioEhProfessorV362();
+}
+
+function editarProdutoLoja(id){
+  const p=produtosLoja.find(x=>String(x.id)===String(id));
+  if(!p)return mostrarAlerta("Produto não encontrado.","error");
+
+  produtoId.value=p.id||"";
+  produtoNome.value=p.nome||"";
+  produtoCategoria.value=p.categoria||"";
+  produtoPreco.value=Number(p.preco||0);
+  produtoPrecoPromocional.value=Number(p.precoPromocional||0);
+  produtoEstoque.value=Number(p.estoque||0);
+  produtoStatus.value=p.status||"Ativo";
+  produtoImagem.value=p.imagem||"";
+  produtoDescricao.value=p.descricao||"";
+
+  const path=document.getElementById("produtoImagemStoragePath");
+  if(path)path.value=p.imagePath||"";
+
+  resetProdutoMediaV36();
+
+  document.getElementById("formProduto")?.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+
+  mostrarAlerta("Produto carregado para edição.");
+}
+
+function renderizarProdutos(){
+  if(!document.getElementById("listaProdutos"))return;
+
+  const aluno=usuarioEhAlunoV362();
+  const gestao=usuarioEhGestaoV362();
+
+  listaProdutos.innerHTML=produtosLoja.length?produtosLoja.map(p=>{
+    const semEstoque=Number(p.estoque||0)<=0;
+
+    let actions="";
+    if(aluno){
+      actions=`
+        <div class="actions product-actions-student">
+          <button class="btn btn-primary"
+                  onclick="adicionarCarrinho('${p.id}')"
+                  ${semEstoque?"disabled":""}>
+            ${semEstoque?"Indisponível":"Comprar"}
+          </button>
+        </div>`;
+    }else if(gestao){
+      actions=`
+        <div class="actions product-actions-admin">
+          <button class="btn btn-secondary"
+                  onclick="editarProdutoLoja('${p.id}')">
+            Editar
+          </button>
+          <button class="btn btn-danger"
+                  onclick="excluirProdutoLoja('${p.id}')">
+            Excluir
+          </button>
+        </div>`;
+    }
+
+    return `<article class="product-card ${semEstoque?"product-out-of-stock":""}">
+      <div class="product-image">
+        ${p.imagem?`<img src="${escaparHtml(p.imagem)}" loading="lazy" alt="${escaparHtml(p.nome||"Produto")}">`:"🥋"}
+      </div>
+
+      <div class="product-card-content">
+        <div class="product-stock-badge ${semEstoque?"out":"in"}">
+          ${semEstoque?"SEM ESTOQUE":"ESTOQUE: "+p.estoque}
+        </div>
+
+        <h4>${escaparHtml(p.nome)}</h4>
+        <p>${escaparHtml(p.descricao||"")}</p>
+
+        <p class="product-price-wrap">
+          ${precoProduto(p)<p.preco?`<span class="product-old-price">${formatarMoeda(p.preco)}</span>`:""}
+          <strong class="product-price">${formatarMoeda(precoProduto(p))}</strong>
+          ${precoProduto(p)<p.preco?`<span class="product-discount-badge">PROMO</span>`:""}
+        </p>
+
+        ${semEstoque?`
+          <small class="product-photo-retained">
+            Foto preservada para quando este item voltar ao estoque.
+          </small>`:""}
+
+        ${actions}
+      </div>
+    </article>`;
+  }).join(""):'<div class="empty">Nenhum produto.</div>';
+
+  if(totalProdutosModulo) totalProdutosModulo.textContent=produtosLoja.length;
+}
+
+function adicionarCarrinho(id){
+  if(!usuarioEhAlunoV362()){
+    return mostrarAlerta("Compras estão disponíveis apenas na área do aluno.","error");
+  }
+  const p=produtosLoja.find(x=>x.id===id);
+  if(!p||Number(p.estoque||0)<=0)return mostrarAlerta("Produto sem estoque.","error");
+  let i=carrinhoLoja.find(x=>x.produtoId===id);
+  if(i){if(i.quantidade>=p.estoque)return mostrarAlerta("Limite do estoque.","error");i.quantidade++}
+  else carrinhoLoja.push({produtoId:id,quantidade:1});
+  salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);
+  renderizarCarrinho();
+  mostrarAlerta("Produto adicionado.");
+}
+function removerCarrinho(id){carrinhoLoja=carrinhoLoja.filter(x=>x.produtoId!==id);salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);renderizarCarrinho()}
+function renderizarCarrinho(){
+  if(!document.getElementById("itensCarrinho"))return;
+  itensCarrinho.innerHTML=carrinhoLoja.length?carrinhoLoja.map(i=>{
+    let p=produtosLoja.find(x=>x.id===i.produtoId);
+    return p?`<div class="cart-item"><div><strong>${escaparHtml(p.nome)}</strong><small>${i.quantidade} x ${formatarMoeda(precoProduto(p))}</small></div><button onclick="removerCarrinho('${i.produtoId}')">×</button></div>`:""
+  }).join(""):'<div class="empty">Seu carrinho está vazio.</div>';
+  let t=carrinhoLoja.reduce((s,i)=>{let p=produtosLoja.find(x=>x.id===i.produtoId);return s+(p?precoProduto(p)*i.quantidade:0)},0);
+  totalCarrinho.textContent=formatarMoeda(t);contadorCarrinho.textContent=carrinhoLoja.reduce((s,i)=>s+i.quantidade,0)
+}
+document.getElementById("finalizarCompra")?.addEventListener("click",()=>{
+  if(!usuarioEhAlunoV362())return mostrarAlerta("Compras estão disponíveis apenas na área do aluno.","error");
+  if(!carrinhoLoja.length)return mostrarAlerta("Carrinho vazio.","error");
+  let alunoId=alunoPortalId.value;
+  let aluno=alunos.find(a=>a.id===alunoId);
+  if(!aluno)return mostrarAlerta("Acesse a área do aluno.","error");
+  let itens=[],total=0;
+  for(let i of carrinhoLoja){
+    let p=produtosLoja.find(x=>x.id===i.produtoId);
+    if(!p||i.quantidade>p.estoque)return mostrarAlerta("Estoque insuficiente.","error");
+    itens.push({nome:p.nome,quantidade:i.quantidade,preco:precoProduto(p)});
+    total+=precoProduto(p)*i.quantidade;
+    p.estoque-=i.quantidade;
+  }
+  let ped={id:gerarId(),codigo:"PED-"+String(pedidosLoja.length+1).padStart(4,"0"),alunoId,itens,total,pagamento:formaPagamentoLoja.value,criadoEm:new Date().toISOString()};
+  pedidosLoja.unshift(ped);
+  carrinhoLoja=[];
+  salvar(PEDIDOS_STORAGE_KEY,pedidosLoja);
+  salvar(PRODUTOS_STORAGE_KEY,produtosLoja);
+  salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);
+  criarNotificacao({tipo:"Venda",titulo:"Nova venda realizada",mensagem:`${aluno.nome} comprou ${formatarMoeda(total)}.`,publico:"Administrador"});
+  criarNotificacao({tipo:"Venda",titulo:"Pedido confirmado",mensagem:`Pedido ${ped.codigo} confirmado.`,publico:"Aluno específico",alunoId});
+  renderizarProdutos();renderizarCarrinho();renderizarPedidos();
+  mostrarAlerta("Pagamento aprovado em modo demonstrativo.");
+});
+function renderizarPedidos(){
+  if(!document.getElementById("tabelaPedidosLoja"))return;
+  const statusLabel=s=>({pending:"AGUARDANDO PIX",paid:"PAGO",deposit_paid:"SINAL PAGO",ready:"PRONTO",delivered:"ENTREGUE",cancelled:"CANCELADO"}[s]||String(s||"PENDENTE").toUpperCase());
+  tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr>
+    <td><strong>${escaparHtml(p.codigo||String(p.id).slice(0,8))}</strong><br><small class="order-status-v37 ${p.status||"pending"}">${statusLabel(p.status)}</small>${p.status==="cancelled"&&p.motivoCancelamento?`<br><small class="order-cancel-reason-v376">${escaparHtml(p.motivoCancelamento)}</small>`:""}</td>
+    <td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td>
+    <td>${(p.itens||[]).map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td>
+    <td>${escaparHtml(p.pagamento||"PIX")}</td>
+    <td><strong>${formatarMoeda(p.total)}</strong></td>
+    <td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td>
+    <td>${p.status==="pending"?`<button type="button" class="btn btn-danger btn-cancel-reservation-v376" onclick="cancelarReservaPedidoV376('${p.id}')">CANCELAR RESERVA</button>`:'<span class="order-no-action-v376">—</span>'}</td>
+  </tr>`).join(""):'<tr><td colspan="7" class="empty">Nenhum pedido.</td></tr>';
+  if(document.getElementById("totalPedidosModulo"))totalPedidosModulo.textContent=pedidosLoja.length;
+}
+
+async function cancelarReservaPedidoV376(orderId){
+  const pedido=pedidosLoja.find(item=>String(item.id)===String(orderId));
+  if(!pedido||pedido.status!=="pending") return mostrarAlerta("Esta reserva não está mais aguardando PIX.","error");
+  if(!confirm(`Cancelar a reserva ${pedido.codigo}? O pedido continuará no histórico para auditoria.`)) return;
+  const button=document.querySelector(`[onclick="cancelarReservaPedidoV376('${orderId}')"]`);
+  const old=button?.textContent;
+  if(button){button.disabled=true;button.textContent="CANCELANDO..."}
+  try{
+    const result=await window.supabaseCancelStoreOrderV376?.(orderId);
+    if(!result?.ok) throw new Error("Não foi possível cancelar a reserva.");
+    mostrarAlerta(result.legacy_stock_restored
+      ?`Reserva cancelada. ${Number(result.restored_quantity||0)} unidade(s) devolvida(s) ao estoque.`
+      :"Reserva cancelada e quantidade liberada imediatamente.");
+  }catch(error){
+    console.error("Cancelamento V37.6",error);
+    mostrarAlerta(error?.message||"Não foi possível cancelar a reserva.","error");
+    if(button){button.disabled=false;button.textContent=old||"CANCELAR RESERVA"}
+  }
+}
+document.getElementById("formNotificacao")?.addEventListener("submit",e=>{e.preventDefault();if(notificacaoPublico.value==="Aluno específico"&&!notificacaoAluno.value)return mostrarAlerta("Selecione o aluno.","error");criarNotificacao({tipo:notificacaoTipo.value,titulo:notificacaoTitulo.value.trim(),mensagem:notificacaoMensagem.value.trim(),publico:notificacaoPublico.value,alunoId:notificacaoAluno.value});formNotificacao.reset();renderizarNotificacoes();mostrarAlerta("Notificação enviada.")});
+function renderizarNotificacoes(){if(!document.getElementById("listaNotificacoes"))return;listaNotificacoes.innerHTML=notificacoes.length?notificacoes.map(n=>`<article class="notification-card ${n.lida?"":"unread"}"><div class="notification-icon">🔔</div><div class="notification-content"><strong>${escaparHtml(n.titulo)}</strong><p>${escaparHtml(n.mensagem)}</p><small>${n.tipo} • ${new Date(n.criadaEm).toLocaleString("pt-BR")}</small></div><div class="notification-actions">${n.lida?"":`<button onclick="lerNotificacao('${n.id}')">Lida</button>`}<button onclick="apagarNotificacao('${n.id}')">Excluir</button></div></article>`).join(""):'<div class="empty">Nenhuma notificação.</div>';let q=notificacoes.filter(n=>!n.lida).length;[menuNotificationBadge,topNotificationBadge].forEach(x=>{x.textContent=q;x.classList.toggle("show",q>0)});totalNotificacoesNaoLidas.textContent=q}
+function lerNotificacao(id){notificacoes=notificacoes.map(n=>n.id===id?{...n,lida:true}:n);salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
+function apagarNotificacao(id){notificacoes=notificacoes.filter(n=>n.id!==id);salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
+document.getElementById("gerarAlertasMensalidade")?.addEventListener("click",()=>{let c=0,hoje=new Date();matriculas.forEach(m=>{if(m.status!=="Ativo")return;let d=Math.ceil((new Date(m.vencimento+"T00:00:00")-hoje)/86400000);if(d<=7){criarNotificacao({tipo:d<0?"Renovação":"Mensalidade",titulo:d<0?"Plano vencido":"Mensalidade próxima",mensagem:d<0?`Seu plano venceu em ${formatarData(m.vencimento)}.`:`Sua mensalidade vence em ${formatarData(m.vencimento)}.`,publico:"Aluno específico",alunoId:m.alunoId});c++}});mostrarAlerta(c?`${c} alerta(s) gerado(s).`:"Nenhum alerta necessário.")});
+document.getElementById("marcarTodasNotificacoes")?.addEventListener("click",()=>{notificacoes=notificacoes.map(n=>({...n,lida:true}));salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()});
+document.getElementById("topNotificationButton")?.addEventListener("click",()=>document.querySelector('[data-view="notificacoes"]')?.click());
+
+/* =========================================================
+   HOTFIX V36.1
+   Restaura funções auxiliares removidas acidentalmente na V36.
+   Sem estas funções, atualizarExtras() interrompia o script
+   antes da inicialização do bridge Supabase.
+========================================================= */
+
+function preencherAlunosExtras(){
+  ["carrinhoAluno","notificacaoAluno"].forEach(id=>{
+    const s=document.getElementById(id);
+    if(!s)return;
+    const valorAtual=s.value;
+    s.innerHTML=
+      '<option value="">Selecione o aluno</option>'+
+      alunos
+        .filter(a=>a.status==="Ativo")
+        .map(a=>`<option value="${a.id}">${escaparHtml(a.nome)}</option>`)
+        .join("");
+    s.value=valorAtual;
+  });
+}
+
+function excluirProdutoLoja(id){
+  if(!confirm("Excluir produto?"))return;
+
+  produtosLoja=produtosLoja.filter(p=>p.id!==id);
+  carrinhoLoja=carrinhoLoja.filter(i=>i.produtoId!==id);
+
+  salvar(PRODUTOS_STORAGE_KEY,produtosLoja);
+  salvar(CARRINHO_STORAGE_KEY,carrinhoLoja);
+
+  renderizarProdutos();
+  renderizarCarrinho();
+}
+
+function atualizarExtras(){renderizarVideos();renderizarProdutos();preencherAlunosExtras();renderizarCarrinho();renderizarPedidos();renderizarNotificacoes()}
+const atualizarTudoAnteriorExtras=atualizarTudo;
+atualizarTudo=function(){
+  atualizarTudoAnteriorExtras();
+  try{
+    atualizarExtras();
+  }catch(error){
+    console.error("Falha em atualizar extras:",error);
+  }
+};
+try{
+  atualizarExtras();
+}catch(error){
+  console.error("Falha inicial em atualizar extras:",error);
+}
+window.excluirVideo=excluirVideo;window.adicionarCarrinho=adicionarCarrinho;window.excluirProdutoLoja=excluirProdutoLoja;window.removerCarrinho=removerCarrinho;window.lerNotificacao=lerNotificacao;window.apagarNotificacao=apagarNotificacao;window.cancelarReservaPedidoV376=cancelarReservaPedidoV376;
+
+const modelosJiuJitsu=[
+{id:"jj_fundamentos_branca",nome:"Fundamentos — Faixa branca",categoria:"Fundamentos",objetivo:"Fundamentos",nivel:"Faixa branca",frequencia:3,duracao:"60 min",icone:"🥋",descricao:"Base, postura, movimentação e segurança.",observacoes:"Priorizar técnica e controle.",exercicios:[
+{nome:"Saída de quadril",grupo:"Corpo inteiro",series:3,repeticoes:"10 cada lado",carga:"Corporal",descanso:"30s"},
+{nome:"Levantada técnica",grupo:"Corpo inteiro",series:3,repeticoes:"10",carga:"Corporal",descanso:"30s"},
+{nome:"Queda de quadril básica",grupo:"Corpo inteiro",series:4,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Passagem de guarda toreando",grupo:"Corpo inteiro",series:4,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Escape da montada",grupo:"Corpo inteiro",series:4,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Armlock da guarda",grupo:"Corpo inteiro",series:4,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"}]},
+{id:"jj_guarda_azul",nome:"Guarda — Faixa azul",categoria:"Guarda",objetivo:"Guarda",nivel:"Faixa azul",frequencia:4,duracao:"75 min",icone:"🛡️",descricao:"Retenção, raspagens e ataques da guarda.",observacoes:"Trabalhar pegadas e conexão.",exercicios:[
+{nome:"Retenção de guarda",grupo:"Corpo inteiro",series:5,repeticoes:"2 min",carga:"Parceiro",descanso:"45s"},
+{nome:"Raspagem tesoura",grupo:"Corpo inteiro",series:4,repeticoes:"6 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Raspagem pendular",grupo:"Corpo inteiro",series:4,repeticoes:"6 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Triângulo da guarda",grupo:"Corpo inteiro",series:4,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Armlock da guarda",grupo:"Corpo inteiro",series:4,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"}]},
+{id:"jj_passagem",nome:"Passagem de guarda",categoria:"Passagem de guarda",objetivo:"Passagem de guarda",nivel:"Faixa azul",frequencia:4,duracao:"75 min",icone:"⚡",descricao:"Pressão, mobilidade e estabilização.",observacoes:"Controlar quadril e cabeça.",exercicios:[
+{nome:"Toreando",grupo:"Corpo inteiro",series:5,repeticoes:"6 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Passagem over-under",grupo:"Corpo inteiro",series:5,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Passagem meia-guarda",grupo:"Corpo inteiro",series:5,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Estabilização lateral",grupo:"Corpo inteiro",series:4,repeticoes:"1 min",carga:"Parceiro",descanso:"30s"}]},
+{id:"jj_finalizacoes",nome:"Finalizações",categoria:"Finalizações",objetivo:"Finalizações",nivel:"Faixa roxa",frequencia:4,duracao:"80 min",icone:"🎯",descricao:"Encadeamento de ataques e controle.",observacoes:"Aplicar com segurança e soltar imediatamente ao sinal.",exercicios:[
+{nome:"Armlock da montada",grupo:"Corpo inteiro",series:5,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Estrangulamento de lapela",grupo:"Corpo inteiro",series:5,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Kimura da lateral",grupo:"Corpo inteiro",series:5,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"},
+{nome:"Triângulo",grupo:"Corpo inteiro",series:5,repeticoes:"5 cada lado",carga:"Parceiro",descanso:"45s"}]},
+{id:"jj_competicao",nome:"Preparação para competição",categoria:"Competição",objetivo:"Competição",nivel:"Faixa roxa",frequencia:5,duracao:"90 min",icone:"🏆",descricao:"Estratégia, rounds e situações específicas.",observacoes:"Monitorar intensidade e recuperação.",exercicios:[
+{nome:"Aquecimento específico",grupo:"Corpo inteiro",series:1,repeticoes:"15 min",carga:"Corporal",descanso:"-"},
+{nome:"Entrada de queda",grupo:"Corpo inteiro",series:5,repeticoes:"2 min",carga:"Parceiro",descanso:"45s"},
+{nome:"Treino posicional",grupo:"Corpo inteiro",series:6,repeticoes:"3 min",carga:"Parceiro",descanso:"60s"},
+{nome:"Rounds de luta",grupo:"Corpo inteiro",series:5,repeticoes:"5 min",carga:"Parceiro",descanso:"60s"}]}
+];
+if(typeof modelosAutomaticosTreino!=="undefined"){modelosAutomaticosTreino.splice(0,modelosAutomaticosTreino.length,...modelosJiuJitsu);filtroModeloTreinoAtual="Todos";renderizarModelosAutomaticosTreino()}
+
+
+
+// ==========================================================
+// CHECK-IN COM SELFIE — ÁREA DO ALUNO — V30
+// ==========================================================
+let studentSelfieFileV30 = null;
+
+function statusCheckinLabelV30(status){
+  const s=String(status||"pending");
+  if(s==="approved") return {label:"PRESENÇA VALIDADA",className:"approved"};
+  if(s==="rejected") return {label:"CHECK-IN RECUSADO",className:"rejected"};
+  return {label:"AGUARDANDO VALIDAÇÃO",className:"pending"};
+}
+
+function belemAgoraV375(){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone:"America/Belem",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false
+  }).formatToParts(new Date());
+  const get=t=>parts.find(p=>p.type===t)?.value||"";
+  const dayMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+  const hour=Number(get("hour"))%24, minute=Number(get("minute"));
+  return {weekday:dayMap[get("weekday")]??-1,minutes:hour*60+minute,hour,minute};
+}
+function classStartMinutesV375(c){
+  const [h,m]=String(c?.start_time||"00:00").split(":").map(Number);
+  return (h||0)*60+(m||0);
+}
+function checkinLiberadoClasseV375(c){
+  const now=belemAgoraV375();
+  return Number(c?.weekday)===now.weekday && now.minutes>=classStartMinutesV375(c);
+}
+function atualizarBloqueioCheckinV375(classes=[]){
+  const input=document.getElementById("studentSelfieInput");
+  const label=document.querySelector('label[for="studentSelfieInput"]');
+  const select=document.getElementById("studentCheckinClass");
+  const button=document.getElementById("studentSelfieCheckinButton");
+  const lock=document.getElementById("studentCheckinScheduleLock");
+  const badge=document.getElementById("studentCheckinStatusBadge");
+  const available=classes.filter(checkinLiberadoClasseV375);
+
+  if(select){
+    [...select.options].forEach(o=>{
+      if(!o.value)return;
+      const c=classes.find(x=>String(x.id)===String(o.value));
+      o.disabled=!c||!checkinLiberadoClasseV375(c);
+    });
+    if(select.value){
+      const selected=classes.find(c=>String(c.id)===String(select.value));
+      if(selected&&!checkinLiberadoClasseV375(selected)) select.value="";
+    }
+    if(!select.value && available.length) select.value=available[0].id;
+  }
+
+  const unlocked=available.length>0;
+  if(input) input.disabled=!unlocked;
+  if(button) button.disabled=!unlocked;
+  label?.classList.toggle("is-disabled",!unlocked);
+  lock?.classList.toggle("unlocked",unlocked);
+
+  if(lock){
+    const strong=lock.querySelector("strong"),small=lock.querySelector("small"),icon=lock.querySelector(".student-checkin-lock-icon");
+    if(unlocked){
+      if(icon)icon.textContent="🔓";
+      if(strong)strong.textContent="CHECK-IN LIBERADO";
+      if(small)small.textContent="Sua turma já iniciou. Tire ou anexe uma selfie e envie sua presença.";
+    }else{
+      const prox=classes
+        .filter(c=>Number(c.weekday)===belemAgoraV375().weekday)
+        .sort((a,b)=>classStartMinutesV375(a)-classStartMinutesV375(b))[0];
+      if(icon)icon.textContent="🔒";
+      if(strong)strong.textContent="CHECK-IN BLOQUEADO";
+      if(small)small.textContent=prox
+        ? `Liberado hoje somente após ${String(prox.start_time||"").slice(0,5)}.`
+        : "Você não possui uma turma liberada para check-in neste momento.";
+    }
+  }
+
+  if(!unlocked && badge){
+    badge.textContent="AGUARDANDO HORÁRIO DA AULA";
+    badge.className="student-checkin-badge locked";
+  }
+  return unlocked;
+}
+let checkinScheduleTimerV375=null;
+
+window.renderStudentSelfieCheckinV30 = async function(payload={}){
+  const student=payload.student;
+  const classes=Array.isArray(payload.classes)?payload.classes:[];
+  const dbCheckins=(Array.isArray(payload.checkins)?payload.checkins:[])
+    .slice()
+    .sort((a,b)=>new Date(b.checked_in_at||b.created_at||0)-new Date(a.checked_in_at||a.created_at||0));
+  const select=document.getElementById("studentCheckinClass");
+  const history=document.getElementById("studentCheckinHistory");
+  const badge=document.getElementById("studentCheckinStatusBadge");
+  if(!student || !select || !history) return;
+
+  const weekdaysV375=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  window.studentClassesForCheckinV375=classes;
+  select.innerHTML='<option value="">Selecione sua turma</option>' + classes.map(c=>`
+    <option value="${c.id}" ${checkinLiberadoClasseV375(c)?"":"disabled"}>
+      ${escaparHtml(c.name)} • ${weekdaysV375[Number(c.weekday)]||"Dia"} ${String(c.start_time||"").slice(0,5)}
+    </option>
+  `).join("");
+  atualizarBloqueioCheckinV375(classes);
+  clearInterval(checkinScheduleTimerV375);
+  checkinScheduleTimerV375=setInterval(()=>atualizarBloqueioCheckinV375(window.studentClassesForCheckinV375||[]),30000);
+
+  const today=hojeIso();
+  const todayCheckin=dbCheckins.find(c=>String(c.checkin_date||c.checked_in_at||"").slice(0,10)===today);
+  if(todayCheckin && badge){
+    const meta=statusCheckinLabelV30(todayCheckin.validation_status);
+    badge.textContent=meta.label;
+    badge.className=`student-checkin-badge ${meta.className}`;
+  }else if(badge){
+    if((classes||[]).some(checkinLiberadoClasseV375)){
+      badge.textContent="PRONTO PARA CHECK-IN";
+      badge.className="student-checkin-badge";
+    }else{
+      badge.textContent="AGUARDANDO HORÁRIO DA AULA";
+      badge.className="student-checkin-badge locked";
+    }
+  }
+
+  history.innerHTML=dbCheckins.length
+    ? dbCheckins.map((c,index)=>{
+        const meta=statusCheckinLabelV30(c.validation_status);
+        const cls=classes.find(x=>String(x.id)===String(c.class_id));
+        const date=String(c.checkin_date||c.checked_in_at||"").slice(0,10);
+        const time=String(c.checked_in_at||"").slice(11,16);
+        const hasPhoto=!!c.photo_url;
+        const isLatest=index===0;
+
+        if(isLatest){
+          return `
+            <article class="student-checkin-history-card student-checkin-latest">
+              <div class="student-checkin-history-photo ${hasPhoto?"is-clickable":""}"
+                   ${hasPhoto?`data-open-checkin-photo="${c.photo_url}" role="button" tabindex="0" aria-label="Abrir foto do último check-in"`:""}>
+                ${hasPhoto
+                  ? `<img data-checkin-photo-path="${c.photo_url}" alt="Selfie do último check-in">`
+                  : `<div class="student-checkin-no-photo">✓</div>`
+                }
+              </div>
+              <div class="student-checkin-history-content">
+                <span class="student-checkin-latest-label">ÚLTIMO CHECK-IN</span>
+                <strong>${escaparHtml(cls?.name || "Check-in")}</strong>
+                <span>${formatarData(date)} • ${time}</span>
+                <small class="student-checkin-status ${meta.className}">${meta.label}</small>
+              </div>
+            </article>
+          `;
+        }
+
+        return `
+          <article class="student-checkin-history-card student-checkin-compact">
+            <div class="student-checkin-compact-date">
+              <strong>${formatarData(date)}</strong>
+              <span>${time}</span>
+            </div>
+            <small class="student-checkin-status ${meta.className}">${meta.label}</small>
+            ${hasPhoto ? `
+              <button type="button" class="student-checkin-photo-button"
+                      data-open-checkin-photo="${c.photo_url}"
+                      aria-label="Abrir foto deste check-in" title="Ver foto">
+                📷
+              </button>` : `
+              <span class="student-checkin-photo-expired" title="Foto removida após 30 dias">—</span>`
+            }
+          </article>
+        `;
+      }).join("")
+    : '<div class="empty">Você ainda não realizou check-in com selfie.</div>';
+
+  await window.hidratarFotosCheckinV30?.(history);
+  window.bindCheckinPhotoViewerV35?.(history);
+};
+
+window.openCheckinPhotoV35 = async function(path){
+  if(!path) return;
+  try{
+    const url=await window.supabaseSignedCheckinUrl(path,300);
+    if(!url) throw new Error("Foto indisponível.");
+
+    let modal=document.getElementById("checkinPhotoViewerV35");
+    if(!modal){
+      modal=document.createElement("div");
+      modal.id="checkinPhotoViewerV35";
+      modal.className="checkin-photo-viewer-v35";
+      modal.innerHTML=`
+        <div class="checkin-photo-viewer-backdrop" data-close-checkin-photo></div>
+        <div class="checkin-photo-viewer-dialog" role="dialog" aria-modal="true" aria-label="Foto do check-in">
+          <button type="button" class="checkin-photo-viewer-close" data-close-checkin-photo aria-label="Fechar">×</button>
+          <div class="checkin-photo-viewer-head">
+            <span>📷 REGISTRO DE PRESENÇA</span>
+            <small>Foto privada do check-in</small>
+          </div>
+          <img alt="Foto do check-in">
+        </div>`;
+      document.body.appendChild(modal);
+      modal.addEventListener("click",e=>{
+        if(e.target.closest("[data-close-checkin-photo]")) modal.classList.remove("show");
+      });
+      document.addEventListener("keydown",e=>{
+        if(e.key==="Escape") modal.classList.remove("show");
+      });
+    }
+    modal.querySelector("img").src=url;
+    modal.classList.add("show");
+  }catch(e){
+    window.mostrarAlertaPremium?.("Foto indisponível","Esta foto pode ter ultrapassado o período de retenção de 30 dias.","erro");
+  }
+};
+
+window.bindCheckinPhotoViewerV35 = function(root=document){
+  root.querySelectorAll("[data-open-checkin-photo]").forEach(el=>{
+    if(el.dataset.viewerBound==="1") return;
+    el.dataset.viewerBound="1";
+    const open=()=>window.openCheckinPhotoV35(el.dataset.openCheckinPhoto);
+    el.addEventListener("click",open);
+    el.addEventListener("keydown",e=>{
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); }
+    });
+  });
+};
+
+document.getElementById("studentSelfieInput")?.addEventListener("change",(event)=>{
+  const file=event.target.files?.[0] || null;
+  const preview=document.getElementById("studentSelfiePreview");
+  const message=document.getElementById("studentSelfieCheckinMessage");
+  studentSelfieFileV30=file;
+
+  if(message) message.textContent="";
+
+  if(!file){
+    if(preview) preview.innerHTML=`
+      <div class="student-selfie-placeholder">
+        <span>📷</span>
+        <strong>SUA SELFIE APARECE AQUI</strong>
+        <small>A foto é privada e usada somente para validar a presença.</small>
+      </div>`;
+    return;
+  }
+
+  if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){
+    studentSelfieFileV30=null;
+    event.target.value="";
+    if(message) message.textContent="Use uma imagem JPG, PNG ou WEBP.";
+    return;
+  }
+
+  if(file.size > 10 * 1024 * 1024){
+    studentSelfieFileV30=null;
+    event.target.value="";
+    if(message) message.textContent="A foto deve ter no máximo 10 MB.";
+    return;
+  }
+
+  const reader=new FileReader();
+  reader.onload=()=>{
+    if(preview) preview.innerHTML=`<img src="${reader.result}" alt="Prévia da selfie">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById("studentSelfieCheckinButton")?.addEventListener("click",async()=>{
+  const aluno=obterAlunoLogado();
+  const classId=document.getElementById("studentCheckinClass")?.value;
+  const message=document.getElementById("studentSelfieCheckinMessage");
+  const button=document.getElementById("studentSelfieCheckinButton");
+
+  if(!aluno){
+    if(message) message.textContent="Sessão do aluno não encontrada.";
+    return;
+  }
+  if(!classId){
+    if(message) message.textContent="Selecione uma turma já liberada pelo horário.";
+    return;
+  }
+  const selectedClass=(window.studentClassesForCheckinV375||[]).find(c=>String(c.id)===String(classId));
+  if(!selectedClass || !checkinLiberadoClasseV375(selectedClass)){
+    if(message) message.textContent=`Check-in liberado somente no dia da aula, após ${String(selectedClass?.start_time||"").slice(0,5)}.`;
+    mostrarAlerta("O check-in ainda não foi liberado para esta aula.","error");
+    return;
+  }
+  if(!studentSelfieFileV30){
+    if(message) message.textContent="Tire ou escolha uma selfie antes de enviar.";
+    return;
+  }
+
+  button.disabled=true;
+  button.textContent="ENVIANDO CHECK-IN...";
+  if(message) message.textContent="Enviando sua selfie com segurança...";
+
+  try{
+    await window.supabaseRegistrarSelfieCheckin({
+      studentId:aluno.id,
+      classId,
+      file:studentSelfieFileV30
+    });
+
+    studentSelfieFileV30=null;
+    const input=document.getElementById("studentSelfieInput");
+    if(input) input.value="";
+    const preview=document.getElementById("studentSelfiePreview");
+    if(preview) preview.innerHTML=`
+      <div class="student-selfie-success">
+        <span>✓</span>
+        <strong>CHECK-IN ENVIADO</strong>
+        <small>Aguarde a validação do professor.</small>
+      </div>`;
+
+    if(message) message.textContent="Check-in enviado. Sua presença está aguardando validação.";
+    mostrarAlerta("Selfie enviada. O professor já pode validar sua presença.");
+  }catch(e){
+    if(message) message.textContent=e.message || "Não foi possível enviar o check-in.";
+    mostrarAlerta(e.message || "Falha ao enviar check-in.","error");
+  }finally{
+    button.disabled=false;
+    button.textContent="ENVIAR SELFIE E CONFIRMAR CHECK-IN";
+  }
+});
+
+// ==========================================================
+// ÁREA DO ALUNO COM ACESSO POR CPF E COMPRAS
+// ==========================================================
+const STUDENT_SESSION_KEY = "fitcontrol_aluno_logado";
+
+let alunoLogadoId =
+  sessionStorage.getItem(STUDENT_SESSION_KEY) ||
+  localStorage.getItem(STUDENT_SESSION_KEY) ||
+  "";
+
+let carrinhoAluno = [];
+
+function obterAlunoLogado() {
+  return alunos.find(
+    (aluno) => String(aluno.id) === String(alunoLogadoId)
+  );
+}
+
+function entrarAreaAluno(aluno) {
+  alunoLogadoId = aluno.id;
+  sessionStorage.setItem(STUDENT_SESSION_KEY, aluno.id);
+
+  document
+    .getElementById("studentAccessScreen")
+    ?.classList.add("hidden");
+
+  document
+    .getElementById("studentDashboard")
+    ?.classList.remove("hidden");
+
+  carrinhoAluno = [];
+  renderizarAreaAluno();
+}
+
+function sairAreaAluno() {
+  alunoLogadoId = "";
+  carrinhoAluno = [];
+
+  sessionStorage.removeItem(STUDENT_SESSION_KEY);
+  localStorage.removeItem(STUDENT_SESSION_KEY);
+
+  document
+    .getElementById("studentDashboard")
+    ?.classList.add("hidden");
+
+  document
+    .getElementById("studentAccessScreen")
+    ?.classList.remove("hidden");
+
+  const cpfInput = document.getElementById("cpfAcessoAluno");
+  const erro = document.getElementById("erroAcessoAluno");
+
+  if (cpfInput) cpfInput.value = "";
+  if (erro) erro.textContent = "";
+}
+
+document
+  .getElementById("formAcessoAluno")
+  ?.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const cpf = normalizarCpf(
+      document.getElementById("cpfAcessoAluno").value
+    );
+
+    const erro = document.getElementById("erroAcessoAluno");
+
+    const aluno = alunos.find(
+      (item) => normalizarCpf(item.cpf) === cpf
+    );
+
+    if (!aluno) {
+      erro.textContent = "CPF não encontrado no cadastro de alunos.";
+      return;
+    }
+
+    if (aluno.status !== "Ativo") {
+      erro.textContent =
+        "Seu cadastro está inativo. Procure a recepção da academia.";
+      return;
+    }
+
+    erro.textContent = "";
+    entrarAreaAluno(aluno);
+  });
+
+document
+  .getElementById("sairAreaAluno")
+  ?.addEventListener("click", sairAreaAluno);
+
+function obterMatriculaAluno(alunoId) {
+  return matriculas.find(
+    (matricula) =>
+      String(matricula.alunoId) === String(alunoId) &&
+      matricula.status === "Ativo"
+  );
+}
+
+function notificacoesDoAluno(alunoId) {
+  return notificacoes.filter(
+    (notificacao) =>
+      notificacao.publico === "Todos os alunos" ||
+      (
+        notificacao.publico === "Aluno específico" &&
+        String(notificacao.alunoId) === String(alunoId)
+      )
+  );
+}
+
+function pedidosDoAluno(alunoId) {
+  return pedidosLoja.filter(
+    (pedido) => String(pedido.alunoId) === String(alunoId)
+  );
+}
+
+function renderizarResumoAluno() {
+  const aluno = obterAlunoLogado();
+  if (!aluno) return;
+
+  const matricula = obterMatriculaAluno(aluno.id);
+  const plano = matricula
+    ? planos.find((item) => item.id === matricula.planoId)
+    : null;
+
+  const notificacoesAluno = notificacoesDoAluno(aluno.id);
+  const pedidosAluno = pedidosDoAluno(aluno.id);
+
+  document.getElementById("studentProfileAvatar").textContent =
+    obterIniciaisAluno(aluno.nome);
+
+  document.getElementById("studentProfileName").textContent =
+    aluno.nome;
+
+  document.getElementById("studentProfileDetails").textContent =
+    `CPF: ${formatarCpfVisual(aluno.cpf)}` +
+    (aluno.telefone ? ` • ${aluno.telefone}` : "");
+
+  document.getElementById("studentPlanName").textContent =
+    plano?.nome || "Sem plano ativo";
+
+  document.getElementById("studentPlanStatus").textContent =
+    matricula
+      ? `Matrícula ${matricula.status.toLowerCase()}`
+      : "Procure a recepção";
+
+  document.getElementById("studentPlanDue").textContent =
+    matricula ? formatarData(matricula.vencimento) : "—";
+
+  document.getElementById("studentPlanDueStatus").textContent =
+    matricula
+      ? "Data de renovação do plano"
+      : "Nenhuma matrícula ativa";
+
+  document.getElementById("studentUnreadNotifications").textContent =
+    notificacoesAluno.filter((item) => !item.lida).length;
+
+  document.getElementById("studentOrdersCount").textContent =
+    pedidosAluno.length;
+}
+
+const studentProductQtyV375 = new Map();
+
+function quantidadeSelecionadaProdutoV375(produtoId, estoque){
+  const max=Math.max(1,Number(estoque||1));
+  const atual=Math.max(1,Math.min(max,Number(studentProductQtyV375.get(String(produtoId))||1)));
+  studentProductQtyV375.set(String(produtoId),atual);
+  return atual;
+}
+
+function alterarQuantidadeProdutoV375(produtoId,delta){
+  const produto=produtosLoja.find(p=>String(p.id)===String(produtoId));
+  if(!produto)return;
+  const max=Math.max(1,Number(produto.estoque||1));
+  const atual=quantidadeSelecionadaProdutoV375(produtoId,max);
+  const nova=Math.max(1,Math.min(max,atual+Number(delta||0)));
+  studentProductQtyV375.set(String(produtoId),nova);
+
+  const value=document.querySelector(`[data-student-product-qty-value="${CSS.escape(String(produtoId))}"]`);
+  const subtotal=document.querySelector(`[data-student-product-subtotal="${CSS.escape(String(produtoId))}"]`);
+  if(value)value.textContent=String(nova);
+  if(subtotal)subtotal.textContent=formatarMoeda(precoProduto(produto)*nova);
+}
+
+function renderizarProdutosAreaAluno() {
+  const container = document.getElementById("studentProductGrid");
+  if (!container) return;
+
+  const produtosAtivos = produtosLoja.filter(
+    (produto) => produto.status === "Ativo" && Number(produto.estoque) > 0
+  );
+
+  container.innerHTML = produtosAtivos.length
+    ? produtosAtivos.map((produto) => {
+        const preco = precoProduto(produto);
+        const promocao = preco < produto.preco;
+        const qtd = quantidadeSelecionadaProdutoV375(produto.id, produto.estoque);
+
+        return `
+          <article class="student-product-card">
+            <div class="student-product-image">
+              ${
+                produto.imagem
+                  ? `<img src="${escaparHtml(produto.imagem)}" alt="${escaparHtml(produto.nome)}">`
+                  : "🥋"
+              }
+            </div>
+
+            <div class="student-product-content">
+              <div class="student-product-tags">
+                <span>${escaparHtml(produto.categoria)}</span>
+                ${promocao ? '<span class="promotion-tag">Promoção</span>' : ""}
+                <span>Estoque: ${produto.estoque}</span>
+              </div>
+
+              <h4>${escaparHtml(produto.nome)}</h4>
+              <p>${escaparHtml(produto.descricao || "Produto disponível para retirada na academia.")}</p>
+
+              <div class="product-prices">
+                <strong class="product-price">${formatarMoeda(preco)}</strong>
+                ${promocao ? `<span class="product-old-price">${formatarMoeda(produto.preco)}</span>` : ""}
+              </div>
+
+              <div class="student-product-purchase-row">
+                <div class="student-qty-control" aria-label="Quantidade">
+                  <button type="button" data-student-qty-minus="${produto.id}" aria-label="Diminuir quantidade">−</button>
+                  <strong data-student-product-qty-value="${produto.id}">${qtd}</strong>
+                  <button type="button" data-student-qty-plus="${produto.id}" aria-label="Aumentar quantidade">+</button>
+                </div>
+
+                <div class="student-product-subtotal">
+                  <small>SUBTOTAL</small>
+                  <strong data-student-product-subtotal="${produto.id}">${formatarMoeda(preco*qtd)}</strong>
+                </div>
+              </div>
+
+              <button
+                class="btn btn-primary student-product-buy"
+                type="button"
+                data-student-add-product="${produto.id}"
+              >
+                Adicionar ao carrinho
+              </button>
+            </div>
+          </article>
+        `;
+      }).join("")
+    : `<div class="empty" style="grid-column:1/-1;">Nenhum produto disponível no momento.</div>`;
+}
+
+function adicionarProdutoCarrinhoAluno(produtoId) {
+  const produto = produtosLoja.find(
+    (item) => String(item.id) === String(produtoId)
+  );
+
+  if (!produto || produto.status !== "Ativo" || Number(produto.estoque) <= 0) {
+    mostrarAlerta("Produto indisponível.", "error");
+    return;
+  }
+
+  const escolhida=quantidadeSelecionadaProdutoV375(produtoId,produto.estoque);
+  const itemExistente = carrinhoAluno.find(
+    (item) => String(item.produtoId) === String(produtoId)
+  );
+  const noCarrinho=Number(itemExistente?.quantidade||0);
+  const novaQuantidade=noCarrinho+escolhida;
+
+  if(novaQuantidade>Number(produto.estoque)){
+    mostrarAlerta(`Você pode adicionar no máximo ${produto.estoque} unidade(s).`,"error");
+    return;
+  }
+
+  if(itemExistente) itemExistente.quantidade=novaQuantidade;
+  else carrinhoAluno.push({produtoId,quantidade:escolhida});
+
+  studentProductQtyV375.set(String(produtoId),1);
+  renderizarProdutosAreaAluno();
+  renderizarCarrinhoAreaAluno();
+  atualizarResumoPagamentoV375();
+  mostrarAlerta(`${escolhida} unidade(s) adicionada(s) ao carrinho.`);
+}
+
+function removerProdutoCarrinhoAluno(produtoId) {
+  carrinhoAluno = carrinhoAluno.filter(
+    (item) => String(item.produtoId) !== String(produtoId)
+  );
+
+  renderizarCarrinhoAreaAluno();
+}
+
+function alterarQuantidadeCarrinhoV375(produtoId,delta){
+  const produto=produtosLoja.find(p=>String(p.id)===String(produtoId));
+  const item=carrinhoAluno.find(i=>String(i.produtoId)===String(produtoId));
+  if(!produto||!item)return;
+
+  const nova=Number(item.quantidade||1)+Number(delta||0);
+  if(nova<=0){
+    removerProdutoCarrinhoAluno(produtoId);
+    atualizarResumoPagamentoV375();
+    return;
+  }
+  if(nova>Number(produto.estoque||0)){
+    mostrarAlerta(`Estoque máximo disponível: ${produto.estoque}.`,"error");
+    return;
+  }
+  item.quantidade=nova;
+  renderizarCarrinhoAreaAluno();
+  atualizarResumoPagamentoV375();
+}
+
+function renderizarCarrinhoAreaAluno() {
+  const container = document.getElementById("studentCartList");
+  if (!container) return;
+
+  let total = 0;
+  let quantidade = 0;
+
+  const itensValidos = carrinhoAluno
+    .map((item) => {
+      const produto = produtosLoja.find((produto) => String(produto.id) === String(item.produtoId));
+      if (!produto) return null;
+      const subtotal = precoProduto(produto) * Number(item.quantidade||1);
+      total += subtotal;
+      quantidade += Number(item.quantidade||1);
+      return { item, produto, subtotal };
+    })
+    .filter(Boolean);
+
+  container.innerHTML = itensValidos.length
+    ? itensValidos.map(({ item, produto, subtotal }) => `
+        <div class="cart-item cart-item-v375">
+          <div class="cart-item-main-v375">
+            <strong>${escaparHtml(produto.nome)}</strong>
+            <small>${formatarMoeda(precoProduto(produto))} cada</small>
+            <div class="cart-qty-v375">
+              <button type="button" data-cart-qty-minus="${produto.id}">−</button>
+              <span>${item.quantidade}</span>
+              <button type="button" data-cart-qty-plus="${produto.id}">+</button>
+            </div>
+          </div>
+          <div class="cart-item-total-v375">
+            <strong>${formatarMoeda(subtotal)}</strong>
+            <button type="button" data-student-remove-product="${produto.id}" aria-label="Remover produto">×</button>
+          </div>
+        </div>
+      `).join("")
+    : '<div class="empty">Seu carrinho está vazio.</div>';
+
+  document.getElementById("studentCartTotal").textContent = formatarMoeda(total);
+  document.getElementById("studentCartCount").textContent = quantidade;
+  atualizarResumoPagamentoV375();
+}
+
+function totalCarrinhoAlunoV375(){
+  return carrinhoAluno.reduce((sum,item)=>{
+    const produto=produtosLoja.find(p=>String(p.id)===String(item.produtoId));
+    return sum+(produto?precoProduto(produto)*Number(item.quantidade||1):0);
+  },0);
+}
+
+function atualizarResumoPagamentoV375(){
+  const method=document.getElementById("studentPaymentMethod")?.value||"pix_full";
+  const box=document.getElementById("studentPaymentSplitValue");
+  if(!box)return;
+  const total=totalCarrinhoAlunoV375();
+  if(method==="pix_deposit"){
+    const sinal=Math.round(total*30)/100;
+    const restante=Math.max(0,total-sinal);
+    box.textContent=`Sinal agora: ${formatarMoeda(sinal)} • Restante na retirada: ${formatarMoeda(restante)}`;
+  }else{
+    box.textContent=`PIX agora: ${formatarMoeda(total)} • Restante: R$ 0,00`;
+  }
+}
+
+async function finalizarCompraAreaAluno() {
+  const aluno=obterAlunoLogado();
+  if(!aluno){
+    mostrarAlerta("Sua sessão expirou. Entre novamente.","error");
+    sairAreaAluno();
+    return;
+  }
+  if(!carrinhoAluno.length) return mostrarAlerta("Seu carrinho está vazio.","error");
+
+  const paymentOption=document.getElementById("studentPaymentMethod")?.value||"pix_full";
+  if(!["pix_full","pix_deposit"].includes(paymentOption)){
+    return mostrarAlerta("Selecione uma opção de PIX válida.","error");
+  }
+
+  const btn=document.getElementById("studentCheckoutButton");
+  const old=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="RESERVANDO E GERANDO PIX..."}
+
+  try{
+    const result=await window.supabaseStoreCheckoutV375?.(carrinhoAluno,paymentOption);
+    if(!result?.order_id) throw new Error("O pedido não foi criado.");
+    if(!result?.pix_qr_code_base64 || !result?.pix_copy_paste){
+      throw new Error("O Asaas não retornou o QR Code do Pix.");
+    }
+
+    carrinhoAluno=[];
+    renderizarCarrinhoAreaAluno();
+    abrirPixPedidoV375(result);
+    await window.supabaseRefreshCurrentUserV30?.();
+    renderizarAreaAluno();
+
+    mostrarAlerta("Itens reservados por 5 minutos. Finalize o PIX.");
+  }catch(err){
+    console.error("Checkout PIX V37.5:",err);
+    mostrarAlerta(err?.message||"Não foi possível gerar o PIX.","error");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old||"GERAR PIX E RESERVAR POR 5 MIN"}
+  }
+}
+
+let championPixTimerV37=null;
+let championPixPollV37=null;
+
+function fecharPixPedidoV37(){
+  clearInterval(championPixTimerV37);
+  clearInterval(championPixPollV37);
+  championPixTimerV37=null; championPixPollV37=null;
+  document.getElementById("championPixModalV37")?.remove();
+}
+
+function abrirPixPedidoV375(data){
+  fecharPixPedidoV37();
+  const exp=new Date(data.pix_expires_at).getTime();
+  const img=String(data.pix_qr_code_base64||"");
+  const src=img.startsWith("data:")?img:`data:image/png;base64,${img}`;
+  const isDeposit=data.payment_option==="pix_deposit";
+  const modal=document.createElement("div");
+  modal.id="championPixModalV37";
+  modal.className="pix-modal-v37";
+  modal.innerHTML=`
+    <div class="pix-card-v37">
+      <button type="button" class="pix-close-v37" data-pix-close>×</button>
+      <span class="pix-kicker-v37">PAGAMENTO SEGURO • ASAAS SANDBOX</span>
+      <h3>PIX GERADO</h3>
+      <p>Pedido <strong>${escaparHtml(data.code||"")}</strong></p>
+
+      <div class="pix-order-values-v375">
+        <div><span>Total do pedido</span><strong>${formatarMoeda(Number(data.total||0))}</strong></div>
+        <div class="highlight"><span>${isDeposit?"Sinal PIX (30%)":"Valor do PIX"}</span><strong>${formatarMoeda(Number(data.amount_due_now ?? data.total ?? 0))}</strong></div>
+        ${isDeposit?`<div><span>Restante na retirada</span><strong>${formatarMoeda(Number(data.remaining_balance||0))}</strong></div>`:""}
+      </div>
+
+      <div class="pix-reservation-v375">
+        <span>🔒 ITENS RESERVADOS</span>
+        <small>Nenhum outro aluno pode reservar estas unidades durante o contador.</small>
+      </div>
+
+      <div class="pix-qr-wrap-v37"><img src="${src}" alt="QR Code Pix"></div>
+      <div class="pix-timer-v37"><span>RESERVA EXPIRA EM</span><strong id="pixCountdownV37">05:00</strong></div>
+
+      <label class="pix-copy-label-v37">PIX COPIA E COLA</label>
+      <div class="pix-copy-row-v37">
+        <input id="pixCopyV37" readonly value="${escaparHtml(data.pix_copy_paste||"")}">
+        <button type="button" data-copy-store-pix>COPIAR</button>
+      </div>
+
+      <div id="pixStatusV37" class="pix-status-v37 waiting"><span></span> Aguardando confirmação automática do Asaas...</div>
+      <small>A confirmação é consultada automaticamente no Asaas. Não é necessário enviar comprovante.</small>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector("[data-pix-close]")?.addEventListener("click",fecharPixPedidoV37);
+  modal.querySelector("[data-copy-store-pix]")?.addEventListener("click",async()=>{
+    const input=modal.querySelector("#pixCopyV37");
+    try{await navigator.clipboard.writeText(input.value)}catch{input.select();document.execCommand("copy")}
+    mostrarAlerta("Código PIX copiado.");
+  });
+
+  let warned30=false;
+  const tick=async()=>{
+    const left=Math.max(0,exp-Date.now());
+    const min=Math.floor(left/60000),sec=Math.floor((left%60000)/1000);
+    const el=document.getElementById("pixCountdownV37");
+    if(el)el.textContent=`${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+
+    if(left<=30000 && left>0 && !warned30){
+      warned30=true;
+      mostrarAlerta("Faltam 30 segundos para a reserva expirar.");
+    }
+
+    if(left<=0){
+      clearInterval(championPixTimerV37); clearInterval(championPixPollV37);
+      try{
+        const checked=await window.supabaseCheckStorePaymentV378?.(data.order_id);
+        if(["paid","deposit_paid"].includes(checked?.status)){
+          const st=document.getElementById("pixStatusV37");
+          if(st){st.className="pix-status-v37 paid";st.innerHTML="<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓"}
+          const c=document.getElementById("pixCountdownV37");if(c)c.textContent="PAGO";
+          await window.supabaseRefreshCurrentUserV30?.();
+          renderizarAreaAluno();
+          mostrarAlerta("Pagamento confirmado! A academia já foi notificada.");
+          return;
+        }
+      }catch(e){console.warn("Verificação final do PIX:",e)}
+      const st=document.getElementById("pixStatusV37");
+      if(st){st.className="pix-status-v37 expired";st.innerHTML="<span></span> Reserva expirada. Os itens foram liberados."}
+      try{await window.supabaseExpireStoreOrderV37?.(data.order_id)}catch(e){console.warn(e)}
+      await window.supabaseRefreshCurrentUserV30?.().catch(()=>{});
+      renderizarAreaAluno();
+    }
+  };
+  tick();
+  championPixTimerV37=setInterval(tick,1000);
+
+  const poll=async()=>{
+    try{
+      const order=await window.supabaseCheckStorePaymentV378?.(data.order_id);
+      if(["paid","deposit_paid"].includes(order?.status)){
+        clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
+        const st=document.getElementById("pixStatusV37");
+        if(st){
+          st.className="pix-status-v37 paid";
+          st.innerHTML=order.status==="deposit_paid"
+            ? "<span></span> SINAL CONFIRMADO AUTOMATICAMENTE ✓"
+            : "<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓";
+        }
+        const c=document.getElementById("pixCountdownV37");if(c)c.textContent="PAGO";
+        await window.supabaseRefreshCurrentUserV30?.();
+        renderizarAreaAluno();
+        mostrarAlerta(order.status==="deposit_paid"
+          ? "Sinal confirmado! O restante será pago na retirada."
+          : "Pagamento confirmado! A academia já foi notificada.");
+      }else if(order?.status==="cancelled"){
+        clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
+        const st=document.getElementById("pixStatusV37");
+        if(st){st.className="pix-status-v37 expired";st.innerHTML="<span></span> Pedido cancelado / reserva liberada."}
+      }
+    }catch(e){console.warn("Consulta do pedido:",e)}
+  };
+  championPixPollV37=setInterval(poll,2500);
+}
+
+function renderizarNotificacoesAreaAluno() {
+  const aluno = obterAlunoLogado();
+  const container =
+    document.getElementById("studentNotificationsList");
+
+  if (!aluno || !container) return;
+
+  const notificacoesAluno =
+    notificacoesDoAluno(aluno.id);
+
+  container.innerHTML = notificacoesAluno.length
+    ? notificacoesAluno.map((notificacao) => `
+        <article class="notification-card ${
+          notificacao.lida ? "" : "unread"
+        }">
+          <div class="notification-icon">🔔</div>
+
+          <div class="notification-content">
+            <strong>
+              ${escaparHtml(notificacao.titulo)}
+            </strong>
+
+            <p>
+              ${escaparHtml(notificacao.mensagem)}
+            </p>
+
+            <small>
+              ${escaparHtml(notificacao.tipo)} •
+              ${new Date(
+                notificacao.criadaEm
+              ).toLocaleString("pt-BR")}
+            </small>
+          </div>
+
+          <div class="notification-actions">
+            ${
+              notificacao.lida
+                ? ""
+                : `
+                  <button
+                    type="button"
+                    data-student-read-notification="${
+                      notificacao.id
+                    }"
+                  >
+                    Marcar como lida
+                  </button>
+                `
+            }
+          </div>
+        </article>
+      `).join("")
+    : '<div class="empty">Nenhuma notificação para você.</div>';
+}
+
+function marcarNotificacaoAlunoComoLida(id) {
+  notificacoes = notificacoes.map((notificacao) =>
+    String(notificacao.id) === String(id)
+      ? {
+          ...notificacao,
+          lida: true
+        }
+      : notificacao
+  );
+
+  salvar(NOTIFICACOES_STORAGE_KEY, notificacoes);
+  renderizarNotificacoes();
+  renderizarAreaAluno();
+}
+
+function renderizarPedidosAreaAluno() {
+  const aluno = obterAlunoLogado();
+  const container =
+    document.getElementById("studentOrdersList");
+
+  if (!aluno || !container) return;
+
+  const pedidosAluno = pedidosDoAluno(aluno.id);
+
+  container.innerHTML = pedidosAluno.length
+    ? pedidosAluno.map((pedido) => `
+        <article class="student-order-card">
+          <div class="student-order-card-header">
+            <strong>${escaparHtml(pedido.codigo)}</strong>
+            <span class="status pendente">
+              ${escaparHtml(
+                pedido.status || "Aguardando separação"
+              )}
+            </span>
+          </div>
+
+          <p>
+            ${pedido.itens
+              .map(
+                (item) =>
+                  `${item.quantidade}x ${escaparHtml(item.nome)}`
+              )
+              .join("<br>")}
+          </p>
+
+          <small>
+            ${formatarMoeda(pedido.total)} •
+            ${escaparHtml(
+              pedido.formaPagamento ||
+              pedido.pagamento ||
+              "-"
+            )} •
+            Retirada na academia •
+            ${new Date(
+              pedido.criadoEm
+            ).toLocaleString("pt-BR")}
+          </small>
+        </article>
+      `).join("")
+    : '<div class="empty">Você ainda não realizou compras.</div>';
+}
+
+
+document.getElementById("studentPaymentMethod")?.addEventListener("change",atualizarResumoPagamentoV375);
+
+function renderizarAreaAluno() {
+  const aluno = obterAlunoLogado();
+
+  if (!aluno) return;
+
+  renderizarResumoAluno();
+  renderizarProdutosAreaAluno();
+  renderizarCarrinhoAreaAluno();
+  renderizarNotificacoesAreaAluno();
+  renderizarPedidosAreaAluno();
+}
+
+document.addEventListener("click", (event) => {
+  const qtyPlus=event.target.closest("[data-student-qty-plus]");
+  if(qtyPlus){
+    alterarQuantidadeProdutoV375(qtyPlus.dataset.studentQtyPlus,1);
+    return;
+  }
+
+  const qtyMinus=event.target.closest("[data-student-qty-minus]");
+  if(qtyMinus){
+    alterarQuantidadeProdutoV375(qtyMinus.dataset.studentQtyMinus,-1);
+    return;
+  }
+
+  const cartPlus=event.target.closest("[data-cart-qty-plus]");
+  if(cartPlus){
+    alterarQuantidadeCarrinhoV375(cartPlus.dataset.cartQtyPlus,1);
+    return;
+  }
+
+  const cartMinus=event.target.closest("[data-cart-qty-minus]");
+  if(cartMinus){
+    alterarQuantidadeCarrinhoV375(cartMinus.dataset.cartQtyMinus,-1);
+    return;
+  }
+
+  const adicionar = event.target.closest(
+    "[data-student-add-product]"
+  );
+
+  if (adicionar) {
+    adicionarProdutoCarrinhoAluno(
+      adicionar.dataset.studentAddProduct
+    );
+    return;
+  }
+
+  const remover = event.target.closest(
+    "[data-student-remove-product]"
+  );
+
+  if (remover) {
+    removerProdutoCarrinhoAluno(
+      remover.dataset.studentRemoveProduct
+    );
+    return;
+  }
+
+  const ler = event.target.closest(
+    "[data-student-read-notification]"
+  );
+
+  if (ler) {
+    marcarNotificacaoAlunoComoLida(
+      ler.dataset.studentReadNotification
+    );
+  }
+});
+
+document
+  .getElementById("studentCheckoutButton")
+  ?.addEventListener(
+    "click",
+    finalizarCompraAreaAluno
+  );
+
+const atualizarTudoAntesDaAreaAluno = atualizarTudo;
+
+atualizarTudo = function() {
+  atualizarTudoAntesDaAreaAluno();
+
+  if (alunoLogadoId && obterAlunoLogado()) {
+    document
+      .getElementById("studentAccessScreen")
+      ?.classList.add("hidden");
+
+    document
+      .getElementById("studentDashboard")
+      ?.classList.remove("hidden");
+
+    renderizarAreaAluno();
+  }
+};
+
+if (alunoLogadoId && obterAlunoLogado()) {
+  document
+    .getElementById("studentAccessScreen")
+    ?.classList.add("hidden");
+
+  document
+    .getElementById("studentDashboard")
+    ?.classList.remove("hidden");
+
+  renderizarAreaAluno();
+}
+
+const PAYMENT_ALERT_CONTROL_KEY="champion_team_alertas_mensalidade";
+
+function mensagemMensalidadeChampion(aluno,matricula){
+  return `Passando para lembrar que a mensalidade do treino de Jiu-Jitsu do aluno ${aluno.nome} encontra-se em aberto.
+
+Pedimos a gentileza de verificar a situação e, se possível, realizar o pagamento para manter a matrícula ativa e garantir a continuidade dos treinos.
+
+Caso o pagamento já tenha sido realizado, por favor, desconsidere esta mensagem e nos envie o comprovante para atualização do sistema.
+
+Qualquer dúvida, estamos à disposição.
+
+Equipe Champion Team 🥋`;
+}
+
+function gerarAlertaAutomaticoMensalidade(aluno,matricula){
+  if(!aluno||!matricula)return;
+  const vencimento=matricula.proximaMensalidade||matricula.vencimento;
+  if(!vencimento||vencimento>=hojeIso())return;
+
+  const existe=notificacoes.some(n=>
+    n.tipo==="Mensalidade" &&
+    String(n.alunoId)===String(aluno.id) &&
+    n.referenciaVencimento===vencimento
+  );
+
+  if(!existe){
+    notificacoes.unshift({
+      id:gerarId(),
+      tipo:"Mensalidade",
+      titulo:"Mensalidade em aberto",
+      mensagem:mensagemMensalidadeChampion(aluno,matricula),
+      publico:"Aluno específico",
+      alunoId:aluno.id,
+      prioridade:"Alta",
+      lida:false,
+      referenciaVencimento:vencimento,
+      criadaEm:new Date().toISOString()
+    });
+
+    notificacoes.unshift({
+      id:gerarId(),
+      tipo:"Mensalidade",
+      titulo:"Aluno com mensalidade em aberto",
+      mensagem:`${aluno.nome} possui mensalidade vencida desde ${formatarData(vencimento)}.`,
+      publico:"Administrador",
+      alunoId:aluno.id,
+      prioridade:"Alta",
+      lida:false,
+      referenciaVencimento:vencimento,
+      criadaEm:new Date().toISOString()
+    });
+
+    salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);
+  }
+}
+
+function atualizarAlertaVisualMensalidadeAluno(){
+  const aluno=obterAlunoLogado();
+  const alerta=document.getElementById("studentPaymentAlert");
+  if(!aluno||!alerta)return;
+
+  const matricula=matriculas.find(m=>String(m.alunoId)===String(aluno.id));
+  if(!matricula){
+    alerta.classList.add("hidden");
+    return;
+  }
+
+  const vencimento=matricula.proximaMensalidade||matricula.vencimento;
+  const emAberto=vencimento&&vencimento<hojeIso();
+
+  if(!emAberto){
+    alerta.classList.add("hidden");
+    return;
+  }
+
+  gerarAlertaAutomaticoMensalidade(aluno,matricula);
+
+  const titulo=document.getElementById("studentPaymentAlertTitle");
+  if(titulo){
+    titulo.textContent=`Mensalidade vencida em ${formatarData(vencimento)}`;
+  }
+
+  alerta.classList.remove("hidden");
+}
+
+document.getElementById("studentPaymentContactButton")?.addEventListener("click",()=>{
+  const aluno=obterAlunoLogado();
+  const matricula=aluno?matriculas.find(m=>String(m.alunoId)===String(aluno.id)):null;
+  if(!aluno||!matricula)return;
+
+  navigator.clipboard?.writeText(mensagemMensalidadeChampion(aluno,matricula))
+    .then(()=>mostrarAlerta("Mensagem copiada."))
+    .catch(()=>mostrarAlerta("Procure a recepção para regularizar.","error"));
+});
+
+const renderizarAreaAlunoChampionOriginal=renderizarAreaAluno;
+renderizarAreaAluno=function(){
+  renderizarAreaAlunoChampionOriginal();
+  atualizarAlertaVisualMensalidadeAluno();
+};
+
+
+/* =========================================================
+   MÓDULO CHAMPION TEAM — GESTÃO DE GRADUAÇÕES
+   LocalStorage hoje; estrutura pronta para futura migração.
+========================================================= */
+const GRADUATION_KEYS = {
+  graduacoes: "champion_team_graduacoes",
+  regras: "champion_team_regras_graduacao",
+  historico: "champion_team_historico_graduacao",
+  exames: "champion_team_exames_graduacao"
+};
+
+let graduacoes = carregar(GRADUATION_KEYS.graduacoes);
+let regrasGraduacao = carregar(GRADUATION_KEYS.regras);
+let historicoGraduacoes = carregar(GRADUATION_KEYS.historico);
+let examesGraduacao = carregar(GRADUATION_KEYS.exames);
+const INDICACOES_FAIXA_KEY = "champion_team_indicacoes_faixa";
+let indicacoesFaixa = carregar(INDICACOES_FAIXA_KEY);
+
+if (!regrasGraduacao.length) {
+  regrasGraduacao = [
+    { id: gerarId(), categoria: "Infantil", faixa: "Cinza", graus: 4, dias: 60 },
+    { id: gerarId(), categoria: "Infantil", faixa: "Amarela", graus: 4, dias: 90 },
+    { id: gerarId(), categoria: "Infantil", faixa: "Laranja", graus: 4, dias: 90 },
+    { id: gerarId(), categoria: "Infantil", faixa: "Verde", graus: 4, dias: 120 },
+    { id: gerarId(), categoria: "Juvenil", faixa: "Branca", graus: 4, dias: 90 },
+    { id: gerarId(), categoria: "Juvenil", faixa: "Azul", graus: 4, dias: 180 },
+    { id: gerarId(), categoria: "Adulto", faixa: "Branca", graus: 4, dias: 120 },
+    { id: gerarId(), categoria: "Adulto", faixa: "Azul", graus: 4, dias: 180 },
+    { id: gerarId(), categoria: "Adulto", faixa: "Roxa", graus: 4, dias: 180 },
+    { id: gerarId(), categoria: "Adulto", faixa: "Marrom", graus: 4, dias: 180 },
+    { id: gerarId(), categoria: "Adulto", faixa: "Preta", graus: 6, dias: 365 }
+  ];
+  salvar(GRADUATION_KEYS.regras, regrasGraduacao);
+}
+
+function diasEntreDatas(inicioIso, fimIso = hojeIso()) {
+  if (!inicioIso) return 0;
+  const inicio = new Date(inicioIso + "T00:00:00");
+  const fim = new Date(fimIso + "T00:00:00");
+  return Math.max(0, Math.floor((fim - inicio) / 86400000));
+}
+
+function obterAlunoPorId(id) {
+  return alunos.find(a => String(a.id) === String(id));
+}
+
+function obterRegraGraduacao(graduacao) {
+  if (!graduacao) return null;
+  return regrasGraduacao.find(r =>
+    r.categoria === graduacao.categoria &&
+    String(r.faixa).toLowerCase() === String(graduacao.faixa).toLowerCase()
+  ) || null;
+}
+
+function obterGraduacaoAluno(alunoId) {
+  return graduacoes.find(g => String(g.alunoId) === String(alunoId));
+}
+
+function calcularStatusGraduacao(graduacao) {
+  const regra = obterRegraGraduacao(graduacao);
+  const diasPassados = diasEntreDatas(graduacao?.ultimoAvanco || graduacao?.dataFaixa);
+  const referencia = Number(regra?.dias || 0);
+  const faltam = Math.max(0, referencia - diasPassados);
+  return {
+    regra,
+    diasPassados,
+    referencia,
+    faltam,
+    apto: referencia > 0 && diasPassados >= referencia,
+    proximo: referencia > 0 && faltam > 0 && faltam <= 30
+  };
+}
+
+function faixaCorClasse(faixa) {
+  const nome = String(faixa || "").toLowerCase();
+  if (nome.includes("branca")) return "belt-white";
+  if (nome.includes("azul")) return "belt-blue";
+  if (nome.includes("roxa")) return "belt-purple";
+  if (nome.includes("marrom")) return "belt-brown";
+  if (nome.includes("preta")) return "belt-black";
+  if (nome.includes("cinza")) return "belt-gray";
+  if (nome.includes("amarela")) return "belt-yellow";
+  if (nome.includes("laranja")) return "belt-orange";
+  if (nome.includes("verde")) return "belt-green";
+  return "belt-neutral";
+}
+
+function listaFaixasDisponiveis(categoria) {
+  const faixas = regrasGraduacao
+    .filter(r => r.categoria === categoria)
+    .map(r => r.faixa);
+  return [...new Set(faixas)];
+}
+
+function preencherSelectGraduacaoAlunos() {
+  const ids = ["graduacaoAlunoId", "graduacaoEvolucaoAluno", "historicoGraduacaoAluno"];
+  ids.forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    const valor = select.value;
+    const inicial = id === "historicoGraduacaoAluno"
+      ? '<option value="">Todos os alunos</option>'
+      : '<option value="">Selecione um aluno</option>';
+    select.innerHTML = inicial + alunos
       .slice()
       .sort((a,b) => a.nome.localeCompare(b.nome, "pt-BR"))
       .map(a => `<option value="${a.id}">${a.nome}</option>`)
@@ -3994,14 +6072,10 @@ document.addEventListener("click", async (event)=>{
     return {
       id:r.id,
       alunoId:r.student_id || "",
-      recipientProfileId:r.recipient_profile_id || "",
-      recipientKind:r.recipient_kind || "",
-      batchId:r.batch_id || r.id,
-      publico: audience==="teachers" ? "Todos os professores" : audience==="students" ? "Todos os alunos" : audience==="individual" ? "Pessoa específica" : audience==="admin" ? "Administrador" : (r.student_id ? "Aluno específico" : "Legado"),
+      publico: audience==="admin" ? "Administrador" : (r.student_id ? "Aluno específico" : "Todos os alunos"),
       titulo:r.title,
       mensagem:r.message,
       tipo:r.type || "info",
-      prioridade:r.priority==="high" ? "Alta" : "Normal",
       criadaEm:r.created_at,
       criadoEm:r.created_at,
       lida:!!r.read_at,
@@ -4303,14 +6377,13 @@ document.addEventListener("click", async (event)=>{
     if(error) throw error;
 
     const a = await getAcademy();
-    const [studentsRes,trainingsRes,recsRes,classesRes,classStudentsRes,checkinsRes,notificationsRes] = await Promise.all([
+    const [studentsRes,trainingsRes,recsRes,classesRes,classStudentsRes,checkinsRes] = await Promise.all([
       client.from("students").select("*").eq("academy_id",a.id),
       client.from("training_plans").select("*,training_items(*)").eq("academy_id",a.id),
       client.from("belt_recommendations").select("*").eq("academy_id",a.id),
       client.from("classes").select("*").eq("teacher_id",teacher.id).eq("active",true),
       client.from("class_students").select("*"),
-      client.from("checkins").select("*").eq("academy_id",a.id),
-      client.from("notifications").select("*").eq("recipient_profile_id",user.id).order("created_at",{ascending:false})
+      client.from("checkins").select("*").eq("academy_id",a.id)
     ]);
 
     if(studentsRes.error) throw studentsRes.error;
@@ -4319,7 +6392,6 @@ document.addEventListener("click", async (event)=>{
     if(classesRes.error) throw classesRes.error;
     if(classStudentsRes.error) throw classStudentsRes.error;
     if(checkinsRes.error) throw checkinsRes.error;
-    if(notificationsRes.error) throw notificationsRes.error;
 
     window.renderProfessorOverviewV28?.({
       classes:classesRes.data||[],
@@ -4340,7 +6412,6 @@ document.addEventListener("click", async (event)=>{
       }))
     })));
     window.aplicarDadosSupabase("champion_team_indicacoes_faixa",(recsRes.data||[]).map(legacyRecommendation));
-    window.aplicarDadosSupabase("fitcontrol_notificacoes",(notificationsRes.data||[]).map(legacyNotification));
   }
 
   async function deleteMissing(table,ids,academyId){
@@ -4447,7 +6518,12 @@ document.addEventListener("click", async (event)=>{
     }
 
     if(key==="fitcontrol_notificacoes"){
-      // V37.11: notificações são alteradas somente pelos RPCs seguros de envio/leitura.
+      const rows=items.map(x=>({
+        id:x.id,academy_id:a.id,student_id:x.alunoId||null,title:x.titulo||"Notificação",message:x.mensagem||"",
+        type:x.tipo||"info",read_at:x.lidaEm||null
+      }));
+      if(rows.length){ const {error}=await client.from("notifications").upsert(rows,{onConflict:"id"}); if(error)throw error; }
+      await deleteMissing("notifications",rows.map(x=>x.id),a.id);
       return;
     }
 
@@ -4763,35 +6839,6 @@ document.addEventListener("click", async (event)=>{
     return loadNormalized();
   };
 
-  window.supabaseSendNotificationV3711 = async function(payload){
-    if(!profile || !["master_admin","owner"].includes(profile.role)) throw new Error("Somente a administração pode enviar notificações.");
-    const a=await getAcademy();
-    const {data,error}=await client.rpc("send_champion_notification",{
-      p_academy_id:a.id,
-      p_audience:String(payload.audience||""),
-      p_recipient_profile_id:payload.recipientProfileId||null,
-      p_type:String(payload.type||"Geral").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""),
-      p_title:String(payload.title||"").trim(),
-      p_message:String(payload.message||"").trim(),
-      p_priority:String(payload.priority||"Normal").toLowerCase()==="alta"?"high":"normal"
-    });
-    if(error) throw error;
-    await loadNormalized();
-    const result=Array.isArray(data)?data[0]:data;
-    return result||{delivered_count:0};
-  };
-
-  window.supabaseMarkNotificationReadV3711 = async function(notificationId){
-    const {error}=await client.rpc("mark_champion_notification_read",{p_notification_id:notificationId});
-    if(error) throw error;
-    if(profile?.role==="student") await loadStudentOnly();
-    else if(profile?.role==="teacher") await loadTeacherOnly();
-    else await loadNormalized();
-    renderizarNotificacoes();
-    renderizarAreaAluno();
-    return true;
-  };
-
   window.supabaseCloudSave = async function(key,data){
     if(!user || !profile) throw new Error("Sessão Supabase ausente.");
     if(roleToLegacy[profile.role]==="aluno") throw new Error("Aluno não pode editar dados administrativos.");
@@ -4916,7 +6963,6 @@ document.addEventListener("click", async (event)=>{
     user=authUser;
     profile=await getProfile(user);
     academy=null;
-    await getAcademy();
 
     const legacyRole=roleToLegacy[profile.role];
     if(!legacyRole) throw new Error("Perfil não reconhecido.");
@@ -4988,12 +7034,12 @@ document.addEventListener("click", async (event)=>{
   };
 
   function setupRealtime(){
-    if(!academy || !profile) return;
+    if(!academy || !profile || profile.role==="student") return;
 
     channels.forEach(ch=>client.removeChannel(ch));
     channels=[];
 
-    const tables=profile.role==="student" ? ["notifications"] : [
+    const tables=[
       "students","teachers","plans","memberships","checkins","classes","class_students",
       "training_plans","training_items","products","orders",
       "order_items","notifications","graduation_history","belt_recommendations"
@@ -5005,8 +7051,7 @@ document.addEventListener("click", async (event)=>{
         .on("postgres_changes",{event:"*",schema:"public",table},()=>{
           clearTimeout(window.__CHAMPION_RT_TIMER__);
           window.__CHAMPION_RT_TIMER__=setTimeout(()=>{
-            if(profile?.role==="student") loadStudentOnly().catch(console.error);
-            else if(profile?.role==="teacher") loadTeacherOnly().catch(console.error);
+            if(profile?.role==="teacher") loadTeacherOnly().catch(console.error);
             else loadNormalized().catch(console.error);
           },350);
         })
