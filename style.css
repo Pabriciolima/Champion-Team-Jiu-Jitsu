@@ -5873,3 +5873,44 @@ html.champion-premium-v29 *::-webkit-scrollbar-thumb {
   .media-source-grid{grid-template-columns:1fr}
   .media-source-card{min-height:auto}
 }
+
+
+/* =========================================================
+   LOJA — SEPARAÇÃO GESTÃO x ALUNO — V36.2
+========================================================= */
+.product-actions-admin{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+.product-actions-admin .btn{
+  min-width:92px;
+}
+
+.product-actions-admin .btn-secondary{
+  border:1px solid rgba(255,255,255,.13);
+  background:rgba(255,255,255,.035);
+  color:#fff;
+}
+
+.product-actions-admin .btn-secondary:hover{
+  border-color:rgba(255,255,255,.26);
+  background:rgba(255,255,255,.07);
+}
+
+.product-actions-student{
+  margin-top:12px;
+}
+
+.product-actions-student .btn-primary{
+  width:100%;
+}
+
+@media(max-width:560px){
+  .product-actions-admin{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+}

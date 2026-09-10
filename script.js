@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "36.1";
+window.CHAMPION_APP_VERSION = "36.2";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -3465,29 +3465,114 @@ document.getElementById("formProduto")?.addEventListener("submit",async e=>{
   }
 });
 
+
+function usuarioEhAlunoV362(){
+  return document.body.classList.contains("student-mode");
+}
+
+function usuarioEhProfessorV362(){
+  return document.body.classList.contains("professor-mode");
+}
+
+function usuarioEhGestaoV362(){
+  return !usuarioEhAlunoV362() && !usuarioEhProfessorV362();
+}
+
+function editarProdutoLoja(id){
+  const p=produtosLoja.find(x=>String(x.id)===String(id));
+  if(!p)return mostrarAlerta("Produto não encontrado.","error");
+
+  produtoId.value=p.id||"";
+  produtoNome.value=p.nome||"";
+  produtoCategoria.value=p.categoria||"";
+  produtoPreco.value=Number(p.preco||0);
+  produtoPrecoPromocional.value=Number(p.precoPromocional||0);
+  produtoEstoque.value=Number(p.estoque||0);
+  produtoStatus.value=p.status||"Ativo";
+  produtoImagem.value=p.imagem||"";
+  produtoDescricao.value=p.descricao||"";
+
+  const path=document.getElementById("produtoImagemStoragePath");
+  if(path)path.value=p.imagePath||"";
+
+  resetProdutoMediaV36();
+
+  document.getElementById("formProduto")?.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+
+  mostrarAlerta("Produto carregado para edição.");
+}
+
 function renderizarProdutos(){
   if(!document.getElementById("listaProdutos"))return;
+
+  const aluno=usuarioEhAlunoV362();
+  const gestao=usuarioEhGestaoV362();
+
   listaProdutos.innerHTML=produtosLoja.length?produtosLoja.map(p=>{
     const semEstoque=Number(p.estoque||0)<=0;
+
+    let actions="";
+    if(aluno){
+      actions=`
+        <div class="actions product-actions-student">
+          <button class="btn btn-primary"
+                  onclick="adicionarCarrinho('${p.id}')"
+                  ${semEstoque?"disabled":""}>
+            ${semEstoque?"Indisponível":"Comprar"}
+          </button>
+        </div>`;
+    }else if(gestao){
+      actions=`
+        <div class="actions product-actions-admin">
+          <button class="btn btn-secondary"
+                  onclick="editarProdutoLoja('${p.id}')">
+            Editar
+          </button>
+          <button class="btn btn-danger"
+                  onclick="excluirProdutoLoja('${p.id}')">
+            Excluir
+          </button>
+        </div>`;
+    }
+
     return `<article class="product-card ${semEstoque?"product-out-of-stock":""}">
-      <div class="product-image">${p.imagem?`<img src="${escaparHtml(p.imagem)}" loading="lazy">`:"🥋"}</div>
+      <div class="product-image">
+        ${p.imagem?`<img src="${escaparHtml(p.imagem)}" loading="lazy" alt="${escaparHtml(p.nome||"Produto")}">`:"🥋"}
+      </div>
+
       <div class="product-card-content">
-        <div class="product-stock-badge ${semEstoque?"out":"in"}">${semEstoque?"SEM ESTOQUE":"ESTOQUE: "+p.estoque}</div>
+        <div class="product-stock-badge ${semEstoque?"out":"in"}">
+          ${semEstoque?"SEM ESTOQUE":"ESTOQUE: "+p.estoque}
+        </div>
+
         <h4>${escaparHtml(p.nome)}</h4>
         <p>${escaparHtml(p.descricao||"")}</p>
-        <p><strong class="product-price">${formatarMoeda(precoProduto(p))}</strong>${precoProduto(p)<p.preco?`<span class="product-old-price">${formatarMoeda(p.preco)}</span>`:""}</p>
-        ${semEstoque?`<small class="product-photo-retained">Foto preservada para quando este item voltar ao estoque.</small>`:""}
-        <div class="actions">
-          <button class="btn btn-primary" onclick="adicionarCarrinho('${p.id}')" ${semEstoque?"disabled":""}>${semEstoque?"Indisponível":"Comprar"}</button>
-          <button class="btn btn-danger" onclick="excluirProdutoLoja('${p.id}')">Excluir</button>
-        </div>
+
+        <p>
+          <strong class="product-price">${formatarMoeda(precoProduto(p))}</strong>
+          ${precoProduto(p)<p.preco?`<span class="product-old-price">${formatarMoeda(p.preco)}</span>`:""}
+        </p>
+
+        ${semEstoque?`
+          <small class="product-photo-retained">
+            Foto preservada para quando este item voltar ao estoque.
+          </small>`:""}
+
+        ${actions}
       </div>
     </article>`;
   }).join(""):'<div class="empty">Nenhum produto.</div>';
-  totalProdutosModulo.textContent=produtosLoja.length;
+
+  if(totalProdutosModulo) totalProdutosModulo.textContent=produtosLoja.length;
 }
 
 function adicionarCarrinho(id){
+  if(!usuarioEhAlunoV362()){
+    return mostrarAlerta("Compras estão disponíveis apenas na área do aluno.","error");
+  }
   const p=produtosLoja.find(x=>x.id===id);
   if(!p||Number(p.estoque||0)<=0)return mostrarAlerta("Produto sem estoque.","error");
   let i=carrinhoLoja.find(x=>x.produtoId===id);
@@ -3508,6 +3593,7 @@ function renderizarCarrinho(){
   totalCarrinho.textContent=formatarMoeda(t);contadorCarrinho.textContent=carrinhoLoja.reduce((s,i)=>s+i.quantidade,0)
 }
 document.getElementById("finalizarCompra")?.addEventListener("click",()=>{
+  if(!usuarioEhAlunoV362())return mostrarAlerta("Compras estão disponíveis apenas na área do aluno.","error");
   if(!carrinhoLoja.length)return mostrarAlerta("Carrinho vazio.","error");
   let alunoId=alunoPortalId.value;
   let aluno=alunos.find(a=>a.id===alunoId);
