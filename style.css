@@ -3269,6 +3269,34 @@ body.modal-open{
   gap:12px;
   align-items:end;
 }
+.account-password-wrap{
+  position:relative;
+}
+.account-password-wrap input{
+  width:100%;
+  padding-right:82px;
+}
+.account-password-toggle{
+  position:absolute;
+  top:50%;
+  right:12px;
+  transform:translateY(-50%);
+  min-width:58px;
+  padding:7px 4px;
+  border:0;
+  background:transparent;
+  color:#ff334f;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.4px;
+  cursor:pointer;
+}
+.account-password-toggle:hover,
+.account-password-toggle:focus-visible{
+  color:#fff;
+  outline:1px solid rgba(255,51,79,.55);
+  outline-offset:2px;
+}
 @media(max-width:900px){
   .student-password-form{
     grid-template-columns:1fr;

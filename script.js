@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "37.9";
+window.CHAMPION_APP_VERSION = "37.10";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -5525,6 +5525,22 @@ function configurarFormularioAlterarSenha({
     }
   });
 }
+
+document.querySelectorAll(".account-password-toggle").forEach((botao) => {
+  botao.addEventListener("click", () => {
+    const input = document.getElementById(botao.dataset.passwordTarget || "");
+    if (!input) return;
+
+    const mostrar = input.type === "password";
+    input.type = mostrar ? "text" : "password";
+    botao.textContent = mostrar ? "OCULTAR" : "MOSTRAR";
+    botao.setAttribute("aria-pressed", String(mostrar));
+    botao.setAttribute(
+      "aria-label",
+      mostrar ? "Ocultar senha" : "Mostrar senha"
+    );
+  });
+});
 
 configurarFormularioAlterarSenha({
   formId: "formAlterarSenhaAluno",

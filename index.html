@@ -977,17 +977,26 @@
           <form id="formAlterarSenhaProfessor" class="student-password-form">
             <div class="field">
               <label for="senhaAtualProfessor">Senha atual</label>
-              <input id="senhaAtualProfessor" type="password" minlength="6" required />
+              <div class="account-password-wrap">
+                <input id="senhaAtualProfessor" type="password" minlength="6" autocomplete="current-password" required />
+                <button class="account-password-toggle" type="button" data-password-target="senhaAtualProfessor" aria-label="Mostrar senha atual" aria-pressed="false">MOSTRAR</button>
+              </div>
             </div>
 
             <div class="field">
               <label for="novaSenhaProfessor">Nova senha</label>
-              <input id="novaSenhaProfessor" type="password" minlength="6" required />
+              <div class="account-password-wrap">
+                <input id="novaSenhaProfessor" type="password" minlength="6" autocomplete="new-password" required />
+                <button class="account-password-toggle" type="button" data-password-target="novaSenhaProfessor" aria-label="Mostrar nova senha" aria-pressed="false">MOSTRAR</button>
+              </div>
             </div>
 
             <div class="field">
               <label for="confirmarNovaSenhaProfessor">Confirmar nova senha</label>
-              <input id="confirmarNovaSenhaProfessor" type="password" minlength="6" required />
+              <div class="account-password-wrap">
+                <input id="confirmarNovaSenhaProfessor" type="password" minlength="6" autocomplete="new-password" required />
+                <button class="account-password-toggle" type="button" data-password-target="confirmarNovaSenhaProfessor" aria-label="Mostrar confirmação da senha" aria-pressed="false">MOSTRAR</button>
+              </div>
             </div>
 
             <button class="btn btn-primary" type="submit">Atualizar senha</button>
@@ -1394,17 +1403,26 @@
           <form id="formAlterarSenhaAluno" class="student-password-form">
             <div class="field">
               <label for="senhaAtualAluno">Senha atual</label>
-              <input id="senhaAtualAluno" type="password" minlength="6" required />
+              <div class="account-password-wrap">
+                <input id="senhaAtualAluno" type="password" minlength="6" autocomplete="current-password" required />
+                <button class="account-password-toggle" type="button" data-password-target="senhaAtualAluno" aria-label="Mostrar senha atual" aria-pressed="false">MOSTRAR</button>
+              </div>
             </div>
 
             <div class="field">
               <label for="novaSenhaAluno">Nova senha</label>
-              <input id="novaSenhaAluno" type="password" minlength="6" required />
+              <div class="account-password-wrap">
+                <input id="novaSenhaAluno" type="password" minlength="6" autocomplete="new-password" required />
+                <button class="account-password-toggle" type="button" data-password-target="novaSenhaAluno" aria-label="Mostrar nova senha" aria-pressed="false">MOSTRAR</button>
+              </div>
             </div>
 
             <div class="field">
               <label for="confirmarNovaSenhaAluno">Confirmar nova senha</label>
-              <input id="confirmarNovaSenhaAluno" type="password" minlength="6" required />
+              <div class="account-password-wrap">
+                <input id="confirmarNovaSenhaAluno" type="password" minlength="6" autocomplete="new-password" required />
+                <button class="account-password-toggle" type="button" data-password-target="confirmarNovaSenhaAluno" aria-label="Mostrar confirmação da senha" aria-pressed="false">MOSTRAR</button>
+              </div>
             </div>
 
             <button class="btn btn-primary" type="submit">Atualizar senha</button>
@@ -1422,7 +1440,10 @@
           <form id="formAlterarEmailAluno" class="student-password-form">
             <div class="field">
               <label for="senhaAtualEmailAluno">Senha atual</label>
-              <input id="senhaAtualEmailAluno" type="password" minlength="6" autocomplete="current-password" required />
+              <div class="account-password-wrap">
+                <input id="senhaAtualEmailAluno" type="password" minlength="6" autocomplete="current-password" required />
+                <button class="account-password-toggle" type="button" data-password-target="senhaAtualEmailAluno" aria-label="Mostrar senha atual" aria-pressed="false">MOSTRAR</button>
+              </div>
             </div>
             <div class="field">
               <label for="novoEmailAluno">Novo e-mail de acesso</label>
@@ -1736,7 +1757,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V37.9</div>
+  <div id="appVersionBadge" class="app-version-badge">V37.10</div>
   <div id="supabaseStatus" class="supabase-status supabase-connecting" role="status" aria-live="polite">
     <span class="supabase-status-dot"></span>
     <span id="supabaseStatusText">Conectando ao Supabase...</span><button id="supabaseRetryButton" class="supabase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1818,6 +1839,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=26"></script>
-  <script src="script.js?v=37.9"></script>
+  <script src="script.js?v=37.10"></script>
 </body>
 </html>
