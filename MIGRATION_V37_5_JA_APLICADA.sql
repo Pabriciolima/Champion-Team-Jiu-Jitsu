@@ -1,0 +1,20 @@
+-- CHAMPION TEAM V37.5
+-- ESTA MIGRATION JÁ FOI APLICADA NO PROJETO SUPABASE.
+--
+-- Recursos implementados no banco:
+-- public.stock_reservations
+-- orders.payment_option
+-- orders.deposit_percent
+-- orders.amount_due_now
+-- orders.remaining_balance
+-- orders.reservation_expires_at
+-- public.asaas_webhook_events
+-- RPC public.reserve_store_order(...)
+-- RPC public.confirm_store_order(...)
+-- RPC public.expire_store_order(...)
+-- RPC public.cleanup_stale_store_reservations()
+-- RPC public.can_student_checkin(...)
+-- cron champion_store_reservation_cleanup
+-- RLS do check-in exigindo horário da turma.
+--
+-- Não execute novamente sem necessidade.

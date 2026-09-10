@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "37.0";
+window.CHAMPION_APP_VERSION = "37.5";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -3660,7 +3660,7 @@ document.getElementById("finalizarCompra")?.addEventListener("click",()=>{
   renderizarProdutos();renderizarCarrinho();renderizarPedidos();
   mostrarAlerta("Pagamento aprovado em modo demonstrativo.");
 });
-function renderizarPedidos(){if(!document.getElementById("tabelaPedidosLoja"))return;const statusLabel=s=>({pending:"AGUARDANDO PIX",paid:"PAGO",ready:"PRONTO",delivered:"ENTREGUE",cancelled:"CANCELADO"}[s]||String(s||"PENDENTE").toUpperCase());tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr><td><strong>${escaparHtml(p.codigo||String(p.id).slice(0,8))}</strong><br><small class="order-status-v37 ${p.status||"pending"}">${statusLabel(p.status)}</small></td><td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td><td>${(p.itens||[]).map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td><td>${escaparHtml(p.pagamento||"PIX")}</td><td><strong>${formatarMoeda(p.total)}</strong></td><td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Nenhum pedido.</td></tr>';if(document.getElementById("totalPedidosModulo"))totalPedidosModulo.textContent=pedidosLoja.length}
+function renderizarPedidos(){if(!document.getElementById("tabelaPedidosLoja"))return;const statusLabel=s=>({pending:"AGUARDANDO PIX",paid:"PAGO",deposit_paid:"SINAL PAGO",ready:"PRONTO",delivered:"ENTREGUE",cancelled:"CANCELADO"}[s]||String(s||"PENDENTE").toUpperCase());tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr><td><strong>${escaparHtml(p.codigo||String(p.id).slice(0,8))}</strong><br><small class="order-status-v37 ${p.status||"pending"}">${statusLabel(p.status)}</small></td><td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td><td>${(p.itens||[]).map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td><td>${escaparHtml(p.pagamento||"PIX")}</td><td><strong>${formatarMoeda(p.total)}</strong></td><td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Nenhum pedido.</td></tr>';if(document.getElementById("totalPedidosModulo"))totalPedidosModulo.textContent=pedidosLoja.length}
 document.getElementById("formNotificacao")?.addEventListener("submit",e=>{e.preventDefault();if(notificacaoPublico.value==="Aluno específico"&&!notificacaoAluno.value)return mostrarAlerta("Selecione o aluno.","error");criarNotificacao({tipo:notificacaoTipo.value,titulo:notificacaoTitulo.value.trim(),mensagem:notificacaoMensagem.value.trim(),publico:notificacaoPublico.value,alunoId:notificacaoAluno.value});formNotificacao.reset();renderizarNotificacoes();mostrarAlerta("Notificação enviada.")});
 function renderizarNotificacoes(){if(!document.getElementById("listaNotificacoes"))return;listaNotificacoes.innerHTML=notificacoes.length?notificacoes.map(n=>`<article class="notification-card ${n.lida?"":"unread"}"><div class="notification-icon">🔔</div><div class="notification-content"><strong>${escaparHtml(n.titulo)}</strong><p>${escaparHtml(n.mensagem)}</p><small>${n.tipo} • ${new Date(n.criadaEm).toLocaleString("pt-BR")}</small></div><div class="notification-actions">${n.lida?"":`<button onclick="lerNotificacao('${n.id}')">Lida</button>`}<button onclick="apagarNotificacao('${n.id}')">Excluir</button></div></article>`).join(""):'<div class="empty">Nenhuma notificação.</div>';let q=notificacoes.filter(n=>!n.lida).length;[menuNotificationBadge,topNotificationBadge].forEach(x=>{x.textContent=q;x.classList.toggle("show",q>0)});totalNotificacoesNaoLidas.textContent=q}
 function lerNotificacao(id){notificacoes=notificacoes.map(n=>n.id===id?{...n,lida:true}:n);salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
@@ -3767,6 +3767,77 @@ function statusCheckinLabelV30(status){
   return {label:"AGUARDANDO VALIDAÇÃO",className:"pending"};
 }
 
+function belemAgoraV375(){
+  const parts=new Intl.DateTimeFormat("en-US",{
+    timeZone:"America/Belem",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false
+  }).formatToParts(new Date());
+  const get=t=>parts.find(p=>p.type===t)?.value||"";
+  const dayMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+  const hour=Number(get("hour"))%24, minute=Number(get("minute"));
+  return {weekday:dayMap[get("weekday")]??-1,minutes:hour*60+minute,hour,minute};
+}
+function classStartMinutesV375(c){
+  const [h,m]=String(c?.start_time||"00:00").split(":").map(Number);
+  return (h||0)*60+(m||0);
+}
+function checkinLiberadoClasseV375(c){
+  const now=belemAgoraV375();
+  return Number(c?.weekday)===now.weekday && now.minutes>=classStartMinutesV375(c);
+}
+function atualizarBloqueioCheckinV375(classes=[]){
+  const input=document.getElementById("studentSelfieInput");
+  const label=document.querySelector('label[for="studentSelfieInput"]');
+  const select=document.getElementById("studentCheckinClass");
+  const button=document.getElementById("studentSelfieCheckinButton");
+  const lock=document.getElementById("studentCheckinScheduleLock");
+  const badge=document.getElementById("studentCheckinStatusBadge");
+  const available=classes.filter(checkinLiberadoClasseV375);
+
+  if(select){
+    [...select.options].forEach(o=>{
+      if(!o.value)return;
+      const c=classes.find(x=>String(x.id)===String(o.value));
+      o.disabled=!c||!checkinLiberadoClasseV375(c);
+    });
+    if(select.value){
+      const selected=classes.find(c=>String(c.id)===String(select.value));
+      if(selected&&!checkinLiberadoClasseV375(selected)) select.value="";
+    }
+    if(!select.value && available.length) select.value=available[0].id;
+  }
+
+  const unlocked=available.length>0;
+  if(input) input.disabled=!unlocked;
+  if(button) button.disabled=!unlocked;
+  label?.classList.toggle("is-disabled",!unlocked);
+  lock?.classList.toggle("unlocked",unlocked);
+
+  if(lock){
+    const strong=lock.querySelector("strong"),small=lock.querySelector("small"),icon=lock.querySelector(".student-checkin-lock-icon");
+    if(unlocked){
+      if(icon)icon.textContent="🔓";
+      if(strong)strong.textContent="CHECK-IN LIBERADO";
+      if(small)small.textContent="Sua turma já iniciou. Tire ou anexe uma selfie e envie sua presença.";
+    }else{
+      const prox=classes
+        .filter(c=>Number(c.weekday)===belemAgoraV375().weekday)
+        .sort((a,b)=>classStartMinutesV375(a)-classStartMinutesV375(b))[0];
+      if(icon)icon.textContent="🔒";
+      if(strong)strong.textContent="CHECK-IN BLOQUEADO";
+      if(small)small.textContent=prox
+        ? `Liberado hoje somente após ${String(prox.start_time||"").slice(0,5)}.`
+        : "Você não possui uma turma liberada para check-in neste momento.";
+    }
+  }
+
+  if(!unlocked && badge){
+    badge.textContent="AGUARDANDO HORÁRIO DA AULA";
+    badge.className="student-checkin-badge locked";
+  }
+  return unlocked;
+}
+let checkinScheduleTimerV375=null;
+
 window.renderStudentSelfieCheckinV30 = async function(payload={}){
   const student=payload.student;
   const classes=Array.isArray(payload.classes)?payload.classes:[];
@@ -3778,11 +3849,16 @@ window.renderStudentSelfieCheckinV30 = async function(payload={}){
   const badge=document.getElementById("studentCheckinStatusBadge");
   if(!student || !select || !history) return;
 
+  const weekdaysV375=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  window.studentClassesForCheckinV375=classes;
   select.innerHTML='<option value="">Selecione sua turma</option>' + classes.map(c=>`
-    <option value="${c.id}">
-      ${escaparHtml(c.name)} • ${String(c.start_time||"").slice(0,5)}
+    <option value="${c.id}" ${checkinLiberadoClasseV375(c)?"":"disabled"}>
+      ${escaparHtml(c.name)} • ${weekdaysV375[Number(c.weekday)]||"Dia"} ${String(c.start_time||"").slice(0,5)}
     </option>
   `).join("");
+  atualizarBloqueioCheckinV375(classes);
+  clearInterval(checkinScheduleTimerV375);
+  checkinScheduleTimerV375=setInterval(()=>atualizarBloqueioCheckinV375(window.studentClassesForCheckinV375||[]),30000);
 
   const today=hojeIso();
   const todayCheckin=dbCheckins.find(c=>String(c.checkin_date||c.checked_in_at||"").slice(0,10)===today);
@@ -3791,8 +3867,13 @@ window.renderStudentSelfieCheckinV30 = async function(payload={}){
     badge.textContent=meta.label;
     badge.className=`student-checkin-badge ${meta.className}`;
   }else if(badge){
-    badge.textContent="PRONTO PARA CHECK-IN";
-    badge.className="student-checkin-badge";
+    if((classes||[]).some(checkinLiberadoClasseV375)){
+      badge.textContent="PRONTO PARA CHECK-IN";
+      badge.className="student-checkin-badge";
+    }else{
+      badge.textContent="AGUARDANDO HORÁRIO DA AULA";
+      badge.className="student-checkin-badge locked";
+    }
   }
 
   history.innerHTML=dbCheckins.length
@@ -3946,7 +4027,13 @@ document.getElementById("studentSelfieCheckinButton")?.addEventListener("click",
     return;
   }
   if(!classId){
-    if(message) message.textContent="Selecione sua turma.";
+    if(message) message.textContent="Selecione uma turma já liberada pelo horário.";
+    return;
+  }
+  const selectedClass=(window.studentClassesForCheckinV375||[]).find(c=>String(c.id)===String(classId));
+  if(!selectedClass || !checkinLiberadoClasseV375(selectedClass)){
+    if(message) message.textContent=`Check-in liberado somente no dia da aula, após ${String(selectedClass?.start_time||"").slice(0,5)}.`;
+    mostrarAlerta("O check-in ainda não foi liberado para esta aula.","error");
     return;
   }
   if(!studentSelfieFileV30){
@@ -4147,32 +4234,49 @@ function renderizarResumoAluno() {
     pedidosAluno.length;
 }
 
+const studentProductQtyV375 = new Map();
+
+function quantidadeSelecionadaProdutoV375(produtoId, estoque){
+  const max=Math.max(1,Number(estoque||1));
+  const atual=Math.max(1,Math.min(max,Number(studentProductQtyV375.get(String(produtoId))||1)));
+  studentProductQtyV375.set(String(produtoId),atual);
+  return atual;
+}
+
+function alterarQuantidadeProdutoV375(produtoId,delta){
+  const produto=produtosLoja.find(p=>String(p.id)===String(produtoId));
+  if(!produto)return;
+  const max=Math.max(1,Number(produto.estoque||1));
+  const atual=quantidadeSelecionadaProdutoV375(produtoId,max);
+  const nova=Math.max(1,Math.min(max,atual+Number(delta||0)));
+  studentProductQtyV375.set(String(produtoId),nova);
+
+  const value=document.querySelector(`[data-student-product-qty-value="${CSS.escape(String(produtoId))}"]`);
+  const subtotal=document.querySelector(`[data-student-product-subtotal="${CSS.escape(String(produtoId))}"]`);
+  if(value)value.textContent=String(nova);
+  if(subtotal)subtotal.textContent=formatarMoeda(precoProduto(produto)*nova);
+}
+
 function renderizarProdutosAreaAluno() {
   const container = document.getElementById("studentProductGrid");
   if (!container) return;
 
   const produtosAtivos = produtosLoja.filter(
-    (produto) =>
-      produto.status === "Ativo" &&
-      Number(produto.estoque) > 0
+    (produto) => produto.status === "Ativo" && Number(produto.estoque) > 0
   );
 
   container.innerHTML = produtosAtivos.length
     ? produtosAtivos.map((produto) => {
         const preco = precoProduto(produto);
         const promocao = preco < produto.preco;
+        const qtd = quantidadeSelecionadaProdutoV375(produto.id, produto.estoque);
 
         return `
           <article class="student-product-card">
             <div class="student-product-image">
               ${
                 produto.imagem
-                  ? `
-                    <img
-                      src="${escaparHtml(produto.imagem)}"
-                      alt="${escaparHtml(produto.nome)}"
-                    >
-                  `
+                  ? `<img src="${escaparHtml(produto.imagem)}" alt="${escaparHtml(produto.nome)}">`
                   : "🥋"
               }
             </div>
@@ -4180,37 +4284,29 @@ function renderizarProdutosAreaAluno() {
             <div class="student-product-content">
               <div class="student-product-tags">
                 <span>${escaparHtml(produto.categoria)}</span>
-                ${
-                  promocao
-                    ? '<span class="promotion-tag">Promoção</span>'
-                    : ""
-                }
+                ${promocao ? '<span class="promotion-tag">Promoção</span>' : ""}
                 <span>Estoque: ${produto.estoque}</span>
               </div>
 
               <h4>${escaparHtml(produto.nome)}</h4>
-
-              <p>
-                ${escaparHtml(
-                  produto.descricao ||
-                  "Produto disponível para retirada na academia."
-                )}
-              </p>
+              <p>${escaparHtml(produto.descricao || "Produto disponível para retirada na academia.")}</p>
 
               <div class="product-prices">
-                <strong class="product-price">
-                  ${formatarMoeda(preco)}
-                </strong>
+                <strong class="product-price">${formatarMoeda(preco)}</strong>
+                ${promocao ? `<span class="product-old-price">${formatarMoeda(produto.preco)}</span>` : ""}
+              </div>
 
-                ${
-                  promocao
-                    ? `
-                      <span class="product-old-price">
-                        ${formatarMoeda(produto.preco)}
-                      </span>
-                    `
-                    : ""
-                }
+              <div class="student-product-purchase-row">
+                <div class="student-qty-control" aria-label="Quantidade">
+                  <button type="button" data-student-qty-minus="${produto.id}" aria-label="Diminuir quantidade">−</button>
+                  <strong data-student-product-qty-value="${produto.id}">${qtd}</strong>
+                  <button type="button" data-student-qty-plus="${produto.id}" aria-label="Aumentar quantidade">+</button>
+                </div>
+
+                <div class="student-product-subtotal">
+                  <small>SUBTOTAL</small>
+                  <strong data-student-product-subtotal="${produto.id}">${formatarMoeda(preco*qtd)}</strong>
+                </div>
               </div>
 
               <button
@@ -4218,17 +4314,13 @@ function renderizarProdutosAreaAluno() {
                 type="button"
                 data-student-add-product="${produto.id}"
               >
-                Comprar
+                Adicionar ao carrinho
               </button>
             </div>
           </article>
         `;
       }).join("")
-    : `
-      <div class="empty" style="grid-column:1/-1;">
-        Nenhum produto disponível no momento.
-      </div>
-    `;
+    : `<div class="empty" style="grid-column:1/-1;">Nenhum produto disponível no momento.</div>`;
 }
 
 function adicionarProdutoCarrinhoAluno(produtoId) {
@@ -4236,34 +4328,31 @@ function adicionarProdutoCarrinhoAluno(produtoId) {
     (item) => String(item.id) === String(produtoId)
   );
 
-  if (!produto || produto.status !== "Ativo" || produto.estoque <= 0) {
+  if (!produto || produto.status !== "Ativo" || Number(produto.estoque) <= 0) {
     mostrarAlerta("Produto indisponível.", "error");
     return;
   }
 
+  const escolhida=quantidadeSelecionadaProdutoV375(produtoId,produto.estoque);
   const itemExistente = carrinhoAluno.find(
     (item) => String(item.produtoId) === String(produtoId)
   );
+  const noCarrinho=Number(itemExistente?.quantidade||0);
+  const novaQuantidade=noCarrinho+escolhida;
 
-  if (itemExistente) {
-    if (itemExistente.quantidade >= produto.estoque) {
-      mostrarAlerta(
-        "Você já adicionou todo o estoque disponível.",
-        "error"
-      );
-      return;
-    }
-
-    itemExistente.quantidade += 1;
-  } else {
-    carrinhoAluno.push({
-      produtoId,
-      quantidade: 1
-    });
+  if(novaQuantidade>Number(produto.estoque)){
+    mostrarAlerta(`Você pode adicionar no máximo ${produto.estoque} unidade(s).`,"error");
+    return;
   }
 
+  if(itemExistente) itemExistente.quantidade=novaQuantidade;
+  else carrinhoAluno.push({produtoId,quantidade:escolhida});
+
+  studentProductQtyV375.set(String(produtoId),1);
+  renderizarProdutosAreaAluno();
   renderizarCarrinhoAreaAluno();
-  mostrarAlerta("Produto adicionado ao carrinho.");
+  atualizarResumoPagamentoV375();
+  mostrarAlerta(`${escolhida} unidade(s) adicionada(s) ao carrinho.`);
 }
 
 function removerProdutoCarrinhoAluno(produtoId) {
@@ -4272,6 +4361,26 @@ function removerProdutoCarrinhoAluno(produtoId) {
   );
 
   renderizarCarrinhoAreaAluno();
+}
+
+function alterarQuantidadeCarrinhoV375(produtoId,delta){
+  const produto=produtosLoja.find(p=>String(p.id)===String(produtoId));
+  const item=carrinhoAluno.find(i=>String(i.produtoId)===String(produtoId));
+  if(!produto||!item)return;
+
+  const nova=Number(item.quantidade||1)+Number(delta||0);
+  if(nova<=0){
+    removerProdutoCarrinhoAluno(produtoId);
+    atualizarResumoPagamentoV375();
+    return;
+  }
+  if(nova>Number(produto.estoque||0)){
+    mostrarAlerta(`Estoque máximo disponível: ${produto.estoque}.`,"error");
+    return;
+  }
+  item.quantidade=nova;
+  renderizarCarrinhoAreaAluno();
+  atualizarResumoPagamentoV375();
 }
 
 function renderizarCarrinhoAreaAluno() {
@@ -4283,54 +4392,59 @@ function renderizarCarrinhoAreaAluno() {
 
   const itensValidos = carrinhoAluno
     .map((item) => {
-      const produto = produtosLoja.find(
-        (produto) =>
-          String(produto.id) === String(item.produtoId)
-      );
-
+      const produto = produtosLoja.find((produto) => String(produto.id) === String(item.produtoId));
       if (!produto) return null;
-
-      const subtotal =
-        precoProduto(produto) * item.quantidade;
-
+      const subtotal = precoProduto(produto) * Number(item.quantidade||1);
       total += subtotal;
-      quantidade += item.quantidade;
-
-      return {
-        item,
-        produto,
-        subtotal
-      };
+      quantidade += Number(item.quantidade||1);
+      return { item, produto, subtotal };
     })
     .filter(Boolean);
 
   container.innerHTML = itensValidos.length
     ? itensValidos.map(({ item, produto, subtotal }) => `
-        <div class="cart-item">
-          <div>
+        <div class="cart-item cart-item-v375">
+          <div class="cart-item-main-v375">
             <strong>${escaparHtml(produto.nome)}</strong>
-            <small>
-              ${item.quantidade} x
-              ${formatarMoeda(precoProduto(produto))}
-              = ${formatarMoeda(subtotal)}
-            </small>
+            <small>${formatarMoeda(precoProduto(produto))} cada</small>
+            <div class="cart-qty-v375">
+              <button type="button" data-cart-qty-minus="${produto.id}">−</button>
+              <span>${item.quantidade}</span>
+              <button type="button" data-cart-qty-plus="${produto.id}">+</button>
+            </div>
           </div>
-
-          <button
-            type="button"
-            data-student-remove-product="${produto.id}"
-          >
-            ×
-          </button>
+          <div class="cart-item-total-v375">
+            <strong>${formatarMoeda(subtotal)}</strong>
+            <button type="button" data-student-remove-product="${produto.id}" aria-label="Remover produto">×</button>
+          </div>
         </div>
       `).join("")
     : '<div class="empty">Seu carrinho está vazio.</div>';
 
-  document.getElementById("studentCartTotal").textContent =
-    formatarMoeda(total);
+  document.getElementById("studentCartTotal").textContent = formatarMoeda(total);
+  document.getElementById("studentCartCount").textContent = quantidade;
+  atualizarResumoPagamentoV375();
+}
 
-  document.getElementById("studentCartCount").textContent =
-    quantidade;
+function totalCarrinhoAlunoV375(){
+  return carrinhoAluno.reduce((sum,item)=>{
+    const produto=produtosLoja.find(p=>String(p.id)===String(item.produtoId));
+    return sum+(produto?precoProduto(produto)*Number(item.quantidade||1):0);
+  },0);
+}
+
+function atualizarResumoPagamentoV375(){
+  const method=document.getElementById("studentPaymentMethod")?.value||"pix_full";
+  const box=document.getElementById("studentPaymentSplitValue");
+  if(!box)return;
+  const total=totalCarrinhoAlunoV375();
+  if(method==="pix_deposit"){
+    const sinal=Math.round(total*30)/100;
+    const restante=Math.max(0,total-sinal);
+    box.textContent=`Sinal agora: ${formatarMoeda(sinal)} • Restante na retirada: ${formatarMoeda(restante)}`;
+  }else{
+    box.textContent=`PIX agora: ${formatarMoeda(total)} • Restante: R$ 0,00`;
+  }
 }
 
 async function finalizarCompraAreaAluno() {
@@ -4342,32 +4456,34 @@ async function finalizarCompraAreaAluno() {
   }
   if(!carrinhoAluno.length) return mostrarAlerta("Seu carrinho está vazio.","error");
 
-  const method=document.getElementById("studentPaymentMethod")?.value||"PIX";
-  if(method!=="PIX"){
-    return mostrarAlerta("Para pagamento automático, selecione PIX.","error");
+  const paymentOption=document.getElementById("studentPaymentMethod")?.value||"pix_full";
+  if(!["pix_full","pix_deposit"].includes(paymentOption)){
+    return mostrarAlerta("Selecione uma opção de PIX válida.","error");
   }
 
   const btn=document.getElementById("studentCheckoutButton");
   const old=btn?.textContent;
-  if(btn){btn.disabled=true;btn.textContent="GERANDO PIX..."}
+  if(btn){btn.disabled=true;btn.textContent="RESERVANDO E GERANDO PIX..."}
 
   try{
-    // Não confirma venda localmente. O servidor recalcula preço, promoção e estoque.
-    const result=await window.supabaseStoreCheckoutV37?.(carrinhoAluno,method);
-    if(!result?.order_id||!result?.pix_qr_code_base64) throw new Error("O Asaas não retornou o QR Code.");
+    const result=await window.supabaseStoreCheckoutV375?.(carrinhoAluno,paymentOption);
+    if(!result?.order_id) throw new Error("O pedido não foi criado.");
+    if(!result?.pix_qr_code_base64 || !result?.pix_copy_paste){
+      throw new Error("O Asaas não retornou o QR Code do Pix.");
+    }
 
     carrinhoAluno=[];
     renderizarCarrinhoAreaAluno();
-
-    abrirPixPedidoV37(result);
+    abrirPixPedidoV375(result);
     await window.supabaseRefreshCurrentUserV30?.();
     renderizarAreaAluno();
-    mostrarAlerta("Pix gerado. Aguardando pagamento pelo Asaas.");
+
+    mostrarAlerta("Itens reservados por 5 minutos. Finalize o PIX.");
   }catch(err){
-    console.error("Checkout PIX:",err);
-    mostrarAlerta(err?.message||"Não foi possível gerar o Pix.","error");
+    console.error("Checkout PIX V37.5:",err);
+    mostrarAlerta(err?.message||"Não foi possível gerar o PIX.","error");
   }finally{
-    if(btn){btn.disabled=false;btn.textContent=old||"CONFIRMAR COMPRA"}
+    if(btn){btn.disabled=false;btn.textContent=old||"GERAR PIX E RESERVAR POR 5 MIN"}
   }
 }
 
@@ -4381,11 +4497,12 @@ function fecharPixPedidoV37(){
   document.getElementById("championPixModalV37")?.remove();
 }
 
-function abrirPixPedidoV37(data){
+function abrirPixPedidoV375(data){
   fecharPixPedidoV37();
   const exp=new Date(data.pix_expires_at).getTime();
   const img=String(data.pix_qr_code_base64||"");
   const src=img.startsWith("data:")?img:`data:image/png;base64,${img}`;
+  const isDeposit=data.payment_option==="pix_deposit";
   const modal=document.createElement("div");
   modal.id="championPixModalV37";
   modal.className="pix-modal-v37";
@@ -4393,17 +4510,31 @@ function abrirPixPedidoV37(data){
     <div class="pix-card-v37">
       <button type="button" class="pix-close-v37" data-pix-close>×</button>
       <span class="pix-kicker-v37">PAGAMENTO SEGURO • ASAAS SANDBOX</span>
-      <h3>ESCANEIE O PIX</h3>
-      <p>Pedido <strong>${escaparHtml(data.code||"")}</strong> • ${formatarMoeda(Number(data.total||0))}</p>
+      <h3>PIX GERADO</h3>
+      <p>Pedido <strong>${escaparHtml(data.code||"")}</strong></p>
+
+      <div class="pix-order-values-v375">
+        <div><span>Total do pedido</span><strong>${formatarMoeda(Number(data.total||0))}</strong></div>
+        <div class="highlight"><span>${isDeposit?"Sinal PIX (30%)":"Valor do PIX"}</span><strong>${formatarMoeda(Number(data.amount_due_now ?? data.total ?? 0))}</strong></div>
+        ${isDeposit?`<div><span>Restante na retirada</span><strong>${formatarMoeda(Number(data.remaining_balance||0))}</strong></div>`:""}
+      </div>
+
+      <div class="pix-reservation-v375">
+        <span>🔒 ITENS RESERVADOS</span>
+        <small>Nenhum outro aluno pode reservar estas unidades durante o contador.</small>
+      </div>
+
       <div class="pix-qr-wrap-v37"><img src="${src}" alt="QR Code Pix"></div>
-      <div class="pix-timer-v37"><span>EXPIRA EM</span><strong id="pixCountdownV37">05:00</strong></div>
+      <div class="pix-timer-v37"><span>RESERVA EXPIRA EM</span><strong id="pixCountdownV37">05:00</strong></div>
+
       <label class="pix-copy-label-v37">PIX COPIA E COLA</label>
       <div class="pix-copy-row-v37">
         <input id="pixCopyV37" readonly value="${escaparHtml(data.pix_copy_paste||"")}">
         <button type="button" data-copy-store-pix>COPIAR</button>
       </div>
-      <div id="pixStatusV37" class="pix-status-v37 waiting"><span></span> Aguardando confirmação automática...</div>
-      <small>Não feche esta tela durante o teste. O status é consultado automaticamente.</small>
+
+      <div id="pixStatusV37" class="pix-status-v37 waiting"><span></span> Aguardando confirmação automática do Asaas...</div>
+      <small>A confirmação chega pelo webhook. Não é necessário enviar comprovante.</small>
     </div>`;
   document.body.appendChild(modal);
 
@@ -4411,19 +4542,28 @@ function abrirPixPedidoV37(data){
   modal.querySelector("[data-copy-store-pix]")?.addEventListener("click",async()=>{
     const input=modal.querySelector("#pixCopyV37");
     try{await navigator.clipboard.writeText(input.value)}catch{input.select();document.execCommand("copy")}
-    mostrarAlerta("Código Pix copiado.");
+    mostrarAlerta("Código PIX copiado.");
   });
 
+  let warned30=false;
   const tick=async()=>{
     const left=Math.max(0,exp-Date.now());
     const min=Math.floor(left/60000),sec=Math.floor((left%60000)/1000);
     const el=document.getElementById("pixCountdownV37");
     if(el)el.textContent=`${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+
+    if(left<=30000 && left>0 && !warned30){
+      warned30=true;
+      mostrarAlerta("Faltam 30 segundos para a reserva expirar.");
+    }
+
     if(left<=0){
       clearInterval(championPixTimerV37); clearInterval(championPixPollV37);
       const st=document.getElementById("pixStatusV37");
-      if(st){st.className="pix-status-v37 expired";st.innerHTML="<span></span> Pix expirado. Gere um novo pedido."}
+      if(st){st.className="pix-status-v37 expired";st.innerHTML="<span></span> Reserva expirada. Os itens foram liberados."}
       try{await window.supabaseExpireStoreOrderV37?.(data.order_id)}catch(e){console.warn(e)}
+      await window.supabaseRefreshCurrentUserV30?.().catch(()=>{});
+      renderizarAreaAluno();
     }
   };
   tick();
@@ -4431,21 +4571,30 @@ function abrirPixPedidoV37(data){
 
   const poll=async()=>{
     try{
-      const order=await window.supabaseGetStoreOrderV37?.(data.order_id);
-      if(order?.status==="paid"){
+      const order=await window.supabaseGetStoreOrderV375?.(data.order_id);
+      if(["paid","deposit_paid"].includes(order?.status)){
         clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
         const st=document.getElementById("pixStatusV37");
-        if(st){st.className="pix-status-v37 paid";st.innerHTML="<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓"}
+        if(st){
+          st.className="pix-status-v37 paid";
+          st.innerHTML=order.status==="deposit_paid"
+            ? "<span></span> SINAL CONFIRMADO AUTOMATICAMENTE ✓"
+            : "<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓";
+        }
         const c=document.getElementById("pixCountdownV37");if(c)c.textContent="PAGO";
         await window.supabaseRefreshCurrentUserV30?.();
         renderizarAreaAluno();
-        mostrarAlerta("Pagamento confirmado! A academia já foi notificada.");
+        mostrarAlerta(order.status==="deposit_paid"
+          ? "Sinal confirmado! O restante será pago na retirada."
+          : "Pagamento confirmado! A academia já foi notificada.");
       }else if(order?.status==="cancelled"){
         clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
+        const st=document.getElementById("pixStatusV37");
+        if(st){st.className="pix-status-v37 expired";st.innerHTML="<span></span> Pedido cancelado / reserva liberada."}
       }
     }catch(e){console.warn("Consulta do pedido:",e)}
   };
-  championPixPollV37=setInterval(poll,3000);
+  championPixPollV37=setInterval(poll,2500);
 }
 
 function renderizarNotificacoesAreaAluno() {
@@ -4565,6 +4714,9 @@ function renderizarPedidosAreaAluno() {
     : '<div class="empty">Você ainda não realizou compras.</div>';
 }
 
+
+document.getElementById("studentPaymentMethod")?.addEventListener("change",atualizarResumoPagamentoV375);
+
 function renderizarAreaAluno() {
   const aluno = obterAlunoLogado();
 
@@ -4578,6 +4730,30 @@ function renderizarAreaAluno() {
 }
 
 document.addEventListener("click", (event) => {
+  const qtyPlus=event.target.closest("[data-student-qty-plus]");
+  if(qtyPlus){
+    alterarQuantidadeProdutoV375(qtyPlus.dataset.studentQtyPlus,1);
+    return;
+  }
+
+  const qtyMinus=event.target.closest("[data-student-qty-minus]");
+  if(qtyMinus){
+    alterarQuantidadeProdutoV375(qtyMinus.dataset.studentQtyMinus,-1);
+    return;
+  }
+
+  const cartPlus=event.target.closest("[data-cart-qty-plus]");
+  if(cartPlus){
+    alterarQuantidadeCarrinhoV375(cartPlus.dataset.cartQtyPlus,1);
+    return;
+  }
+
+  const cartMinus=event.target.closest("[data-cart-qty-minus]");
+  if(cartMinus){
+    alterarQuantidadeCarrinhoV375(cartMinus.dataset.cartQtyMinus,-1);
+    return;
+  }
+
   const adicionar = event.target.closest(
     "[data-student-add-product]"
   );
@@ -5949,6 +6125,9 @@ document.addEventListener("click", async (event)=>{
       status:o.status,
       total:Number(o.total || 0),
       pagamento:o.payment_method || "PIX",
+      paymentOption:o.payment_option||"pix_full",
+      valorPix:Number(o.amount_due_now||o.total||0),
+      saldoRetirada:Number(o.remaining_balance||0),
       providerPaymentId:o.provider_payment_id||"",
       pixExpiraEm:o.pix_expires_at||"",
       criadoEm:o.created_at,
@@ -6056,7 +6235,7 @@ document.addEventListener("click", async (event)=>{
     window.aplicarDadosSupabase("fitcontrol_checkins",(checkinsRes.data||[]).map(legacyCheckin));
     window.aplicarDadosSupabase("fitcontrol_produtos_loja",(productsRes.data||[]).map(legacyProduct));
     window.aplicarDadosSupabase("fitcontrol_pedidos_loja",(ordersRes.data||[]).map(o=>({
-      id:o.id,codigo:o.code||("PED-"+String(o.id).slice(0,8).toUpperCase()),alunoId:o.student_id,status:o.status,total:Number(o.total||0),pagamento:o.payment_method||"PIX",providerPaymentId:o.provider_payment_id||"",pixExpiraEm:o.pix_expires_at||"",criadoEm:o.created_at,
+      id:o.id,codigo:o.code||("PED-"+String(o.id).slice(0,8).toUpperCase()),alunoId:o.student_id,status:o.status,total:Number(o.total||0),pagamento:o.payment_method||"PIX",paymentOption:o.payment_option||"pix_full",valorPix:Number(o.amount_due_now||o.total||0),saldoRetirada:Number(o.remaining_balance||0),providerPaymentId:o.provider_payment_id||"",pixExpiraEm:o.pix_expires_at||"",criadoEm:o.created_at,
       itens:(o.order_items||[]).map(i=>({produtoId:i.product_id,nome:i.product_name,quantidade:i.quantity,valor:Number(i.unit_price||0)}))
     })));
     window.aplicarDadosSupabase("fitcontrol_notificacoes",(notificationsRes.data||[]).map(legacyNotification));
@@ -6273,16 +6452,31 @@ document.addEventListener("click", async (event)=>{
 
 
 
-  window.supabaseStoreCheckoutV37 = async function(items,paymentMethod="PIX"){
+  async function mensagemErroEdgeV375(error,fallback){
+    let msg=error?.message||fallback;
+    try{
+      if(error?.context && typeof error.context.clone==="function"){
+        const response=error.context.clone();
+        const payload=await response.json();
+        if(payload?.error) msg=payload.error;
+      }
+    }catch{}
+    return msg;
+  }
+
+  window.supabaseStoreCheckoutV375 = async function(items,paymentOption="pix_full"){
     if(!Array.isArray(items)||!items.length) throw new Error("Carrinho vazio.");
     const {data,error}=await client.functions.invoke("store-checkout",{
       body:{
         action:"checkout",
-        payment_method:paymentMethod,
-        items:items.map(i=>({product_id:i.produtoId,quantity:Number(i.quantidade||1)}))
+        payment_option:paymentOption,
+        items:items.map(i=>({
+          product_id:i.produtoId,
+          quantity:Math.max(1,Number(i.quantidade||1))
+        }))
       }
     });
-    if(error) throw error;
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao gerar o PIX."));
     if(data?.error) throw new Error(data.error);
     return data;
   };
@@ -6290,15 +6484,15 @@ document.addEventListener("click", async (event)=>{
   window.supabaseExpireStoreOrderV37 = async function(orderId){
     if(!orderId) return;
     const {data,error}=await client.functions.invoke("store-checkout",{body:{action:"expire_order",order_id:orderId}});
-    if(error) throw error;
+    if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao liberar a reserva."));
     if(data?.error) throw new Error(data.error);
     await loadStudentOnly();
     return data;
   };
 
-  window.supabaseGetStoreOrderV37 = async function(orderId){
+  window.supabaseGetStoreOrderV375 = async function(orderId){
     const {data,error}=await client.from("orders")
-      .select("id,code,status,total,paid_at,pix_expires_at")
+      .select("id,code,status,total,paid_at,pix_expires_at,reservation_expires_at,payment_option,amount_due_now,remaining_balance")
       .eq("id",orderId).single();
     if(error) throw error;
     return data;
@@ -6407,7 +6601,16 @@ document.addEventListener("click", async (event)=>{
       throw new Error("Turma e selfie são obrigatórias.");
     }
 
-    const today=new Date().toISOString().slice(0,10);
+    const {data:allowed,error:allowedError}=await client.rpc("can_student_checkin",{
+      p_class_id:classId,
+      p_student_id:studentId
+    });
+    if(allowedError) throw allowedError;
+    if(!allowed) throw new Error("Check-in bloqueado: aguarde o horário de início da sua aula.");
+
+    const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Belem",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+    const part=t=>parts.find(p=>p.type===t)?.value||"";
+    const today=`${part("year")}-${part("month")}-${part("day")}`;
 
     const {data:existing,error:existingError}=await client
       .from("checkins")

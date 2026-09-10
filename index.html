@@ -1278,6 +1278,14 @@
             ENVIAR SELFIE E CONFIRMAR CHECK-IN
           </button>
 
+          <div id="studentCheckinScheduleLock" class="student-checkin-schedule-lock">
+            <span class="student-checkin-lock-icon">🔒</span>
+            <div>
+              <strong>CHECK-IN BLOQUEADO FORA DO HORÁRIO</strong>
+              <small>O envio da selfie é liberado somente no dia da turma, após o horário de início da aula.</small>
+            </div>
+          </div>
+
           <p id="studentSelfieCheckinMessage" class="student-checkin-message"></p>
         </div>
       </div>
@@ -1327,19 +1335,22 @@
         <div class="field">
           <label for="studentPaymentMethod">Forma de pagamento</label>
           <select id="studentPaymentMethod">
-            <option value="PIX">PIX</option>
-            <option value="Cartão de crédito">Cartão de crédito</option>
-            <option value="Cartão de débito">Cartão de débito</option>
-            <option value="Pagar na retirada">Pagar na retirada</option>
+            <option value="pix_full">PIX integral — pagar 100% agora</option>
+            <option value="pix_deposit">PIX sinal — 30% agora + restante na retirada</option>
           </select>
         </div>
 
+        <div id="studentPaymentSplitInfo" class="student-payment-split-info">
+          <span>Pagamento seguro via PIX</span>
+          <strong id="studentPaymentSplitValue">Você pagará o total agora.</strong>
+        </div>
+
         <button id="studentCheckoutButton" class="btn btn-primary cart-checkout-button" type="button">
-          Confirmar compra
+          GERAR PIX E RESERVAR POR 5 MIN
         </button>
 
         <small class="payment-demo-note">
-          Após a confirmação, a academia receberá o alerta e separará o pedido
+          Ao gerar o PIX, os itens ficam reservados por 5 minutos. A venda só é confirmada após o webhook do Asaas
           para retirada.
         </small>
       </aside>
@@ -1700,7 +1711,7 @@
   </div>
 
 
-  <div id="appVersionBadge" class="app-version-badge">V37.0</div>
+  <div id="appVersionBadge" class="app-version-badge">V37.5</div>
   <div id="supabaseStatus" class="supabase-status supabase-connecting" role="status" aria-live="polite">
     <span class="supabase-status-dot"></span>
     <span id="supabaseStatusText">Conectando ao Supabase...</span><button id="supabaseRetryButton" class="supabase-retry-button" type="button" hidden>Tentar novamente</button>
@@ -1782,6 +1793,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=26"></script>
-  <script src="script.js?v=37.0"></script>
+  <script src="script.js?v=37.5"></script>
 </body>
 </html>

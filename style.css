@@ -5968,3 +5968,76 @@ html.champion-premium-v29 *::-webkit-scrollbar-thumb {
 .pix-card-v37>small{display:block;color:#6f7a83;margin-top:10px;font-size:9px}
 .order-status-v37{display:inline-block;margin-top:5px;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:950;letter-spacing:.08em;border:1px solid #38414a;color:#aab4bc}.order-status-v37.paid{color:#63e88b;border-color:rgba(99,232,139,.25)}.order-status-v37.pending{color:#ffc24c;border-color:rgba(255,194,76,.25)}.order-status-v37.cancelled{color:#ff6672;border-color:rgba(255,102,114,.25)}
 @media(max-width:600px){.pix-card-v37{padding:20px 16px;border-radius:20px}.pix-qr-wrap-v37{width:210px;height:210px}.pix-card-v37 h3{font-size:24px}}
+
+
+/* =========================================================
+   CHAMPION TEAM V37.5 — LOJA / PIX / CHECK-IN POR HORÁRIO
+========================================================= */
+.student-product-purchase-row{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:12px;
+  align-items:end;
+  margin:14px 0;
+}
+.student-qty-control,.cart-qty-v375{
+  display:inline-grid;
+  grid-template-columns:38px 42px 38px;
+  align-items:center;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:13px;
+  overflow:hidden;
+  background:#0b0f12;
+}
+.student-qty-control button,.cart-qty-v375 button{
+  height:38px;border:0;background:rgba(255,255,255,.025);color:#fff;
+  font-size:19px;font-weight:900;cursor:pointer;
+}
+.student-qty-control button:active,.cart-qty-v375 button:active{background:rgba(255,36,52,.14)}
+.student-qty-control strong,.cart-qty-v375 span{text-align:center;color:#fff;font-size:12px}
+.student-product-subtotal{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.student-product-subtotal small{font-size:7px;color:#67737d;font-weight:900;letter-spacing:.13em}
+.student-product-subtotal strong{font-size:17px;color:#fff}
+.cart-item-v375{align-items:center!important}
+.cart-item-main-v375{display:flex;flex-direction:column;gap:5px}
+.cart-item-main-v375 small{color:#79858e}
+.cart-qty-v375{grid-template-columns:30px 34px 30px;width:max-content;margin-top:5px}
+.cart-qty-v375 button{height:30px;font-size:15px}
+.cart-item-total-v375{display:flex;align-items:center;gap:9px}
+.cart-item-total-v375>strong{color:#fff}
+.student-payment-split-info{
+  margin:10px 0 13px;padding:12px 13px;border-radius:13px;
+  border:1px solid rgba(255,194,76,.18);
+  background:linear-gradient(90deg,rgba(255,194,76,.055),rgba(255,255,255,.012));
+  display:flex;flex-direction:column;gap:4px;
+}
+.student-payment-split-info span{font-size:7px;color:#f5ba42;font-weight:950;letter-spacing:.12em}
+.student-payment-split-info strong{font-size:10px;color:#d7dee4;line-height:1.45}
+.pix-order-values-v375{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:13px 0}
+.pix-order-values-v375>div{padding:10px;border-radius:12px;border:1px solid #293139;background:#0b0f12;display:flex;flex-direction:column;gap:3px}
+.pix-order-values-v375>div.highlight{border-color:rgba(255,36,52,.27);background:rgba(255,36,52,.055)}
+.pix-order-values-v375 span{font-size:7px;color:#78858f;font-weight:900;letter-spacing:.08em}.pix-order-values-v375 strong{color:#fff;font-size:13px}
+.pix-order-values-v375 .highlight strong{color:#ff3541}
+.pix-reservation-v375{margin:9px 0 13px;padding:10px;border:1px solid rgba(99,232,139,.2);border-radius:12px;background:rgba(99,232,139,.045);text-align:left}
+.pix-reservation-v375 span{display:block;color:#6fe696;font-size:8px;font-weight:950;letter-spacing:.1em}.pix-reservation-v375 small{display:block;color:#7d8992;font-size:8px;margin-top:4px}
+.order-status-v37.deposit_paid{color:#69c8ff;border-color:rgba(105,200,255,.28)}
+
+.student-checkin-schedule-lock{
+  margin-top:11px;padding:12px;border-radius:14px;
+  border:1px solid rgba(255,194,76,.18);
+  background:linear-gradient(90deg,rgba(255,194,76,.055),rgba(255,255,255,.012));
+  display:flex;gap:10px;align-items:center;
+}
+.student-checkin-schedule-lock.unlocked{border-color:rgba(99,232,139,.22);background:linear-gradient(90deg,rgba(99,232,139,.06),rgba(255,255,255,.012))}
+.student-checkin-lock-icon{font-size:18px}
+.student-checkin-schedule-lock strong{display:block;font-size:8px;color:#f2bd4c;font-weight:950;letter-spacing:.1em}
+.student-checkin-schedule-lock.unlocked strong{color:#6fe696}
+.student-checkin-schedule-lock small{display:block;margin-top:3px;color:#7f8b94;font-size:8.5px;line-height:1.4}
+.student-camera-trigger.is-disabled{opacity:.38;pointer-events:none;filter:grayscale(.5)}
+.student-checkin-badge.locked{color:#f2bd4c!important;border-color:rgba(242,189,76,.25)!important}
+
+@media(max-width:600px){
+  .student-product-purchase-row{grid-template-columns:1fr;align-items:stretch}
+  .student-product-subtotal{align-items:flex-start}
+  .pix-order-values-v375{grid-template-columns:1fr}
+}
