@@ -20,7 +20,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 
-window.CHAMPION_APP_VERSION = "36.4";
+window.CHAMPION_APP_VERSION = "37.0";
 
 (async function limparVersaoAntigaChampionTeam() {
   try {
@@ -3660,7 +3660,7 @@ document.getElementById("finalizarCompra")?.addEventListener("click",()=>{
   renderizarProdutos();renderizarCarrinho();renderizarPedidos();
   mostrarAlerta("Pagamento aprovado em modo demonstrativo.");
 });
-function renderizarPedidos(){if(!document.getElementById("tabelaPedidosLoja"))return;tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr><td>${p.codigo}</td><td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td><td>${p.itens.map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td><td>${p.pagamento}</td><td>${formatarMoeda(p.total)}</td><td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Nenhum pedido.</td></tr>';totalPedidosModulo.textContent=pedidosLoja.length}
+function renderizarPedidos(){if(!document.getElementById("tabelaPedidosLoja"))return;const statusLabel=s=>({pending:"AGUARDANDO PIX",paid:"PAGO",ready:"PRONTO",delivered:"ENTREGUE",cancelled:"CANCELADO"}[s]||String(s||"PENDENTE").toUpperCase());tabelaPedidosLoja.innerHTML=pedidosLoja.length?pedidosLoja.map(p=>`<tr><td><strong>${escaparHtml(p.codigo||String(p.id).slice(0,8))}</strong><br><small class="order-status-v37 ${p.status||"pending"}">${statusLabel(p.status)}</small></td><td>${escaparHtml(alunos.find(a=>a.id===p.alunoId)?.nome||"-")}</td><td>${(p.itens||[]).map(i=>i.quantidade+"x "+escaparHtml(i.nome)).join("<br>")}</td><td>${escaparHtml(p.pagamento||"PIX")}</td><td><strong>${formatarMoeda(p.total)}</strong></td><td>${new Date(p.criadoEm).toLocaleString("pt-BR")}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">Nenhum pedido.</td></tr>';if(document.getElementById("totalPedidosModulo"))totalPedidosModulo.textContent=pedidosLoja.length}
 document.getElementById("formNotificacao")?.addEventListener("submit",e=>{e.preventDefault();if(notificacaoPublico.value==="Aluno específico"&&!notificacaoAluno.value)return mostrarAlerta("Selecione o aluno.","error");criarNotificacao({tipo:notificacaoTipo.value,titulo:notificacaoTitulo.value.trim(),mensagem:notificacaoMensagem.value.trim(),publico:notificacaoPublico.value,alunoId:notificacaoAluno.value});formNotificacao.reset();renderizarNotificacoes();mostrarAlerta("Notificação enviada.")});
 function renderizarNotificacoes(){if(!document.getElementById("listaNotificacoes"))return;listaNotificacoes.innerHTML=notificacoes.length?notificacoes.map(n=>`<article class="notification-card ${n.lida?"":"unread"}"><div class="notification-icon">🔔</div><div class="notification-content"><strong>${escaparHtml(n.titulo)}</strong><p>${escaparHtml(n.mensagem)}</p><small>${n.tipo} • ${new Date(n.criadaEm).toLocaleString("pt-BR")}</small></div><div class="notification-actions">${n.lida?"":`<button onclick="lerNotificacao('${n.id}')">Lida</button>`}<button onclick="apagarNotificacao('${n.id}')">Excluir</button></div></article>`).join(""):'<div class="empty">Nenhuma notificação.</div>';let q=notificacoes.filter(n=>!n.lida).length;[menuNotificationBadge,topNotificationBadge].forEach(x=>{x.textContent=q;x.classList.toggle("show",q>0)});totalNotificacoesNaoLidas.textContent=q}
 function lerNotificacao(id){notificacoes=notificacoes.map(n=>n.id===id?{...n,lida:true}:n);salvar(NOTIFICACOES_STORAGE_KEY,notificacoes);renderizarNotificacoes()}
@@ -4333,124 +4333,119 @@ function renderizarCarrinhoAreaAluno() {
     quantidade;
 }
 
-function finalizarCompraAreaAluno() {
-  const aluno = obterAlunoLogado();
-
-  if (!aluno) {
-    mostrarAlerta(
-      "Sua sessão expirou. Entre novamente usando o CPF.",
-      "error"
-    );
+async function finalizarCompraAreaAluno() {
+  const aluno=obterAlunoLogado();
+  if(!aluno){
+    mostrarAlerta("Sua sessão expirou. Entre novamente.","error");
     sairAreaAluno();
     return;
   }
+  if(!carrinhoAluno.length) return mostrarAlerta("Seu carrinho está vazio.","error");
 
-  if (!carrinhoAluno.length) {
-    mostrarAlerta("Seu carrinho está vazio.", "error");
-    return;
+  const method=document.getElementById("studentPaymentMethod")?.value||"PIX";
+  if(method!=="PIX"){
+    return mostrarAlerta("Para pagamento automático, selecione PIX.","error");
   }
 
-  const itens = [];
-  let total = 0;
+  const btn=document.getElementById("studentCheckoutButton");
+  const old=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent="GERANDO PIX..."}
 
-  for (const item of carrinhoAluno) {
-    const produto = produtosLoja.find(
-      (produto) =>
-        String(produto.id) === String(item.produtoId)
-    );
+  try{
+    // Não confirma venda localmente. O servidor recalcula preço, promoção e estoque.
+    const result=await window.supabaseStoreCheckoutV37?.(carrinhoAluno,method);
+    if(!result?.order_id||!result?.pix_qr_code_base64) throw new Error("O Asaas não retornou o QR Code.");
 
-    if (!produto || item.quantidade > produto.estoque) {
-      mostrarAlerta(
-        `Estoque insuficiente para ${
-          produto?.nome || "um dos produtos"
-        }.`,
-        "error"
-      );
-      renderizarProdutosAreaAluno();
-      return;
+    carrinhoAluno=[];
+    renderizarCarrinhoAreaAluno();
+
+    abrirPixPedidoV37(result);
+    await window.supabaseRefreshCurrentUserV30?.();
+    renderizarAreaAluno();
+    mostrarAlerta("Pix gerado. Aguardando pagamento pelo Asaas.");
+  }catch(err){
+    console.error("Checkout PIX:",err);
+    mostrarAlerta(err?.message||"Não foi possível gerar o Pix.","error");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old||"CONFIRMAR COMPRA"}
+  }
+}
+
+let championPixTimerV37=null;
+let championPixPollV37=null;
+
+function fecharPixPedidoV37(){
+  clearInterval(championPixTimerV37);
+  clearInterval(championPixPollV37);
+  championPixTimerV37=null; championPixPollV37=null;
+  document.getElementById("championPixModalV37")?.remove();
+}
+
+function abrirPixPedidoV37(data){
+  fecharPixPedidoV37();
+  const exp=new Date(data.pix_expires_at).getTime();
+  const img=String(data.pix_qr_code_base64||"");
+  const src=img.startsWith("data:")?img:`data:image/png;base64,${img}`;
+  const modal=document.createElement("div");
+  modal.id="championPixModalV37";
+  modal.className="pix-modal-v37";
+  modal.innerHTML=`
+    <div class="pix-card-v37">
+      <button type="button" class="pix-close-v37" data-pix-close>×</button>
+      <span class="pix-kicker-v37">PAGAMENTO SEGURO • ASAAS SANDBOX</span>
+      <h3>ESCANEIE O PIX</h3>
+      <p>Pedido <strong>${escaparHtml(data.code||"")}</strong> • ${formatarMoeda(Number(data.total||0))}</p>
+      <div class="pix-qr-wrap-v37"><img src="${src}" alt="QR Code Pix"></div>
+      <div class="pix-timer-v37"><span>EXPIRA EM</span><strong id="pixCountdownV37">05:00</strong></div>
+      <label class="pix-copy-label-v37">PIX COPIA E COLA</label>
+      <div class="pix-copy-row-v37">
+        <input id="pixCopyV37" readonly value="${escaparHtml(data.pix_copy_paste||"")}">
+        <button type="button" data-copy-store-pix>COPIAR</button>
+      </div>
+      <div id="pixStatusV37" class="pix-status-v37 waiting"><span></span> Aguardando confirmação automática...</div>
+      <small>Não feche esta tela durante o teste. O status é consultado automaticamente.</small>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector("[data-pix-close]")?.addEventListener("click",fecharPixPedidoV37);
+  modal.querySelector("[data-copy-store-pix]")?.addEventListener("click",async()=>{
+    const input=modal.querySelector("#pixCopyV37");
+    try{await navigator.clipboard.writeText(input.value)}catch{input.select();document.execCommand("copy")}
+    mostrarAlerta("Código Pix copiado.");
+  });
+
+  const tick=async()=>{
+    const left=Math.max(0,exp-Date.now());
+    const min=Math.floor(left/60000),sec=Math.floor((left%60000)/1000);
+    const el=document.getElementById("pixCountdownV37");
+    if(el)el.textContent=`${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+    if(left<=0){
+      clearInterval(championPixTimerV37); clearInterval(championPixPollV37);
+      const st=document.getElementById("pixStatusV37");
+      if(st){st.className="pix-status-v37 expired";st.innerHTML="<span></span> Pix expirado. Gere um novo pedido."}
+      try{await window.supabaseExpireStoreOrderV37?.(data.order_id)}catch(e){console.warn(e)}
     }
-
-    const preco = precoProduto(produto);
-
-    itens.push({
-      produtoId: produto.id,
-      nome: produto.nome,
-      quantidade: item.quantidade,
-      preco
-    });
-
-    total += preco * item.quantidade;
-  }
-
-  const codigo =
-    `PED-${Date.now().toString().slice(-6)}`;
-
-  const pedido = {
-    id: gerarId(),
-    codigo,
-    alunoId: aluno.id,
-    itens,
-    total,
-    pagamento:
-      document.getElementById("studentPaymentMethod").value,
-    formaPagamento:
-      document.getElementById("studentPaymentMethod").value,
-    retirada: "Retirada na academia",
-    status: "Aguardando separação",
-    criadoEm: new Date().toISOString()
   };
+  tick();
+  championPixTimerV37=setInterval(tick,1000);
 
-  pedidosLoja.unshift(pedido);
-
-  produtosLoja = produtosLoja.map((produto) => {
-    const itemComprado = carrinhoAluno.find(
-      (item) =>
-        String(item.produtoId) === String(produto.id)
-    );
-
-    return itemComprado
-      ? {
-          ...produto,
-          estoque:
-            produto.estoque - itemComprado.quantidade
-        }
-      : produto;
-  });
-
-  carrinhoAluno = [];
-
-  salvar(PEDIDOS_STORAGE_KEY, pedidosLoja);
-  salvar(PRODUTOS_STORAGE_KEY, produtosLoja);
-
-  criarNotificacao({
-    tipo: "Venda",
-    titulo: "Nova venda na área do aluno",
-    mensagem:
-      `${aluno.nome} realizou o pedido ${codigo} ` +
-      `no valor de ${formatarMoeda(total)}. ` +
-      "O pedido será retirado na academia.",
-    publico: "Administrador"
-  });
-
-  criarNotificacao({
-    tipo: "Venda",
-    titulo: "Compra confirmada",
-    mensagem:
-      `Seu pedido ${codigo} foi confirmado no valor de ` +
-      `${formatarMoeda(total)}. Aguarde a academia separar ` +
-      "os produtos para retirada.",
-    publico: "Aluno específico",
-    alunoId: aluno.id
-  });
-
-  renderizarProdutos();
-  renderizarPedidos();
-  renderizarNotificacoes();
-  renderizarAreaAluno();
-
-  mostrarAlerta(
-    "Compra confirmada. A academia recebeu o alerta."
-  );
+  const poll=async()=>{
+    try{
+      const order=await window.supabaseGetStoreOrderV37?.(data.order_id);
+      if(order?.status==="paid"){
+        clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
+        const st=document.getElementById("pixStatusV37");
+        if(st){st.className="pix-status-v37 paid";st.innerHTML="<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓"}
+        const c=document.getElementById("pixCountdownV37");if(c)c.textContent="PAGO";
+        await window.supabaseRefreshCurrentUserV30?.();
+        renderizarAreaAluno();
+        mostrarAlerta("Pagamento confirmado! A academia já foi notificada.");
+      }else if(order?.status==="cancelled"){
+        clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
+      }
+    }catch(e){console.warn("Consulta do pedido:",e)}
+  };
+  championPixPollV37=setInterval(poll,3000);
 }
 
 function renderizarNotificacoesAreaAluno() {
@@ -5797,14 +5792,17 @@ document.addEventListener("click", async (event)=>{
   }
 
   function legacyNotification(r){
+    const audience=String(r.audience||"student").toLowerCase();
     return {
       id:r.id,
       alunoId:r.student_id || "",
-      publico:r.student_id ? "Aluno específico" : "Todos os alunos",
+      publico: audience==="admin" ? "Administrador" : (r.student_id ? "Aluno específico" : "Todos os alunos"),
       titulo:r.title,
       mensagem:r.message,
       tipo:r.type || "info",
+      criadaEm:r.created_at,
       criadoEm:r.created_at,
+      lida:!!r.read_at,
       lidaEm:r.read_at || ""
     };
   }
@@ -5946,10 +5944,13 @@ document.addEventListener("click", async (event)=>{
 
     const orders = (ordersRes.data||[]).map(o=>({
       id:o.id,
+      codigo:o.code || ("PED-"+String(o.id).slice(0,8).toUpperCase()),
       alunoId:o.student_id,
       status:o.status,
       total:Number(o.total || 0),
       pagamento:o.payment_method || "PIX",
+      providerPaymentId:o.provider_payment_id||"",
+      pixExpiraEm:o.pix_expires_at||"",
       criadoEm:o.created_at,
       itens:(o.order_items||[]).map(i=>({
         produtoId:i.product_id,
@@ -6055,7 +6056,7 @@ document.addEventListener("click", async (event)=>{
     window.aplicarDadosSupabase("fitcontrol_checkins",(checkinsRes.data||[]).map(legacyCheckin));
     window.aplicarDadosSupabase("fitcontrol_produtos_loja",(productsRes.data||[]).map(legacyProduct));
     window.aplicarDadosSupabase("fitcontrol_pedidos_loja",(ordersRes.data||[]).map(o=>({
-      id:o.id,alunoId:o.student_id,status:o.status,total:Number(o.total||0),pagamento:o.payment_method||"PIX",criadoEm:o.created_at,
+      id:o.id,codigo:o.code||("PED-"+String(o.id).slice(0,8).toUpperCase()),alunoId:o.student_id,status:o.status,total:Number(o.total||0),pagamento:o.payment_method||"PIX",providerPaymentId:o.provider_payment_id||"",pixExpiraEm:o.pix_expires_at||"",criadoEm:o.created_at,
       itens:(o.order_items||[]).map(i=>({produtoId:i.product_id,nome:i.product_name,quantidade:i.quantity,valor:Number(i.unit_price||0)}))
     })));
     window.aplicarDadosSupabase("fitcontrol_notificacoes",(notificationsRes.data||[]).map(legacyNotification));
@@ -6271,6 +6272,37 @@ document.addEventListener("click", async (event)=>{
   }
 
 
+
+  window.supabaseStoreCheckoutV37 = async function(items,paymentMethod="PIX"){
+    if(!Array.isArray(items)||!items.length) throw new Error("Carrinho vazio.");
+    const {data,error}=await client.functions.invoke("store-checkout",{
+      body:{
+        action:"checkout",
+        payment_method:paymentMethod,
+        items:items.map(i=>({product_id:i.produtoId,quantity:Number(i.quantidade||1)}))
+      }
+    });
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    return data;
+  };
+
+  window.supabaseExpireStoreOrderV37 = async function(orderId){
+    if(!orderId) return;
+    const {data,error}=await client.functions.invoke("store-checkout",{body:{action:"expire_order",order_id:orderId}});
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    await loadStudentOnly();
+    return data;
+  };
+
+  window.supabaseGetStoreOrderV37 = async function(orderId){
+    const {data,error}=await client.from("orders")
+      .select("id,code,status,total,paid_at,pix_expires_at")
+      .eq("id",orderId).single();
+    if(error) throw error;
+    return data;
+  };
 
   window.supabaseEnsurePixPaymentV31 = async function(paymentId){
     if(!paymentId) throw new Error("Mensalidade não identificada.");
