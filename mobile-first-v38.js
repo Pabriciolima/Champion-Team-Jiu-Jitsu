@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.7";
+  window.CHAMPION_APP_VERSION = "38.8";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.7";
+  if (versionBadge) versionBadge.textContent = "V38.8";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {

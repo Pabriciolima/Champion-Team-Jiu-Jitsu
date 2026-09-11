@@ -221,6 +221,19 @@ body.v38-mobile-ui #billingCrm>.view-heading{background:#fff!important;color:#20
 body.v38-mobile-ui #billingCrm>.view-heading h2{color:#1d2b36!important}
 body.v38-mobile-ui #billingCrm>.view-heading p{color:#526572!important}
 
+/* V38.8 - leitura clara do status dos alunos */
+body.v38-mobile-ui #studentsDonut{--primary:#58cc02;width:200px;height:200px;box-shadow:0 0 0 10px #f4f7f9}
+body.v38-mobile-ui #studentsDonut::after{width:128px;height:128px;background:#fff!important;border:2px solid #dbe4e9!important;box-shadow:0 4px 0 #e4eaee!important}
+body.v38-mobile-ui #studentsDonut .donut-center strong{color:#1d2b36!important;font-size:46px!important;font-weight:950!important;opacity:1!important}
+body.v38-mobile-ui #studentsDonut .donut-center span{color:#536572!important;font-size:11px!important;font-weight:950!important;opacity:1!important}
+body.v38-mobile-ui .donut-legend{gap:18px!important}
+body.v38-mobile-ui .donut-legend>div{gap:13px!important;padding:8px 10px;border-radius:13px;background:#f7f9fa}
+body.v38-mobile-ui .donut-legend .legend-color{width:10px;height:42px;border-radius:6px}
+body.v38-mobile-ui .donut-legend .active-color{background:#58cc02!important}
+body.v38-mobile-ui .donut-legend .inactive-color{background:#ff3045!important}
+body.v38-mobile-ui .donut-legend strong{color:#1d2b36!important;font-size:29px!important;font-weight:950!important;opacity:1!important}
+body.v38-mobile-ui .donut-legend small{color:#536572!important;font-size:11px!important;font-weight:850!important;opacity:1!important}
+
 /* V38.7 - painel executivo e ponto de venda presencial */
 .v38-business-dashboard{margin:16px 0;padding:22px;border:1px solid #dfe7ec;border-radius:24px;background:#fff;color:#24313d;box-shadow:0 5px 0 rgba(26,40,52,.08)}
 .v38-business-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}.v38-business-head span,.v38-store-business-bar span,.v38-counter-modal header span,.v38-counter-modal aside>span{color:#df1f34;font-size:11px;font-weight:950;letter-spacing:.12em}.v38-business-head h3{margin:4px 0;color:#24313d;font-size:27px}.v38-business-head p{margin:0;color:#637480;font-size:14px}.v38-business-head button{padding:11px 14px;border:2px solid #dbe4e9;border-radius:13px;background:#fff;color:#344652;font-weight:900;cursor:pointer}.v38-business-head button:disabled{opacity:.6}
