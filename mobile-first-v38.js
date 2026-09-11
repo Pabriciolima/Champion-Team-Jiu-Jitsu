@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "39.1";
+  window.CHAMPION_APP_VERSION = "39.2";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V39.1";
+  if (versionBadge) versionBadge.textContent = "V39.2";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -51,16 +51,18 @@
     button.setAttribute("aria-pressed", String(valuesUnlocked));
   }
 
-  function scanMoneyValues(root = document.body) {
-    if (!root?.querySelectorAll) return;
-    [root, ...root.querySelectorAll("*")].forEach(element => {
-      if (!(element instanceof HTMLElement) || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(element.tagName)) return;
-      if (element.tagName === "OPTION") {
-        if (!element.dataset.v38MoneyOriginal && /R\$\s*[\d.]+(?:,\d{2})?/i.test(element.textContent || "")) element.dataset.v38MoneyOriginal = element.textContent;
-        if (element.dataset.v38MoneyOriginal) { const target = valuesUnlocked ? element.dataset.v38MoneyOriginal : element.dataset.v38MoneyOriginal.replace(/R\$\s*[\d.]+(?:,\d{2})?/gi, "R$ •••••"); if (element.textContent !== target) element.textContent = target; }
-        return;
-      }
-      if (element.childElementCount === 0 && /R\$\s*[\d.]+(?:,\d{2})?/i.test(element.textContent || "")) element.classList.add("v38-money-private");
+  const PRIVATE_MONEY_SCOPES = "#v38BusinessDashboard, #billingCrm, #v38StoreBusinessBar, #tabelaPedidosLoja";
+
+  function scanMoneyValues() {
+    document.querySelectorAll(".v38-money-private").forEach(element => {
+      if (!element.closest(PRIVATE_MONEY_SCOPES)) element.classList.remove("v38-money-private");
+    });
+    if (roleMode() !== "admin") return;
+    document.querySelectorAll(PRIVATE_MONEY_SCOPES).forEach(scope => {
+      [scope, ...scope.querySelectorAll("*")].forEach(element => {
+        if (!(element instanceof HTMLElement) || element.childElementCount > 0) return;
+        if (/R\$\s*[\d.]+(?:,\d{2})?/i.test(element.textContent || "")) element.classList.add("v38-money-private");
+      });
     });
   }
 
@@ -75,7 +77,7 @@
     if (valuesUnlocked) { setValuesUnlocked(false); toast("Valores financeiros ocultados."); return; }
     document.getElementById("v38ValuesDialog")?.remove();
     const modal = document.createElement("div"); modal.id = "v38ValuesDialog"; modal.className = "v38-values-backdrop";
-    modal.innerHTML = `<section class="v38-values-dialog" role="dialog" aria-modal="true" aria-labelledby="v38ValuesTitle"><button type="button" class="v38-values-close" data-v38-values-close aria-label="Fechar">×</button><div class="v38-values-icon">◉</div><span>PRIVACIDADE FINANCEIRA</span><h3 id="v38ValuesTitle">Mostrar valores?</h3><p>Digite a senha de visualização para consultar preços e informações financeiras.</p><form id="v38ValuesForm"><label for="v38ValuesPassword">Senha de acesso</label><div class="v38-values-password"><input id="v38ValuesPassword" type="password" inputmode="numeric" autocomplete="off" maxlength="12" required><button type="button" id="v38ValuesPasswordToggle">MOSTRAR</button></div><small id="v38ValuesError" role="alert"></small><button type="submit">LIBERAR VISUALIZAÇÃO</button></form></section>`;
+    modal.innerHTML = `<section class="v38-values-dialog" role="dialog" aria-modal="true" aria-labelledby="v38ValuesTitle"><button type="button" class="v38-values-close" data-v38-values-close aria-label="Fechar">×</button><div class="v38-values-icon">◉</div><span>PRIVACIDADE FINANCEIRA</span><h3 id="v38ValuesTitle">Mostrar resultados?</h3><p>Digite a senha de visualização para consultar os indicadores financeiros administrativos.</p><form id="v38ValuesForm"><label for="v38ValuesPassword">Senha de acesso</label><div class="v38-values-password"><input id="v38ValuesPassword" type="password" inputmode="numeric" autocomplete="off" maxlength="12" required><button type="button" id="v38ValuesPasswordToggle">MOSTRAR</button></div><small id="v38ValuesError" role="alert"></small><button type="submit">LIBERAR VISUALIZAÇÃO</button></form></section>`;
     document.body.appendChild(modal);
     const close = () => { modal.classList.remove("is-open"); setTimeout(() => modal.remove(), 180); };
     modal.addEventListener("click", event => {
@@ -93,7 +95,16 @@
   }
 
   function setupMoneyPrivacy() {
-    ["planoValor", "produtoPreco", "produtoPrecoPromocional"].forEach(id => document.getElementById(id)?.classList.add("v38-money-private"));
+    if (roleMode() !== "admin") {
+      document.getElementById("v38ValuesToggle")?.remove();
+      document.querySelectorAll(".v38-money-private").forEach(element => element.classList.remove("v38-money-private"));
+      document.body.classList.remove("v38-values-locked");
+      document.body.classList.add("v38-values-unlocked");
+      moneyObserver?.disconnect(); moneyObserver = null;
+      return;
+    }
+    document.body.classList.toggle("v38-values-unlocked", valuesUnlocked);
+    document.body.classList.toggle("v38-values-locked", !valuesUnlocked);
     if (!document.getElementById("v38ValuesToggle")) {
       const button = document.createElement("button"); button.id = "v38ValuesToggle"; button.className = "v38-values-toggle"; button.type = "button"; button.addEventListener("click", openValuesDialog);
       const actions = document.querySelector(".topbar-actions") || document.querySelector(".topbar"); actions?.prepend(button); updateValuesButton();
