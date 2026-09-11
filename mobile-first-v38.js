@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.5";
+  window.CHAMPION_APP_VERSION = "38.6";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.5";
+  if (versionBadge) versionBadge.textContent = "V38.6";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -43,6 +43,44 @@
     requestAnimationFrame(() => box.classList.add("show"));
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => box.classList.remove("show"), 3200);
+  }
+
+  function confirmDeleteNotification() {
+    return new Promise((resolve) => {
+      document.getElementById("v38ConfirmDialog")?.remove();
+      const dialog = document.createElement("div");
+      dialog.id = "v38ConfirmDialog";
+      dialog.className = "v38-confirm-backdrop";
+      dialog.innerHTML = `<section class="v38-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="v38ConfirmTitle" aria-describedby="v38ConfirmText">
+        <button class="v38-confirm-close" type="button" data-v38-confirm="cancel" aria-label="Fechar">×</button>
+        <div class="v38-confirm-icon" aria-hidden="true">🗑️</div>
+        <span class="v38-confirm-kicker">CONFIRMAR EXCLUSÃO</span>
+        <h3 id="v38ConfirmTitle">Excluir notificação agora?</h3>
+        <p id="v38ConfirmText">Ela será removida imediatamente para todos os destinatários e não poderá ser recuperada.</p>
+        <div class="v38-confirm-actions">
+          <button class="v38-confirm-keep" type="button" data-v38-confirm="cancel">MANTER NOTIFICAÇÃO</button>
+          <button class="v38-confirm-delete" type="button" data-v38-confirm="delete">EXCLUIR AGORA</button>
+        </div>
+      </section>`;
+      document.body.appendChild(dialog);
+      const finish = (answer) => {
+        document.removeEventListener("keydown", onKeydown);
+        dialog.classList.add("is-closing");
+        window.setTimeout(() => dialog.remove(), 170);
+        resolve(answer);
+      };
+      const onKeydown = (event) => { if (event.key === "Escape") finish(false); };
+      document.addEventListener("keydown", onKeydown);
+      dialog.addEventListener("click", (event) => {
+        const action = event.target.closest("[data-v38-confirm]")?.dataset.v38Confirm;
+        if (action) finish(action === "delete");
+        else if (event.target === dialog) finish(false);
+      });
+      requestAnimationFrame(() => {
+        dialog.classList.add("is-open");
+        dialog.querySelector(".v38-confirm-keep")?.focus();
+      });
+    });
   }
 
   function iconFor(type) {
@@ -178,7 +216,7 @@
 
   async function deleteNotification(id, batchId, button) {
     if (!id && !batchId) return;
-    if (roleMode() === "admin" && !window.confirm("Excluir esta notificação imediatamente para todos os destinatários?")) return;
+    if (roleMode() === "admin" && !(await confirmDeleteNotification())) return;
     if (button) { button.disabled = true; button.textContent = "EXCLUINDO..."; }
     const { data, error } = await client.rpc("delete_champion_notification", {
       p_notification_id: id || null,
