@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.4";
+  window.CHAMPION_APP_VERSION = "38.5";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.4";
+  if (versionBadge) versionBadge.textContent = "V38.5";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -92,7 +92,7 @@
   function recipientCard(item) {
     return `<article class="v38-notification-card ${item.priority === "high" ? "v38-high" : ""}" data-v38-read="${item.id}" tabindex="0" role="button" aria-label="Marcar ${escapeHtml(item.title)} como lida">
       <div class="v38-notification-icon">${iconFor(item.type)}</div>
-      <div class="v38-notification-body"><span class="v38-notification-kind">${escapeHtml(item.type || "Geral")}</span><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.message)}</p><small>${relativeTime(item.created_at)} · toque para dispensar</small></div>
+      <div class="v38-notification-body"><span class="v38-notification-kind">${escapeHtml(item.type || "Geral")}</span><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.message)}</p><small>${relativeTime(item.created_at)} · expira em 24h</small><button class="v38-delete-notification" type="button" data-v38-delete-id="${item.id}" aria-label="Excluir esta notificação agora">EXCLUIR AGORA</button></div>
       <span class="v38-unread-dot"></span>
     </article>`;
   }
@@ -145,13 +145,13 @@
       const item = group[0];
       const read = group.filter((entry) => entry.read_at).length;
       const percent = group.length ? Math.round(read / group.length * 100) : 0;
-      return `<article class="v38-notification-card" style="grid-template-columns:46px minmax(0,1fr)"><div class="v38-notification-icon">${iconFor(item.type)}</div><div class="v38-notification-body"><span class="v38-notification-kind">${escapeHtml(item.type || "Geral")}</span>${item.priority === "high" ? '<span class="v38-priority">ALTA</span>' : ""}<strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.message)}</p><small>${audienceLabel(item.audience)} · ${relativeTime(item.created_at)}</small><div class="v38-delivery"><span style="width:${percent}%"></span></div><small>${group.length} entregue(s) · ${read} lida(s)</small></div></article>`;
+      return `<article class="v38-notification-card" style="grid-template-columns:46px minmax(0,1fr)"><div class="v38-notification-icon">${iconFor(item.type)}</div><div class="v38-notification-body"><span class="v38-notification-kind">${escapeHtml(item.type || "Geral")}</span>${item.priority === "high" ? '<span class="v38-priority">ALTA</span>' : ""}<strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.message)}</p><small>${audienceLabel(item.audience)} · ${relativeTime(item.created_at)} · expira em 24h</small><div class="v38-delivery"><span style="width:${percent}%"></span></div><small>${group.length} entregue(s) · ${read} lida(s)</small><button class="v38-delete-notification" type="button" data-v38-delete-batch="${item.batch_id || item.id}" aria-label="Excluir este envio agora">EXCLUIR AGORA</button></div></article>`;
     }).join("") : emptyState("Os envios aparecerão aqui.");
   }
 
   async function refreshNotifications() {
     if (!currentProfile && !(await loadIdentity())) return;
-    let query = client.from("notifications").select("*").order("created_at", { ascending: false }).limit(300);
+    let query = client.from("notifications").select("*").gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }).limit(300);
     if (roleMode() !== "admin") query = query.eq("recipient_profile_id", currentProfile.id);
     else query = query.eq("academy_id", currentAcademyId);
     const { data, error } = await query;
@@ -176,7 +176,30 @@
     setTimeout(refreshNotifications, 190);
   }
 
+  async function deleteNotification(id, batchId, button) {
+    if (!id && !batchId) return;
+    if (roleMode() === "admin" && !window.confirm("Excluir esta notificação imediatamente para todos os destinatários?")) return;
+    if (button) { button.disabled = true; button.textContent = "EXCLUINDO..."; }
+    const { data, error } = await client.rpc("delete_champion_notification", {
+      p_notification_id: id || null,
+      p_batch_id: batchId || null
+    });
+    if (error) {
+      if (button) { button.disabled = false; button.textContent = "EXCLUIR AGORA"; }
+      toast(error.message || "Não foi possível excluir a notificação.", "error");
+      return;
+    }
+    await refreshNotifications();
+    toast(`${Number(data) || 1} notificação(ões) excluída(s).`);
+  }
+
   document.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-v38-delete-id],[data-v38-delete-batch]");
+    if (deleteButton) {
+      event.preventDefault(); event.stopPropagation();
+      deleteNotification(deleteButton.dataset.v38DeleteId, deleteButton.dataset.v38DeleteBatch, deleteButton);
+      return;
+    }
     const card = event.target.closest("[data-v38-read]");
     if (card) markRead(card.dataset.v38Read, card);
   });

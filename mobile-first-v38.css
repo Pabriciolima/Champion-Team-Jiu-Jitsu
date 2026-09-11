@@ -172,7 +172,53 @@ body.v38-mobile-ui #appVersionBadge{display:none!important}
 .v38-empty{display:grid;justify-items:center;padding:38px 18px;text-align:center}.v38-empty span{width:58px;height:58px;display:grid;place-items:center;margin-bottom:12px;border-radius:20px;background:#effbe7;color:var(--v38-green);font-size:27px;animation:v38-float 2.4s ease-in-out infinite}.v38-empty strong{color:var(--v38-ink);font-size:17px}.v38-empty p{margin:5px 0 0!important;color:var(--v38-muted)!important;font-size:11px!important}
 .v38-delivery{height:6px;margin:10px 0 6px;border-radius:99px;background:#edf1f3;overflow:hidden}.v38-delivery span{display:block;height:100%;border-radius:inherit;background:var(--v38-green)}
 .v38-priority{display:inline-flex;margin-left:7px;padding:3px 6px;border-radius:99px;background:#fff0d5;color:#a76800;font-size:8px;font-weight:900}
+.v38-delete-notification{display:inline-flex;align-items:center;justify-content:center;margin-top:10px;padding:8px 10px;border:1px solid #f4a9b1;border-radius:10px;background:#fff2f4;color:#a51f30;font-size:9px;font-weight:950;letter-spacing:.05em;cursor:pointer}.v38-delete-notification:hover,.v38-delete-notification:focus-visible{background:#ff3045;color:#fff;border-color:#ff3045;outline:0}.v38-delete-notification:disabled{opacity:.6;cursor:wait}
 .v38-toast{position:fixed;z-index:99999;left:50%;bottom:96px;display:flex;align-items:center;gap:10px;max-width:min(420px,calc(100% - 28px));padding:13px 17px;border-radius:16px;background:var(--v38-ink);color:#fff;box-shadow:0 12px 35px rgba(30,45,58,.25);font-size:12px;font-weight:800;transform:translate(-50%,24px);opacity:0;pointer-events:none;transition:.22s ease}.v38-toast.show{transform:translate(-50%,0);opacity:1}.v38-toast.success span{color:#91e85a}.v38-toast.error span{color:#ff8b98}
+
+/* V38.5 - remove os ultimos blocos escuros herdados do tema antigo */
+body.v38-mobile-ui .automatic-template-card,
+body.v38-mobile-ui .student-product-card,
+body.v38-mobile-ui .student-selfie-checkin,
+body.v38-mobile-ui .student-camera-card,
+body.v38-mobile-ui .student-selfie-preview{
+  background:#fff!important;color:#20303c!important;border:2px solid #d5dfe6!important;box-shadow:0 4px 0 #e4eaee!important;
+}
+body.v38-mobile-ui .automatic-template-card h5,
+body.v38-mobile-ui .automatic-template-card strong,
+body.v38-mobile-ui .student-product-card h4,
+body.v38-mobile-ui .student-product-card strong,
+body.v38-mobile-ui .student-selfie-placeholder strong,
+body.v38-mobile-ui .student-selfie-success strong{color:#1d2b36!important;opacity:1!important}
+body.v38-mobile-ui .template-description,
+body.v38-mobile-ui .template-level,
+body.v38-mobile-ui .template-metadata small,
+body.v38-mobile-ui .student-product-card p,
+body.v38-mobile-ui .student-product-card small,
+body.v38-mobile-ui .student-product-tags span,
+body.v38-mobile-ui .student-selfie-placeholder small,
+body.v38-mobile-ui .student-selfie-success small{color:#526572!important;opacity:1!important}
+body.v38-mobile-ui .template-metadata div,
+body.v38-mobile-ui .template-level,
+body.v38-mobile-ui .student-product-tags span{background:#f4f7f9!important;border-color:#d5dfe6!important}
+body.v38-mobile-ui .template-filter{background:#fff!important;color:#40515e!important;border:2px solid #d5dfe6!important}
+body.v38-mobile-ui .template-filter.active{background:var(--v38-red)!important;color:#fff!important;border-color:var(--v38-red)!important}
+body.v38-mobile-ui .use-template-button{background:#eef8ff!important;color:#126b96!important;border:2px solid #9ed7f1!important}
+body.v38-mobile-ui .automatic-template-card.selected{background:#f4fbef!important;border-color:#72b942!important}
+body.v38-mobile-ui .student-product-image{background:#eef3f6!important}
+body.v38-mobile-ui .student-qty-control,
+body.v38-mobile-ui .cart-qty-v375{background:#fff!important;border-color:#cbd6dd!important}
+body.v38-mobile-ui .student-qty-control button,
+body.v38-mobile-ui .cart-qty-v375 button{background:#eef3f6!important;color:#20303c!important}
+body.v38-mobile-ui .student-qty-control strong,
+body.v38-mobile-ui .cart-qty-v375 span,
+body.v38-mobile-ui .student-product-subtotal strong{color:#20303c!important}
+body.v38-mobile-ui .student-camera-trigger{background:#ff3045!important;color:#fff!important;border-color:#ff3045!important;box-shadow:0 4px 0 #c82033!important}
+body.v38-mobile-ui .student-payment-split-info{background:#fff7df!important;border:2px solid #e7c45f!important}
+body.v38-mobile-ui .student-payment-split-info span{color:#805700!important;font-size:9px!important}
+body.v38-mobile-ui .student-payment-split-info strong{color:#364651!important;font-size:11px!important}
+body.v38-mobile-ui #billingCrm>.view-heading{background:#fff!important;color:#20303c!important;border:1px solid #d5dfe6!important;border-radius:22px!important;box-shadow:0 5px 0 rgba(26,40,52,.08)!important;padding:20px!important}
+body.v38-mobile-ui #billingCrm>.view-heading h2{color:#1d2b36!important}
+body.v38-mobile-ui #billingCrm>.view-heading p{color:#526572!important}
 @keyframes v38-float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
 @keyframes v38-pop{0%{transform:scale(.94);opacity:.4}70%{transform:scale(1.02)}100%{transform:scale(1);opacity:1}}
 
