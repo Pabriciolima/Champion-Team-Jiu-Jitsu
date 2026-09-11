@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.1";
+  window.CHAMPION_APP_VERSION = "38.2";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.1";
+  if (versionBadge) versionBadge.textContent = "V38.2";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -184,6 +184,37 @@
     const card = event.target.closest("[data-v38-read]");
     if (card && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); markRead(card.dataset.v38Read, card); }
   });
+
+  function openStudentNotifications() {
+    const areaButton = document.querySelector('.menu button[data-view="areaAluno"]');
+    const section = document.getElementById("studentNotificationsSection");
+    areaButton?.click();
+    document.getElementById("appSidebar")?.classList.remove("mobile-open");
+    document.getElementById("mobileMenuBackdrop")?.classList.remove("show");
+    document.body.classList.remove("mobile-menu-open");
+    const menuButton = document.getElementById("mobileMenuButton");
+    menuButton?.classList.remove("active");
+    menuButton?.setAttribute("aria-expanded", "false");
+    window.setTimeout(() => {
+      if (!section) return;
+      const offset = window.innerWidth <= 860 ? 76 : 18;
+      const top = section.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: "smooth" });
+      section.classList.remove("student-section-pulse");
+      void section.offsetWidth;
+      section.classList.add("student-section-pulse");
+      window.setTimeout(() => section.classList.remove("student-section-pulse"), 900);
+    }, 80);
+  }
+
+  document.addEventListener("click", (event) => {
+    if (roleMode() !== "student") return;
+    const trigger = event.target.closest("#topNotificationButton,#mobileNotificationButton,.menu button[data-view='notificacoes']");
+    if (!trigger) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openStudentNotifications();
+  }, true);
 
   async function prepareRecipients() {
     const select = document.getElementById("notificacaoAluno");

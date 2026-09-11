@@ -91,6 +91,25 @@ body.v38-mobile-ui #appVersionBadge{display:none!important}
   body.v38-mobile-ui .panel-header h3{font-size:20px!important}
   body.v38-mobile-ui .form-grid,body.v38-mobile-ui .student-area-grid,body.v38-mobile-ui .dashboard-grid,body.v38-mobile-ui .stats-grid,body.v38-mobile-ui .billing-metrics{grid-template-columns:1fr!important;gap:12px!important}
   body.v38-mobile-ui .field.full{grid-column:auto!important}
+  body.v38-mobile-ui input,
+  body.v38-mobile-ui select,
+  body.v38-mobile-ui textarea,
+  body.v38-mobile-ui .password-wrap input,
+  body.v38-mobile-ui .student-password-panel input,
+  body.v38-mobile-ui .student-password-panel select{
+    background:#fff!important;
+    color:#24313d!important;
+    border:2px solid #dce4e9!important;
+    -webkit-text-fill-color:#24313d!important;
+    opacity:1!important;
+    caret-color:var(--v38-red)!important;
+  }
+  body.v38-mobile-ui input::placeholder,
+  body.v38-mobile-ui textarea::placeholder{color:#8b98a3!important;opacity:1!important;-webkit-text-fill-color:#8b98a3!important}
+  body.v38-mobile-ui input:focus,
+  body.v38-mobile-ui select:focus,
+  body.v38-mobile-ui textarea:focus{background:#fff!important;border-color:var(--v38-blue)!important;box-shadow:0 0 0 4px rgba(28,176,246,.14)!important;outline:0!important}
+  body.v38-mobile-ui label{color:#52616d!important}
   body.v38-mobile-ui .actions{display:grid!important;grid-template-columns:1fr;gap:9px}
   body.v38-mobile-ui .actions .btn{width:100%}
   body.v38-mobile-ui .table-wrap{margin-inline:-16px;padding-inline:16px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
