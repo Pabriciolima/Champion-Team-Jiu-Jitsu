@@ -38,6 +38,41 @@ body.v38-mobile-ui input,body.v38-mobile-ui select,body.v38-mobile-ui textarea{
 body.v38-mobile-ui input:focus,body.v38-mobile-ui select:focus,body.v38-mobile-ui textarea:focus{
   border-color:var(--v38-blue);box-shadow:0 0 0 4px rgba(28,176,246,.12);outline:0;
 }
+body.v38-mobile-ui .panel input,
+body.v38-mobile-ui .panel select,
+body.v38-mobile-ui .panel textarea,
+body.v38-mobile-ui .module-hero input,
+body.v38-mobile-ui .student-password-panel input{
+  background:#fff!important;
+  color:#182630!important;
+  -webkit-text-fill-color:#182630!important;
+  border:2px solid #cbd6dd!important;
+  opacity:1!important;
+  caret-color:var(--v38-red)!important;
+  font-weight:600!important;
+}
+body.v38-mobile-ui .panel input::placeholder,
+body.v38-mobile-ui .panel textarea::placeholder{color:#687783!important;-webkit-text-fill-color:#687783!important;opacity:1!important;font-weight:500!important}
+body.v38-mobile-ui .panel select option{background:#fff!important;color:#182630!important}
+body.v38-mobile-ui .panel input:-webkit-autofill,
+body.v38-mobile-ui .panel input:-webkit-autofill:hover,
+body.v38-mobile-ui .panel input:-webkit-autofill:focus{
+  -webkit-box-shadow:0 0 0 1000px #fff inset!important;
+  -webkit-text-fill-color:#182630!important;
+  caret-color:var(--v38-red)!important;
+}
+body.v38-mobile-ui .panel .field>label,
+body.v38-mobile-ui .panel label{color:#43525e!important;font-weight:900!important;opacity:1!important}
+body.v38-mobile-ui .panel-header p,
+body.v38-mobile-ui .panel .field-hint,
+body.v38-mobile-ui .panel small{color:#5f6f7b!important;opacity:1!important}
+body.v38-mobile-ui .auto-password-info{
+  background:#eef7ff!important;
+  border:2px solid #cce9f8!important;
+  border-radius:14px!important;
+}
+body.v38-mobile-ui .auto-password-info strong{color:#20313d!important}
+body.v38-mobile-ui .auto-password-info small{color:#526775!important}
 body.v38-mobile-ui .btn{
   min-height:46px;border:0;border-radius:14px;font-weight:900;letter-spacing:.02em;box-shadow:0 4px 0 rgba(25,39,50,.15);
   transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;
