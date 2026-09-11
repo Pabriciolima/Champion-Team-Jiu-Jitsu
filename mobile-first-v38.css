@@ -73,6 +73,77 @@ body.v38-mobile-ui .auto-password-info{
 }
 body.v38-mobile-ui .auto-password-info strong{color:#20313d!important}
 body.v38-mobile-ui .auto-password-info small{color:#526775!important}
+
+/* V38.4 - tabelas, listas e cards claros com contraste AA */
+html.champion-premium-v29 body.v38-mobile-ui .panel .table-wrap,
+body.v38-mobile-ui .panel .table-wrap{
+  overflow:hidden;
+  border:1px solid #d4dde3!important;
+  border-radius:16px!important;
+  background:#fff!important;
+}
+html.champion-premium-v29 body.v38-mobile-ui .panel table,
+body.v38-mobile-ui .panel table{
+  background:#fff!important;
+  color:#1d2b36!important;
+}
+html.champion-premium-v29 body.v38-mobile-ui .panel table thead tr,
+html.champion-premium-v29 body.v38-mobile-ui .panel table th,
+body.v38-mobile-ui .panel table thead tr,
+body.v38-mobile-ui .panel table th{
+  background:#e9eff3!important;
+  color:#465866!important;
+  border-color:#ced8df!important;
+  font-weight:900!important;
+  opacity:1!important;
+}
+html.champion-premium-v29 body.v38-mobile-ui .panel table tbody tr,
+body.v38-mobile-ui .panel table tbody tr{background:#fff!important;color:#1d2b36!important}
+html.champion-premium-v29 body.v38-mobile-ui .panel table tbody tr:nth-child(even),
+body.v38-mobile-ui .panel table tbody tr:nth-child(even){background:#f4f7f9!important}
+html.champion-premium-v29 body.v38-mobile-ui .panel table tbody tr:hover,
+body.v38-mobile-ui .panel table tbody tr:hover{background:#eaf6fc!important}
+html.champion-premium-v29 body.v38-mobile-ui .panel table td,
+html.champion-premium-v29 body.v38-mobile-ui .panel table td strong,
+body.v38-mobile-ui .panel table td,
+body.v38-mobile-ui .panel table td strong{
+  color:#20303c!important;
+  border-color:#d8e0e5!important;
+  opacity:1!important;
+}
+body.v38-mobile-ui .panel table td small:not(.status):not([class*="order-status"]){color:#5b6d79!important}
+body.v38-mobile-ui .panel .status.ativo,
+body.v38-mobile-ui .panel .order-status-v37.paid{background:#ddf6e6!important;border-color:#92d9ab!important;color:#176c39!important}
+body.v38-mobile-ui .panel .status.inativo,
+body.v38-mobile-ui .panel .status.cancelada,
+body.v38-mobile-ui .panel .order-status-v37.cancelled{background:#ffe6e9!important;border-color:#f2a6ae!important;color:#a52232!important}
+body.v38-mobile-ui .panel .status.pendente,
+body.v38-mobile-ui .panel .order-status-v37.pending{background:#fff2cf!important;border-color:#e8c66b!important;color:#775300!important}
+
+html.champion-premium-v29 body.v38-mobile-ui .video-card,
+html.champion-premium-v29 body.v38-mobile-ui .product-card,
+body.v38-mobile-ui .video-card,
+body.v38-mobile-ui .product-card,
+body.v38-mobile-ui .student-order-card,
+body.v38-mobile-ui .cart-item{
+  border-color:#d6dfe5!important;
+  background:#fff!important;
+  color:#20303c!important;
+  box-shadow:0 5px 0 rgba(31,48,60,.08)!important;
+}
+body.v38-mobile-ui .video-card-content,
+body.v38-mobile-ui .product-card-content{background:#fff!important}
+body.v38-mobile-ui .video-card h4,
+body.v38-mobile-ui .product-card h4,
+body.v38-mobile-ui .student-order-card strong,
+body.v38-mobile-ui .cart-item strong{color:#1d2b36!important;opacity:1!important}
+body.v38-mobile-ui .video-card p,
+body.v38-mobile-ui .product-card p,
+body.v38-mobile-ui .student-order-card p,
+body.v38-mobile-ui .student-order-card small,
+body.v38-mobile-ui .cart-item small{color:#526572!important;opacity:1!important}
+body.v38-mobile-ui .product-image{background:#f0f4f6!important}
+body.v38-mobile-ui .media-origin-badge{background:#eef3f6!important;border-color:#ced8df!important;color:#40525f!important}
 body.v38-mobile-ui .btn{
   min-height:46px;border:0;border-radius:14px;font-weight:900;letter-spacing:.02em;box-shadow:0 4px 0 rgba(25,39,50,.15);
   transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;
