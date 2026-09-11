@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "39.0";
+  window.CHAMPION_APP_VERSION = "39.1";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V39.0";
+  if (versionBadge) versionBadge.textContent = "V39.1";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -93,6 +93,7 @@
   }
 
   function setupMoneyPrivacy() {
+    ["planoValor", "produtoPreco", "produtoPrecoPromocional"].forEach(id => document.getElementById(id)?.classList.add("v38-money-private"));
     if (!document.getElementById("v38ValuesToggle")) {
       const button = document.createElement("button"); button.id = "v38ValuesToggle"; button.className = "v38-values-toggle"; button.type = "button"; button.addEventListener("click", openValuesDialog);
       const actions = document.querySelector(".topbar-actions") || document.querySelector(".topbar"); actions?.prepend(button); updateValuesButton();
