@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.6";
+  window.CHAMPION_APP_VERSION = "38.7";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.6";
+  if (versionBadge) versionBadge.textContent = "V38.7";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -23,11 +23,15 @@
   let currentAcademyId = null;
   let notificationChannel = null;
   let rawNotifications = [];
+  let counterProducts = [];
+  let counterStudents = [];
+  let counterCart = [];
   let toastTimer = null;
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   function toast(message, type = "success") {
     let box = document.getElementById("v38Toast");
@@ -383,11 +387,118 @@
     document.getElementById("v38BottomNav")?.remove();
   }
 
+  function ensureBusinessDashboard() {
+    const dashboard = document.getElementById("dashboard");
+    const hero = dashboard?.querySelector(".hero");
+    if (!dashboard || !hero || document.getElementById("v38BusinessDashboard")) return;
+    const section = document.createElement("section");
+    section.id = "v38BusinessDashboard";
+    section.className = "v38-business-dashboard";
+    section.innerHTML = `<div class="v38-business-head"><div><span>VISÃO DO NEGÓCIO</span><h3>Saúde financeira da academia</h3><p>Receitas, mensalidades, loja e estoque em uma visão executiva.</p></div><button type="button" id="v38RefreshBusiness">ATUALIZAR DADOS</button></div>
+      <div class="v38-business-metrics">
+        <article class="primary"><span>FATURAMENTO TOTAL</span><strong id="v38RevenueTotal">R$ 0,00</strong><small>Mensalidades + loja</small></article>
+        <article><span>FATURAMENTO DO MÊS</span><strong id="v38RevenueMonth">R$ 0,00</strong><small>Recebido no mês atual</small></article>
+        <article><span>MENSALIDADES RECEBIDAS</span><strong id="v38MembershipRevenue">R$ 0,00</strong><small>Histórico confirmado</small></article>
+        <article><span>FATURAMENTO DA LOJA</span><strong id="v38StoreRevenue">R$ 0,00</strong><small id="v38StoreSales">0 vendas confirmadas</small></article>
+        <article class="warning"><span>VALORES A RECEBER</span><strong id="v38Receivables">R$ 0,00</strong><small id="v38OverdueSummary">Sem atrasos</small></article>
+        <article><span>TICKET MÉDIO DA LOJA</span><strong id="v38AverageTicket">R$ 0,00</strong><small>Valor médio por venda</small></article>
+      </div>
+      <div class="v38-business-bottom"><div><div class="v38-section-title"><strong>Origem do faturamento da loja</strong><small>Online e atendimento no balcão</small></div><div class="v38-revenue-split"><div><span>ONLINE</span><strong id="v38OnlineRevenue">R$ 0,00</strong></div><div><span>BALCÃO</span><strong id="v38CounterRevenue">R$ 0,00</strong></div></div></div><div class="v38-quick-actions"><button type="button" data-v38-go="loja">🛒 NOVA VENDA</button><button type="button" data-v38-go="billingCrm">💳 VER COBRANÇAS</button><button type="button" data-v38-go="alunos">👥 GERENCIAR ALUNOS</button></div></div>`;
+    hero.insertAdjacentElement("afterend", section);
+  }
+
+  function ensureStoreBusinessTools() {
+    const store = document.getElementById("loja");
+    const hero = store?.querySelector(".module-hero");
+    if (!store || !hero || document.getElementById("v38StoreBusinessBar")) return;
+    const bar = document.createElement("section");
+    bar.id = "v38StoreBusinessBar";
+    bar.className = "v38-store-business-bar";
+    bar.innerHTML = `<div><span>VALOR DE VENDA DO ESTOQUE</span><strong id="v38InventoryValue">R$ 0,00</strong><small id="v38InventoryUnits">0 unidades disponíveis</small></div><div><span>FATURAMENTO DA LOJA</span><strong id="v38StoreRevenueShop">R$ 0,00</strong><small>Vendas confirmadas</small></div><button type="button" id="v38OpenCounterSale">＋ VENDER NO BALCÃO</button>`;
+    hero.insertAdjacentElement("afterend", bar);
+  }
+
+  async function loadBusinessMetrics() {
+    if (roleMode() !== "admin" || !currentAcademyId) return;
+    const button = document.getElementById("v38RefreshBusiness");
+    if (button) { button.disabled = true; button.textContent = "ATUALIZANDO..."; }
+    const { data, error } = await client.rpc("get_champion_business_dashboard", { p_academy_id: currentAcademyId });
+    if (button) { button.disabled = false; button.textContent = "ATUALIZAR DADOS"; }
+    if (error) return toast("Não foi possível carregar os indicadores.", "error");
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    set("v38RevenueTotal", money(data.total_revenue)); set("v38RevenueMonth", money(data.month_revenue));
+    set("v38MembershipRevenue", money(data.membership_revenue)); set("v38StoreRevenue", money(data.store_revenue));
+    set("v38StoreRevenueShop", money(data.store_revenue)); set("v38Receivables", money(data.receivables));
+    set("v38AverageTicket", money(data.average_ticket)); set("v38OnlineRevenue", money(data.online_revenue));
+    set("v38CounterRevenue", money(data.counter_revenue)); set("v38InventoryValue", money(data.inventory_value));
+    set("v38InventoryUnits", `${Number(data.inventory_units || 0)} unidades disponíveis`);
+    set("v38StoreSales", `${Number(data.store_sales_count || 0)} vendas confirmadas`);
+    set("v38OverdueSummary", Number(data.overdue_count || 0) ? `${data.overdue_count} mensalidade(s) em atraso · ${money(data.overdue_amount)}` : "Sem mensalidades em atraso");
+  }
+
+  function counterPrice(product) { return Number(product.promotional_price || 0) > 0 ? Number(product.promotional_price) : Number(product.price || 0); }
+  function renderCounterCart() {
+    const list = document.getElementById("v38CounterCart");
+    const total = counterCart.reduce((sum, item) => sum + counterPrice(counterProducts.find(p => p.id === item.product_id)) * item.quantity, 0);
+    if (list) list.innerHTML = counterCart.length ? counterCart.map(item => { const product = counterProducts.find(p => p.id === item.product_id); return `<div class="v38-counter-item"><div><strong>${escapeHtml(product?.name || "Produto")}</strong><small>${item.quantity} × ${money(counterPrice(product))}</small></div><button type="button" data-v38-remove-counter="${item.product_id}" aria-label="Remover produto">×</button></div>`; }).join("") : `<div class="v38-counter-empty">Adicione os produtos desta venda.</div>`;
+    const output = document.getElementById("v38CounterTotal"); if (output) output.textContent = money(total);
+  }
+
+  async function openCounterSale() {
+    const [products, students] = await Promise.all([
+      client.from("products").select("id,name,price,promotional_price,stock,active").eq("academy_id", currentAcademyId).eq("active", true).gt("stock", 0).order("name"),
+      client.from("students").select("id,full_name,cpf,status").eq("academy_id", currentAcademyId).eq("status", "active").order("full_name")
+    ]);
+    if (products.error || students.error) return toast("Não foi possível abrir a venda presencial.", "error");
+    counterProducts = products.data || []; counterStudents = students.data || []; counterCart = [];
+    document.getElementById("v38CounterSaleModal")?.remove();
+    const modal = document.createElement("div"); modal.id = "v38CounterSaleModal"; modal.className = "v38-counter-backdrop";
+    modal.innerHTML = `<section class="v38-counter-modal" role="dialog" aria-modal="true" aria-labelledby="v38CounterTitle"><header><div><span>VENDA PRESENCIAL</span><h3 id="v38CounterTitle">Venda no balcão</h3><p>Registre o pagamento e baixe o estoque na mesma hora.</p></div><button type="button" data-v38-close-counter aria-label="Fechar">×</button></header><div class="v38-counter-grid"><div class="v38-counter-fields"><label>Aluno cadastrado <select id="v38CounterStudent"><option value="">Cliente avulso</option>${counterStudents.map(s => `<option value="${s.id}">${escapeHtml(s.full_name)}${s.cpf ? ` · ${escapeHtml(s.cpf)}` : ""}</option>`).join("")}</select></label><div class="v38-counter-two"><label>Nome do cliente <input id="v38CounterName" placeholder="Obrigatório para cliente avulso"></label><label>Telefone <input id="v38CounterPhone" inputmode="tel" placeholder="Opcional"></label></div><label>Produto <div class="v38-counter-add"><select id="v38CounterProduct"><option value="">Selecione um produto</option>${counterProducts.map(p => `<option value="${p.id}">${escapeHtml(p.name)} · ${money(counterPrice(p))} · ${p.stock} un.</option>`).join("")}</select><input id="v38CounterQty" type="number" min="1" value="1" aria-label="Quantidade"><button type="button" id="v38AddCounterItem">ADICIONAR</button></div></label><label>Forma de pagamento <select id="v38CounterPayment"><option>Dinheiro</option><option>Pix</option><option>Cartao de debito</option><option>Cartao de credito</option></select></label></div><aside><span>RESUMO DA VENDA</span><div id="v38CounterCart"></div><div class="v38-counter-total"><small>TOTAL</small><strong id="v38CounterTotal">R$ 0,00</strong></div><button type="button" id="v38FinishCounterSale">CONFIRMAR VENDA</button></aside></div></section>`;
+    document.body.appendChild(modal); renderCounterCart(); requestAnimationFrame(() => modal.classList.add("is-open"));
+  }
+
+  function closeCounterSale() { const modal = document.getElementById("v38CounterSaleModal"); if (!modal) return; modal.classList.remove("is-open"); setTimeout(() => modal.remove(), 180); }
+
+  async function finishCounterSale(button) {
+    if (!counterCart.length) return toast("Adicione pelo menos um produto.", "error");
+    const studentId = document.getElementById("v38CounterStudent")?.value || null;
+    const customerName = document.getElementById("v38CounterName")?.value.trim() || null;
+    if (!studentId && !customerName) return toast("Informe o nome do cliente avulso.", "error");
+    button.disabled = true; button.textContent = "REGISTRANDO...";
+    const { data, error } = await client.rpc("create_champion_counter_sale", { p_academy_id: currentAcademyId, p_student_id: studentId, p_customer_name: customerName, p_customer_phone: document.getElementById("v38CounterPhone")?.value.trim() || null, p_payment_method: document.getElementById("v38CounterPayment")?.value, p_items: counterCart });
+    if (error) { button.disabled = false; button.textContent = "CONFIRMAR VENDA"; return toast(error.message || "Falha ao registrar a venda.", "error"); }
+    closeCounterSale(); toast(`Venda ${data.code} registrada: ${money(data.total)}.`); await window.supabaseRefreshCurrentUserV30?.(); await loadBusinessMetrics();
+  }
+
+  function setupBusinessExperience() {
+    if (roleMode() !== "admin") return;
+    ensureBusinessDashboard(); ensureStoreBusinessTools(); loadBusinessMetrics();
+  }
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("#v38RefreshBusiness")) loadBusinessMetrics();
+    if (event.target.closest("#v38OpenCounterSale")) openCounterSale();
+    const go = event.target.closest("[data-v38-go]")?.dataset.v38Go;
+    if (go) document.querySelector(`.menu button[data-view="${go}"]`)?.click();
+    if (event.target.closest("[data-v38-close-counter]") || event.target.id === "v38CounterSaleModal") closeCounterSale();
+    if (event.target.closest("#v38AddCounterItem")) {
+      const id = document.getElementById("v38CounterProduct")?.value; const qty = Number(document.getElementById("v38CounterQty")?.value || 0); const product = counterProducts.find(p => p.id === id);
+      if (!product || qty < 1) return toast("Selecione produto e quantidade.", "error");
+      const existing = counterCart.find(item => item.product_id === id); const finalQty = qty + (existing?.quantity || 0);
+      if (finalQty > product.stock) return toast(`Estoque disponível: ${product.stock}.`, "error");
+      if (existing) existing.quantity = finalQty; else counterCart.push({ product_id: id, quantity: qty }); renderCounterCart();
+    }
+    const remove = event.target.closest("[data-v38-remove-counter]")?.dataset.v38RemoveCounter;
+    if (remove) { counterCart = counterCart.filter(item => item.product_id !== remove); renderCounterCart(); }
+    const finish = event.target.closest("#v38FinishCounterSale"); if (finish) finishCounterSale(finish);
+  });
+
   async function setup() {
     const ready = await loadIdentity().catch(() => false);
     renderBottomNav();
     if (!ready) return;
     configureNotificationForm();
+    setupBusinessExperience();
     await prepareRecipients();
     await refreshNotifications();
     if (typeof window.renderizarNotificacoes === "function") window.renderizarNotificacoes = renderNotifications;
