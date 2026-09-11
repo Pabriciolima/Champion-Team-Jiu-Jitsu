@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.9";
+  window.CHAMPION_APP_VERSION = "39.0";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.9";
+  if (versionBadge) versionBadge.textContent = "V39.0";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -27,11 +27,82 @@
   let counterStudents = [];
   let counterCart = [];
   let toastTimer = null;
+  let moneyObserver = null;
+  let moneyScanTimer = null;
+  let valuesUnlocked = false;
+  const VALUES_PASSWORD_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
+  document.body.classList.toggle("v38-values-unlocked", valuesUnlocked);
+  document.body.classList.toggle("v38-values-locked", !valuesUnlocked);
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  async function hashValue(value) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function updateValuesButton() {
+    const button = document.getElementById("v38ValuesToggle");
+    if (!button) return;
+    button.innerHTML = valuesUnlocked ? '<span>◉</span> OCULTAR VALORES' : '<span>◌</span> MOSTRAR VALORES';
+    button.setAttribute("aria-pressed", String(valuesUnlocked));
+  }
+
+  function scanMoneyValues(root = document.body) {
+    if (!root?.querySelectorAll) return;
+    [root, ...root.querySelectorAll("*")].forEach(element => {
+      if (!(element instanceof HTMLElement) || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(element.tagName)) return;
+      if (element.tagName === "OPTION") {
+        if (!element.dataset.v38MoneyOriginal && /R\$\s*[\d.]+(?:,\d{2})?/i.test(element.textContent || "")) element.dataset.v38MoneyOriginal = element.textContent;
+        if (element.dataset.v38MoneyOriginal) { const target = valuesUnlocked ? element.dataset.v38MoneyOriginal : element.dataset.v38MoneyOriginal.replace(/R\$\s*[\d.]+(?:,\d{2})?/gi, "R$ •••••"); if (element.textContent !== target) element.textContent = target; }
+        return;
+      }
+      if (element.childElementCount === 0 && /R\$\s*[\d.]+(?:,\d{2})?/i.test(element.textContent || "")) element.classList.add("v38-money-private");
+    });
+  }
+
+  function setValuesUnlocked(unlocked) {
+    valuesUnlocked = unlocked;
+    document.body.classList.toggle("v38-values-unlocked", unlocked);
+    document.body.classList.toggle("v38-values-locked", !unlocked);
+    scanMoneyValues(); updateValuesButton();
+  }
+
+  function openValuesDialog() {
+    if (valuesUnlocked) { setValuesUnlocked(false); toast("Valores financeiros ocultados."); return; }
+    document.getElementById("v38ValuesDialog")?.remove();
+    const modal = document.createElement("div"); modal.id = "v38ValuesDialog"; modal.className = "v38-values-backdrop";
+    modal.innerHTML = `<section class="v38-values-dialog" role="dialog" aria-modal="true" aria-labelledby="v38ValuesTitle"><button type="button" class="v38-values-close" data-v38-values-close aria-label="Fechar">×</button><div class="v38-values-icon">◉</div><span>PRIVACIDADE FINANCEIRA</span><h3 id="v38ValuesTitle">Mostrar valores?</h3><p>Digite a senha de visualização para consultar preços e informações financeiras.</p><form id="v38ValuesForm"><label for="v38ValuesPassword">Senha de acesso</label><div class="v38-values-password"><input id="v38ValuesPassword" type="password" inputmode="numeric" autocomplete="off" maxlength="12" required><button type="button" id="v38ValuesPasswordToggle">MOSTRAR</button></div><small id="v38ValuesError" role="alert"></small><button type="submit">LIBERAR VISUALIZAÇÃO</button></form></section>`;
+    document.body.appendChild(modal);
+    const close = () => { modal.classList.remove("is-open"); setTimeout(() => modal.remove(), 180); };
+    modal.addEventListener("click", event => {
+      if (event.target.closest("[data-v38-values-close]") || event.target === modal) close();
+      if (event.target.closest("#v38ValuesPasswordToggle")) { const input = modal.querySelector("#v38ValuesPassword"); const show = input.type === "password"; input.type = show ? "text" : "password"; event.target.textContent = show ? "OCULTAR" : "MOSTRAR"; }
+    });
+    modal.querySelector("#v38ValuesForm").addEventListener("submit", async event => {
+      event.preventDefault(); const input = modal.querySelector("#v38ValuesPassword"); const error = modal.querySelector("#v38ValuesError"); const submit = event.submitter;
+      submit.disabled = true; submit.textContent = "VERIFICANDO...";
+      const valid = await hashValue(input.value) === VALUES_PASSWORD_HASH;
+      if (!valid) { submit.disabled = false; submit.textContent = "LIBERAR VISUALIZAÇÃO"; error.textContent = "Senha incorreta. Tente novamente."; input.select(); return; }
+      setValuesUnlocked(true); close(); toast("Valores financeiros liberados.");
+    });
+    requestAnimationFrame(() => { modal.classList.add("is-open"); modal.querySelector("#v38ValuesPassword")?.focus(); });
+  }
+
+  function setupMoneyPrivacy() {
+    if (!document.getElementById("v38ValuesToggle")) {
+      const button = document.createElement("button"); button.id = "v38ValuesToggle"; button.className = "v38-values-toggle"; button.type = "button"; button.addEventListener("click", openValuesDialog);
+      const actions = document.querySelector(".topbar-actions") || document.querySelector(".topbar"); actions?.prepend(button); updateValuesButton();
+    }
+    scanMoneyValues();
+    if (!moneyObserver) {
+      moneyObserver = new MutationObserver(() => { clearTimeout(moneyScanTimer); moneyScanTimer = setTimeout(() => scanMoneyValues(), 30); });
+      moneyObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+  }
 
   function toast(message, type = "success") {
     let box = document.getElementById("v38Toast");
@@ -506,6 +577,7 @@
     const ready = await loadIdentity().catch(() => false);
     renderBottomNav();
     if (!ready) return;
+    setupMoneyPrivacy();
     configureNotificationForm();
     setupBusinessExperience();
     await prepareRecipients();
