@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "38.8";
+  window.CHAMPION_APP_VERSION = "38.9";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V38.8";
+  if (versionBadge) versionBadge.textContent = "V38.9";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -453,8 +453,28 @@
     counterProducts = products.data || []; counterStudents = students.data || []; counterCart = [];
     document.getElementById("v38CounterSaleModal")?.remove();
     const modal = document.createElement("div"); modal.id = "v38CounterSaleModal"; modal.className = "v38-counter-backdrop";
-    modal.innerHTML = `<section class="v38-counter-modal" role="dialog" aria-modal="true" aria-labelledby="v38CounterTitle"><header><div><span>VENDA PRESENCIAL</span><h3 id="v38CounterTitle">Venda no balcão</h3><p>Registre o pagamento e baixe o estoque na mesma hora.</p></div><button type="button" data-v38-close-counter aria-label="Fechar">×</button></header><div class="v38-counter-grid"><div class="v38-counter-fields"><label>Aluno cadastrado <select id="v38CounterStudent"><option value="">Cliente avulso</option>${counterStudents.map(s => `<option value="${s.id}">${escapeHtml(s.full_name)}${s.cpf ? ` · ${escapeHtml(s.cpf)}` : ""}</option>`).join("")}</select></label><div class="v38-counter-two"><label>Nome do cliente <input id="v38CounterName" placeholder="Obrigatório para cliente avulso"></label><label>Telefone <input id="v38CounterPhone" inputmode="tel" placeholder="Opcional"></label></div><label>Produto <div class="v38-counter-add"><select id="v38CounterProduct"><option value="">Selecione um produto</option>${counterProducts.map(p => `<option value="${p.id}">${escapeHtml(p.name)} · ${money(counterPrice(p))} · ${p.stock} un.</option>`).join("")}</select><input id="v38CounterQty" type="number" min="1" value="1" aria-label="Quantidade"><button type="button" id="v38AddCounterItem">ADICIONAR</button></div></label><label>Forma de pagamento <select id="v38CounterPayment"><option>Dinheiro</option><option>Pix</option><option>Cartao de debito</option><option>Cartao de credito</option></select></label></div><aside><span>RESUMO DA VENDA</span><div id="v38CounterCart"></div><div class="v38-counter-total"><small>TOTAL</small><strong id="v38CounterTotal">R$ 0,00</strong></div><button type="button" id="v38FinishCounterSale">CONFIRMAR VENDA</button></aside></div></section>`;
-    document.body.appendChild(modal); renderCounterCart(); requestAnimationFrame(() => modal.classList.add("is-open"));
+    modal.innerHTML = `<section class="v38-counter-modal" role="dialog" aria-modal="true" aria-labelledby="v38CounterTitle"><header><div><span>VENDA PRESENCIAL</span><h3 id="v38CounterTitle">Venda no balcão</h3><p>Registre o pagamento e baixe o estoque na mesma hora.</p></div><button type="button" data-v38-close-counter aria-label="Fechar">×</button></header><div class="v38-counter-grid"><div class="v38-counter-fields"><label>Aluno cadastrado <select id="v38CounterStudent"><option value="">Cliente avulso</option>${counterStudents.map(s => `<option value="${s.id}">${escapeHtml(s.full_name)}${s.cpf ? ` · ${escapeHtml(s.cpf)}` : ""}</option>`).join("")}</select></label><div class="v38-counter-two"><label>Nome do cliente <input id="v38CounterName" placeholder="Obrigatório para cliente avulso"></label><label>Telefone <input id="v38CounterPhone" inputmode="tel" placeholder="Opcional"></label></div><label>Produto <div class="v38-counter-add"><select id="v38CounterProduct"><option value="">Selecione um produto</option>${counterProducts.map(p => `<option value="${p.id}">${escapeHtml(p.name)} · ${money(counterPrice(p))} · ${p.stock} un.</option>`).join("")}</select><input id="v38CounterQty" type="number" min="1" value="1" aria-label="Quantidade"><button type="button" id="v38AddCounterItem">ADICIONAR</button></div></label><div id="v38CounterFeedback" class="v38-counter-feedback" role="status" aria-live="polite"></div><label>Forma de pagamento <select id="v38CounterPayment"><option>Dinheiro</option><option>Pix</option><option>Cartao de debito</option><option>Cartao de credito</option></select></label></div><aside><span>RESUMO DA VENDA</span><div id="v38CounterCart"></div><div class="v38-counter-total"><small>TOTAL</small><strong id="v38CounterTotal">R$ 0,00</strong></div><button type="button" id="v38FinishCounterSale">CONFIRMAR VENDA</button></aside></div></section>`;
+    document.body.appendChild(modal); renderCounterCart();
+    const feedback = (message, error = false) => { const box = modal.querySelector("#v38CounterFeedback"); if (!box) return; box.textContent = message; box.classList.toggle("error", error); box.classList.add("show"); };
+    modal.addEventListener("click", (event) => {
+      if (event.target.closest("[data-v38-close-counter]") || event.target === modal) return closeCounterSale();
+      if (event.target.closest("#v38AddCounterItem")) {
+        const id = modal.querySelector("#v38CounterProduct")?.value;
+        const qty = Number(modal.querySelector("#v38CounterQty")?.value || 0);
+        const product = counterProducts.find(p => String(p.id) === String(id));
+        if (!product || qty < 1) return feedback("Selecione um produto e uma quantidade válida.", true);
+        const existing = counterCart.find(item => String(item.product_id) === String(id));
+        const finalQty = qty + (existing?.quantity || 0);
+        if (finalQty > Number(product.stock || 0)) return feedback(`Há somente ${product.stock} unidade(s) disponível(is).`, true);
+        if (existing) existing.quantity = finalQty; else counterCart.push({ product_id: id, quantity: qty });
+        renderCounterCart(); feedback(`${qty}x ${product.name} adicionado ao resumo.`);
+        modal.querySelector("#v38CounterProduct").value = ""; modal.querySelector("#v38CounterQty").value = "1";
+      }
+      const remove = event.target.closest("[data-v38-remove-counter]")?.dataset.v38RemoveCounter;
+      if (remove) { counterCart = counterCart.filter(item => String(item.product_id) !== String(remove)); renderCounterCart(); feedback("Produto removido da venda."); }
+      const finish = event.target.closest("#v38FinishCounterSale"); if (finish) finishCounterSale(finish);
+    });
+    requestAnimationFrame(() => modal.classList.add("is-open"));
   }
 
   function closeCounterSale() { const modal = document.getElementById("v38CounterSaleModal"); if (!modal) return; modal.classList.remove("is-open"); setTimeout(() => modal.remove(), 180); }
@@ -480,17 +500,6 @@
     if (event.target.closest("#v38OpenCounterSale")) openCounterSale();
     const go = event.target.closest("[data-v38-go]")?.dataset.v38Go;
     if (go) document.querySelector(`.menu button[data-view="${go}"]`)?.click();
-    if (event.target.closest("[data-v38-close-counter]") || event.target.id === "v38CounterSaleModal") closeCounterSale();
-    if (event.target.closest("#v38AddCounterItem")) {
-      const id = document.getElementById("v38CounterProduct")?.value; const qty = Number(document.getElementById("v38CounterQty")?.value || 0); const product = counterProducts.find(p => p.id === id);
-      if (!product || qty < 1) return toast("Selecione produto e quantidade.", "error");
-      const existing = counterCart.find(item => item.product_id === id); const finalQty = qty + (existing?.quantity || 0);
-      if (finalQty > product.stock) return toast(`Estoque disponível: ${product.stock}.`, "error");
-      if (existing) existing.quantity = finalQty; else counterCart.push({ product_id: id, quantity: qty }); renderCounterCart();
-    }
-    const remove = event.target.closest("[data-v38-remove-counter]")?.dataset.v38RemoveCounter;
-    if (remove) { counterCart = counterCart.filter(item => item.product_id !== remove); renderCounterCart(); }
-    const finish = event.target.closest("#v38FinishCounterSale"); if (finish) finishCounterSale(finish);
   });
 
   async function setup() {
