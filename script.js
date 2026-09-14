@@ -487,7 +487,6 @@ window.addEventListener("offline", () => {
         mostrarAlerta("Aluno atualizado com sucesso.");
       } else {
         alunos.push(dados);
-        mostrarAlerta("Aluno cadastrado com sucesso.");
       }
 
       salvar(STORAGE_KEYS.alunos, alunos);
@@ -509,6 +508,13 @@ window.addEventListener("offline", () => {
 
       limparFormularioAluno();
       atualizarTudo();
+      if (!id) {
+        if (typeof window.mostrarConfirmacaoAlunoCriado === "function") {
+          window.mostrarConfirmacaoAlunoCriado(dados);
+        } else {
+          mostrarAlerta("Cadastro de aluno criado com sucesso.");
+        }
+      }
     });
 
     function editarAluno(id) {

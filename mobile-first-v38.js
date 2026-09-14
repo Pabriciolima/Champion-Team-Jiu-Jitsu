@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "39.2";
+  window.CHAMPION_APP_VERSION = "39.4";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V39.2";
+  if (versionBadge) versionBadge.textContent = "V39.4";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -131,6 +131,22 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => box.classList.remove("show"), 3200);
   }
+
+  function showStudentCreatedNotice(student = {}) {
+    document.getElementById("v38StudentCreatedNotice")?.remove();
+    const notice = document.createElement("aside");
+    notice.id = "v38StudentCreatedNotice";
+    notice.className = "v38-created-notice";
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-live", "polite");
+    notice.innerHTML = `<button type="button" class="v38-created-close" aria-label="Fechar confirmação">×</button><div class="v38-created-icon" aria-hidden="true">✓</div><div class="v38-created-copy"><span>CADASTRO CONCLUÍDO</span><strong>Cadastro de aluno criado</strong><p><b>${escapeHtml(student.nome || "Novo aluno")}</b> já pode acessar o sistema com o e-mail cadastrado e a senha inicial.</p></div><div class="v38-created-progress" aria-hidden="true"></div>`;
+    document.body.appendChild(notice);
+    const close = () => { notice.classList.add("is-closing"); setTimeout(() => notice.remove(), 220); };
+    notice.querySelector(".v38-created-close")?.addEventListener("click", close);
+    requestAnimationFrame(() => notice.classList.add("is-visible"));
+    setTimeout(close, 6500);
+  }
+  window.mostrarConfirmacaoAlunoCriado = showStudentCreatedNotice;
 
   function confirmDeleteNotification() {
     return new Promise((resolve) => {
