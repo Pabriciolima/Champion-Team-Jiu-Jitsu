@@ -30,7 +30,6 @@
   let moneyObserver = null;
   let moneyScanTimer = null;
   let valuesUnlocked = false;
-  const VALUES_PASSWORD_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
   document.body.classList.toggle("v38-values-unlocked", valuesUnlocked);
   document.body.classList.toggle("v38-values-locked", !valuesUnlocked);
 
@@ -38,11 +37,6 @@
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-  async function hashValue(value) {
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
-  }
 
   function updateValuesButton() {
     const button = document.getElementById("v38ValuesToggle");
@@ -87,9 +81,15 @@
     modal.querySelector("#v38ValuesForm").addEventListener("submit", async event => {
       event.preventDefault(); const input = modal.querySelector("#v38ValuesPassword"); const error = modal.querySelector("#v38ValuesError"); const submit = event.submitter;
       submit.disabled = true; submit.textContent = "VERIFICANDO...";
-      const valid = await hashValue(input.value) === VALUES_PASSWORD_HASH;
-      if (!valid) { submit.disabled = false; submit.textContent = "LIBERAR VISUALIZAÇÃO"; error.textContent = "Senha incorreta. Tente novamente."; input.select(); return; }
-      setValuesUnlocked(true); close(); toast("Valores financeiros liberados.");
+      try {
+        const valid = await window.supabaseVerifyFinancialAccessV40?.(input.value);
+        if (!valid) { submit.disabled = false; submit.textContent = "LIBERAR VISUALIZAÇÃO"; error.textContent = "Senha incorreta. Tente novamente."; input.select(); return; }
+        setValuesUnlocked(true); close(); toast("Valores financeiros liberados.");
+      } catch (failure) {
+        submit.disabled = false; submit.textContent = "LIBERAR VISUALIZAÇÃO";
+        error.textContent = "Não foi possível validar agora. Verifique sua conexão e tente novamente.";
+        console.error("Falha ao validar acesso financeiro:", failure);
+      }
     });
     requestAnimationFrame(() => { modal.classList.add("is-open"); modal.querySelector("#v38ValuesPassword")?.focus(); });
   }

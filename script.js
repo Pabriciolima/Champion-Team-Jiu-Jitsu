@@ -6612,6 +6612,14 @@ document.addEventListener("click", async (event)=>{
   };
 
 
+  window.supabaseVerifyFinancialAccessV40 = async function(password){
+    if(!client || !user || !profile) throw new Error("Sessão do Supabase indisponível.");
+    if(!["master_admin","owner"].includes(profile.role)) return false;
+    const {data,error}=await client.rpc("verify_financial_access",{p_password:String(password||"")});
+    if(error) throw error;
+    return data === true;
+  };
+
   window.supabaseUploadProductImageV36 = async function(file){
     if(!client || !user || !profile) throw new Error("Sessão do Supabase indisponível.");
     if(!["master_admin","owner"].includes(profile.role)) throw new Error("Somente a administração pode enviar fotos de produtos.");

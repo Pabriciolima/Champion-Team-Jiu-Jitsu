@@ -1,0 +1,12 @@
+-- Champion Team V40.0
+-- Auditoria geral de fluxos aplicada no Supabase em 14/09/2026.
+-- Inclui:
+-- 1. check-in livre sem conflito com a antiga validação de horário;
+-- 2. validação financeira no servidor (segredo provisionado fora do repositório);
+-- 3. redução das permissões EXECUTE de funções internas;
+-- 4. search_path fixo na expiração de fotos;
+-- 5. índices de apoio para relacionamentos críticos;
+-- 6. recuperação segura do perfil de aluno de homologação.
+--
+-- O segredo financeiro não é armazenado neste arquivo público.
+-- A migração executável permanece registrada no histórico do projeto Supabase.

@@ -348,47 +348,89 @@ button {
   place-items: center;
 }
 
-.barbell {
-  width: 210px;
-  height: 15px;
+.hero-jiujitsu {
+  isolation: isolate;
+}
+
+.jiujitsu-belt {
+  position: relative;
   z-index: 2;
-  background: linear-gradient(180deg, #adb5bd, #4f565e);
-  border-radius: 99px;
-  transform: rotate(-8deg);
-  box-shadow: 0 18px 30px rgba(0,0,0,.45);
+  width: 250px;
+  height: 42px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f8f8f4 0%, #d8d9d4 58%, #b8bbb7 100%);
+  border: 1px solid rgba(255,255,255,.72);
+  box-shadow: 0 18px 32px rgba(0,0,0,.48), inset 0 2px 0 rgba(255,255,255,.78);
+  transform: rotate(-7deg);
+  animation: beltFloat 3.8s ease-in-out infinite;
 }
 
-.barbell span {
+.jiujitsu-belt::before,
+.jiujitsu-belt::after {
+  content: "";
   position: absolute;
-  width: 70px;
-  height: 8px;
-  top: 3px;
-  left: 70px;
-  background: rgba(255,255,255,.32);
-  border-radius: 99px;
+  inset: 8px 0 auto;
+  height: 1px;
+  background: rgba(31,37,42,.2);
+  box-shadow: 0 24px 0 rgba(31,37,42,.16);
 }
 
-.weight {
+.jiujitsu-belt-rank {
   position: absolute;
-  z-index: 3;
-  width: 54px;
-  height: 126px;
-  border: 9px solid #252b31;
-  background: linear-gradient(90deg, #0e1114, #2b3238, #101316);
-  box-shadow: inset 0 0 0 3px #080a0c, 0 16px 35px rgba(0,0,0,.5);
-  transform: rotate(-8deg);
+  z-index: 2;
+  right: 15px;
+  inset-block: 0;
+  width: 62px;
+  background: linear-gradient(180deg,#20252a,#080a0c);
+  border-inline: 3px solid #ef233c;
 }
 
-.weight-left { left: 28px; }
-.weight-right { right: 28px; }
+.jiujitsu-belt-knot {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  width: 57px;
+  height: 57px;
+  border-radius: 12px;
+  background: linear-gradient(145deg,#fafaf6,#b7bab6);
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow: 0 10px 22px rgba(0,0,0,.42);
+  transform: translate(-50%,-50%) rotate(45deg);
+}
+
+.jiujitsu-belt-tail {
+  position: absolute;
+  z-index: -1;
+  top: 31px;
+  width: 108px;
+  height: 37px;
+  border-radius: 0 0 7px 7px;
+  background: linear-gradient(180deg,#d7d9d4,#aaaead);
+  box-shadow: 0 15px 24px rgba(0,0,0,.34);
+}
+
+.tail-left { left: 38px; transform: rotate(27deg); transform-origin: top right; }
+.tail-right { right: 38px; transform: rotate(-27deg); transform-origin: top left; }
+
+@keyframes beltFloat {
+  0%,100% { transform: rotate(-7deg) translateY(0); }
+  50% { transform: rotate(-5deg) translateY(-7px); }
+}
 
 .pulse-ring {
   position: absolute;
-  width: 210px;
-  height: 210px;
-  border: 2px solid rgba(183,255,0,.25);
+  width: 235px;
+  height: 235px;
+  border: 2px solid rgba(183,255,0,.27);
   border-radius: 50%;
-  box-shadow: 0 0 45px rgba(183,255,0,.10), inset 0 0 45px rgba(183,255,0,.05);
+  box-shadow: 0 0 45px rgba(183,255,0,.12), inset 0 0 45px rgba(183,255,0,.06);
+  animation: beltPulse 2.8s ease-in-out infinite;
+}
+
+@keyframes beltPulse {
+  0%,100% { opacity: .55; transform: scale(.96); }
+  50% { opacity: 1; transform: scale(1.04); }
 }
 
 .cards {

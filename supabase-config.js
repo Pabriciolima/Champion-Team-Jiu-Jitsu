@@ -4,9 +4,9 @@ window.CHAMPION_SUPABASE_CONFIG = {
   academySlug: "champion-team-jiu-jitsu"
 };
 
-// V38: camada visual e comportamental isolada para mobile-first.
+// V40: auditoria de fluxos, privacidade financeira no servidor e identidade jiu-jitsu.
 (() => {
-  const version = "39.7";
+  const version = "40.0";
   const css = document.createElement("link");
   css.rel = "stylesheet";
   css.href = `mobile-first-v38.css?v=${version}`;
