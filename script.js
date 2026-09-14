@@ -6870,13 +6870,23 @@ document.addEventListener("click", async (event)=>{
       email:String(email||"").trim().toLowerCase()
     };
 
-    const {data:invite,error:inviteError}=await client.from("access_invites").insert({
-      academy_id:a.id,
-      email:invitePayload.email,
-      role:dbRole,
-      payload:invitePayload,
-      created_by:user.id
-    }).select("id").single();
+    const {data:openInvite,error:openInviteError}=await client.from("access_invites")
+      .select("id")
+      .eq("academy_id",a.id)
+      .ilike("email",invitePayload.email)
+      .is("used_at",null)
+      .maybeSingle();
+    if(openInviteError) throw openInviteError;
+
+    const inviteQuery=openInvite?.id
+      ? client.from("access_invites").update({
+          role:dbRole,payload:invitePayload,created_by:user.id,created_at:new Date().toISOString()
+        }).eq("id",openInvite.id)
+      : client.from("access_invites").insert({
+          academy_id:a.id,email:invitePayload.email,role:dbRole,
+          payload:invitePayload,created_by:user.id
+        });
+    const {data:invite,error:inviteError}=await inviteQuery.select("id").single();
     if(inviteError) throw inviteError;
     try{
       const {data,error}=await client.functions.invoke("user-access",{body:{
@@ -6885,9 +6895,18 @@ document.addEventListener("click", async (event)=>{
       }});
       if(error) throw new Error(await mensagemErroEdgeV375(error,"Falha ao criar o acesso."));
       if(data?.error) throw new Error(data.error);
+      if(invite?.id){
+        const {error:usedError}=await client.from("access_invites")
+          .update({used_at:new Date().toISOString()})
+          .eq("id",invite.id);
+        if(usedError){
+          const {error:deleteError}=await client.from("access_invites").delete().eq("id",invite.id);
+          if(deleteError) throw usedError;
+        }
+      }
       return {uid:data.uid,email:data.email};
     }catch(error){
-      if(invite?.id) await client.from("access_invites").delete().eq("id",invite.id).catch(()=>{});
+      if(invite?.id) await client.from("access_invites").delete().eq("id",invite.id);
       throw error;
     }
   };
