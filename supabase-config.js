@@ -4,9 +4,9 @@ window.CHAMPION_SUPABASE_CONFIG = {
   academySlug: "champion-team-jiu-jitsu"
 };
 
-// V40: auditoria de fluxos, privacidade financeira no servidor e identidade jiu-jitsu.
+// V40.1: faixa de jiu-jitsu redesenhada conforme a referência visual.
 (() => {
-  const version = "40.0";
+  const version = "40.1";
   const css = document.createElement("link");
   css.rel = "stylesheet";
   css.href = `mobile-first-v38.css?v=${version}`;
