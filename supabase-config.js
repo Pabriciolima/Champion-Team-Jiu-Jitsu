@@ -4,9 +4,9 @@ window.CHAMPION_SUPABASE_CONFIG = {
   academySlug: "champion-team-jiu-jitsu"
 };
 
-// V40.1: faixa de jiu-jitsu redesenhada conforme a referência visual.
+// V40.3: emblema vetorial do lutador.
 (() => {
-  const version = "40.1";
+  const version = "40.3";
   const css = document.createElement("link");
   css.rel = "stylesheet";
   css.href = `mobile-first-v38.css?v=${version}`;
