@@ -6,7 +6,7 @@ window.CHAMPION_SUPABASE_CONFIG = {
 
 // V38: camada visual e comportamental isolada para mobile-first.
 (() => {
-  const version = "39.6";
+  const version = "39.7";
   const css = document.createElement("link");
   css.rel = "stylesheet";
   css.href = `mobile-first-v38.css?v=${version}`;
