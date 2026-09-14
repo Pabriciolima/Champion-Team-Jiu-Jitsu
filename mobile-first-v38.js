@@ -6,9 +6,9 @@
   if (!cfg || !window.supabase) return;
 
   document.body.classList.add("v38-mobile-ui");
-  window.CHAMPION_APP_VERSION = "39.4";
+  window.CHAMPION_APP_VERSION = "39.5";
   const versionBadge = document.getElementById("appVersionBadge");
-  if (versionBadge) versionBadge.textContent = "V39.4";
+  if (versionBadge) versionBadge.textContent = "V39.5";
 
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, {
     auth: {
@@ -131,6 +131,22 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => box.classList.remove("show"), 3200);
   }
+
+  function showPixPaidNotice(isDeposit = false) {
+    document.getElementById("v38PixPaidNotice")?.remove();
+    const notice = document.createElement("aside");
+    notice.id = "v38PixPaidNotice";
+    notice.className = "v38-paid-notice";
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-live", "assertive");
+    notice.innerHTML = `<button type="button" class="v38-paid-close" aria-label="Fechar confirmação">×</button><div class="v38-paid-icon" aria-hidden="true">✓</div><div class="v38-paid-copy"><span>PIX CONFIRMADO</span><strong>${isDeposit ? "Sinal recebido com sucesso" : "Pagamento recebido com sucesso"}</strong><p>A confirmação foi registrada automaticamente. Você já pode fechar esta janela.</p></div><div class="v38-paid-progress" aria-hidden="true"></div>`;
+    document.body.appendChild(notice);
+    const close = () => { notice.classList.add("is-closing"); setTimeout(() => notice.remove(), 220); };
+    notice.querySelector(".v38-paid-close")?.addEventListener("click", close);
+    requestAnimationFrame(() => notice.classList.add("is-visible"));
+    setTimeout(close, 7000);
+  }
+  window.mostrarConfirmacaoPixPago = showPixPaidNotice;
 
   function showStudentCreatedNotice(student = {}) {
     document.getElementById("v38StudentCreatedNotice")?.remove();

@@ -4537,6 +4537,21 @@ function fecharPixPedidoV37(){
   document.getElementById("championPixModalV37")?.remove();
 }
 
+function aplicarConfirmacaoPixV395(status="paid"){
+  const isDeposit=status==="deposit_paid";
+  const st=document.getElementById("pixStatusV37");
+  if(st){
+    st.className="pix-status-v37 paid";
+    st.innerHTML=`<span></span><div><b>${isDeposit?"SINAL CONFIRMADO":"PAGAMENTO CONFIRMADO"} ✓</b><small>Você já pode fechar esta janela.</small></div>`;
+  }
+  const countdown=document.getElementById("pixCountdownV37");
+  if(countdown){
+    countdown.textContent=isDeposit?"SINAL PAGO":"PAGO";
+    countdown.closest(".pix-timer-v37")?.classList.add("paid");
+  }
+  window.mostrarConfirmacaoPixPago?.(isDeposit);
+}
+
 function abrirPixPedidoV375(data){
   fecharPixPedidoV37();
   const exp=new Date(data.pix_expires_at).getTime();
@@ -4602,9 +4617,7 @@ function abrirPixPedidoV375(data){
       try{
         const checked=await window.supabaseCheckStorePaymentV378?.(data.order_id);
         if(["paid","deposit_paid"].includes(checked?.status)){
-          const st=document.getElementById("pixStatusV37");
-          if(st){st.className="pix-status-v37 paid";st.innerHTML="<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓"}
-          const c=document.getElementById("pixCountdownV37");if(c)c.textContent="PAGO";
+          aplicarConfirmacaoPixV395(checked.status);
           await window.supabaseRefreshCurrentUserV30?.();
           renderizarAreaAluno();
           mostrarAlerta("Pagamento confirmado! A academia já foi notificada.");
@@ -4626,14 +4639,7 @@ function abrirPixPedidoV375(data){
       const order=await window.supabaseCheckStorePaymentV378?.(data.order_id);
       if(["paid","deposit_paid"].includes(order?.status)){
         clearInterval(championPixTimerV37);clearInterval(championPixPollV37);
-        const st=document.getElementById("pixStatusV37");
-        if(st){
-          st.className="pix-status-v37 paid";
-          st.innerHTML=order.status==="deposit_paid"
-            ? "<span></span> SINAL CONFIRMADO AUTOMATICAMENTE ✓"
-            : "<span></span> PAGAMENTO CONFIRMADO AUTOMATICAMENTE ✓";
-        }
-        const c=document.getElementById("pixCountdownV37");if(c)c.textContent="PAGO";
+        aplicarConfirmacaoPixV395(order.status);
         await window.supabaseRefreshCurrentUserV30?.();
         renderizarAreaAluno();
         mostrarAlerta(order.status==="deposit_paid"
@@ -6321,6 +6327,7 @@ document.addEventListener("click", async (event)=>{
         client.functions.invoke("billing-pix",{body:{action:"check_payment",payment_id:payment.id}})
       ));
       if(checks.some(check=>check.status==="fulfilled"&&check.value?.data?.status==="paid")){
+        window.mostrarConfirmacaoPixPago?.(false);
         const refreshed=await client.from("payments").select("*").eq("student_id",sid);
         if(!refreshed.error) paymentsRes.data=refreshed.data||[];
       }
