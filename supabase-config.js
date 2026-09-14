@@ -4,9 +4,9 @@ window.CHAMPION_SUPABASE_CONFIG = {
   academySlug: "champion-team-jiu-jitsu"
 };
 
-// V40.3: emblema vetorial do lutador.
+// V40.4: imagem exata do lutador fornecida pelo usuário.
 (() => {
-  const version = "40.3";
+  const version = "40.4";
   const css = document.createElement("link");
   css.rel = "stylesheet";
   css.href = `mobile-first-v38.css?v=${version}`;

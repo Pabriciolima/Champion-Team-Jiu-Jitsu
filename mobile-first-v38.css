@@ -325,6 +325,10 @@ body[data-role="aluno"] .v38-money-private,body[data-role="professor"] .v38-mone
 
 /* V40.3 — substituicao definitiva da faixa */
 .hero-visual.hero-jiujitsu .jiujitsu-belt{display:none!important}
-.hero-visual.hero-jiujitsu::before{content:""!important;position:relative!important;z-index:3!important;display:block!important;width:min(300px,90%)!important;aspect-ratio:360/390!important;background:url("jiujitsu-fighter.svg?v=40.3") center/contain no-repeat!important;filter:drop-shadow(0 20px 22px rgba(0,0,0,.5)) drop-shadow(0 0 18px rgba(183,255,0,.12));animation:v403FighterFloat 4.2s ease-in-out infinite!important}
+.hero-visual.hero-jiujitsu::before{content:""!important;position:relative!important;z-index:3!important;display:block!important;width:min(300px,90%)!important;aspect-ratio:360/390!important;background:url("jiujitsu-fighter-reference.png?v=40.4") center/contain no-repeat!important;filter:drop-shadow(0 20px 22px rgba(0,0,0,.5)) drop-shadow(0 0 18px rgba(183,255,0,.12));animation:v403FighterFloat 4.2s ease-in-out infinite!important}
 @keyframes v403FighterFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-7px) scale(1.012)}}
 @media(max-width:760px){.hero-visual.hero-jiujitsu::before{width:min(245px,82vw)!important}}
+
+/* V40.4 — imagem de referência exata */
+.hero-visual.hero-jiujitsu .jiujitsu-belt{display:none!important}
+.hero-visual.hero-jiujitsu::before{background-image:url("jiujitsu-fighter-reference.png?v=40.4")!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important;width:min(315px,92%)!important;aspect-ratio:1/1!important}
