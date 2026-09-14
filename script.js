@@ -3807,77 +3807,28 @@ function statusCheckinLabelV30(status){
   return {label:"AGUARDANDO VALIDAÇÃO",className:"pending"};
 }
 
-function belemAgoraV375(){
-  const parts=new Intl.DateTimeFormat("en-US",{
-    timeZone:"America/Belem",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false
-  }).formatToParts(new Date());
-  const get=t=>parts.find(p=>p.type===t)?.value||"";
-  const dayMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
-  const hour=Number(get("hour"))%24, minute=Number(get("minute"));
-  return {weekday:dayMap[get("weekday")]??-1,minutes:hour*60+minute,hour,minute};
-}
-function classStartMinutesV375(c){
-  const [h,m]=String(c?.start_time||"00:00").split(":").map(Number);
-  return (h||0)*60+(m||0);
-}
-function checkinLiberadoClasseV375(c){
-  const now=belemAgoraV375();
-  return Number(c?.weekday)===now.weekday && now.minutes>=classStartMinutesV375(c);
-}
+function checkinLiberadoClasseV375(c){return Boolean(c?.id)}
 function atualizarBloqueioCheckinV375(classes=[]){
-  const input=document.getElementById("studentSelfieInput");
-  const label=document.querySelector('label[for="studentSelfieInput"]');
-  const select=document.getElementById("studentCheckinClass");
-  const button=document.getElementById("studentSelfieCheckinButton");
-  const lock=document.getElementById("studentCheckinScheduleLock");
-  const badge=document.getElementById("studentCheckinStatusBadge");
+  const input=document.getElementById("studentSelfieInput"),label=document.querySelector('label[for="studentSelfieInput"]'),select=document.getElementById("studentCheckinClass"),button=document.getElementById("studentSelfieCheckinButton"),lock=document.getElementById("studentCheckinScheduleLock"),badge=document.getElementById("studentCheckinStatusBadge");
   const available=classes.filter(checkinLiberadoClasseV375);
-
-  if(select){
-    [...select.options].forEach(o=>{
-      if(!o.value)return;
-      const c=classes.find(x=>String(x.id)===String(o.value));
-      o.disabled=!c||!checkinLiberadoClasseV375(c);
-    });
-    if(select.value){
-      const selected=classes.find(c=>String(c.id)===String(select.value));
-      if(selected&&!checkinLiberadoClasseV375(selected)) select.value="";
-    }
-    if(!select.value && available.length) select.value=available[0].id;
-  }
-
+  if(select){[...select.options].forEach(o=>{if(o.value)o.disabled=false});if(!select.value&&available.length)select.value=available[0].id}
   const unlocked=available.length>0;
-  if(input) input.disabled=!unlocked;
-  if(button) button.disabled=!unlocked;
-  label?.classList.toggle("is-disabled",!unlocked);
-  lock?.classList.toggle("unlocked",unlocked);
-
-  if(lock){
-    const strong=lock.querySelector("strong"),small=lock.querySelector("small"),icon=lock.querySelector(".student-checkin-lock-icon");
-    if(unlocked){
-      if(icon)icon.textContent="🔓";
-      if(strong)strong.textContent="CHECK-IN LIBERADO";
-      if(small)small.textContent="Sua turma já iniciou. Tire ou anexe uma selfie e envie sua presença.";
-    }else{
-      const prox=classes
-        .filter(c=>Number(c.weekday)===belemAgoraV375().weekday)
-        .sort((a,b)=>classStartMinutesV375(a)-classStartMinutesV375(b))[0];
-      if(icon)icon.textContent="🔒";
-      if(strong)strong.textContent="CHECK-IN BLOQUEADO";
-      if(small)small.textContent=prox
-        ? `Liberado hoje somente após ${String(prox.start_time||"").slice(0,5)}.`
-        : "Você não possui uma turma liberada para check-in neste momento.";
-    }
-  }
-
-  if(!unlocked && badge){
-    badge.textContent="AGUARDANDO HORÁRIO DA AULA";
-    badge.className="student-checkin-badge locked";
-  }
-  return unlocked;
+  if(input)input.disabled=!unlocked;if(button)button.disabled=!unlocked;label?.classList.toggle("is-disabled",!unlocked);lock?.classList.toggle("unlocked",unlocked);
+  if(lock){const strong=lock.querySelector("strong"),small=lock.querySelector("small"),icon=lock.querySelector(".student-checkin-lock-icon");if(unlocked){if(icon)icon.textContent="🔥";if(strong)strong.textContent="CHECK-IN LIVRE";if(small)small.textContent="Registre seu treino a qualquer hora. Escolha a turma, tire ou anexe sua selfie e confirme."}else{if(icon)icon.textContent="🥋";if(strong)strong.textContent="NENHUMA TURMA VINCULADA";if(small)small.textContent="Peça à academia para vincular você a uma turma."}}
+  if(!unlocked&&badge){badge.textContent="SEM TURMA VINCULADA";badge.className="student-checkin-badge locked"}return unlocked
 }
 let checkinScheduleTimerV375=null;
 
+function renderCheckinHeatmapV396(checkins=[]){
+ const valid=checkins.filter(c=>String(c.validation_status||"pending")!=="rejected"),counts=new Map();
+ valid.forEach(c=>{const d=String(c.checkin_date||c.checked_in_at||"").slice(0,10);if(d)counts.set(d,(counts.get(d)||0)+1)});
+ const dates=[...counts.keys()].sort();let best=0,run=0,previous=null;
+ dates.forEach(d=>{const current=Date.parse(d+"T12:00:00Z");run=previous!==null&&current-previous===86400000?run+1:1;best=Math.max(best,run);previous=current});
+ let streak=dates.length?1:0;for(let i=dates.length-2;i>=0;i--){if(Date.parse(dates[i+1]+"T12:00:00Z")-Date.parse(dates[i]+"T12:00:00Z")===86400000)streak++;else break}
+ const today=Date.parse(hojeIso()+"T12:00:00Z"),start=new Date(today-181*86400000),empty=Array.from({length:start.getUTCDay()},()=>'<i class="is-empty"></i>').join("");
+ const cells=Array.from({length:182},(_,i)=>{const d=new Date(start.getTime()+i*86400000).toISOString().slice(0,10),n=counts.get(d)||0,l=n===0?0:n===1?1:n===2?2:3;return `<i class="level-${l}" title="${formatarData(d)}: ${n} treino(s)" aria-label="${formatarData(d)}: ${n} treino(s)"></i>`}).join("");
+ return `<div class="student-heatmap-head"><div><span>RITMO DE TREINO</span><strong>Sua constância nos últimos 6 meses</strong></div><div class="student-heatmap-stats"><b>${valid.length}<small>TREINOS</small></b><b>${streak}<small>SEQUÊNCIA</small></b><b>${best}<small>MELHOR</small></b></div></div><div class="student-heatmap-scroll"><div class="student-heatmap-grid">${empty}${cells}</div></div><div class="student-heatmap-legend"><span>Menos</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><span>Mais</span></div>`
+}
 window.renderStudentSelfieCheckinV30 = async function(payload={}){
   const student=payload.student;
   const classes=Array.isArray(payload.classes)?payload.classes:[];
@@ -3892,13 +3843,12 @@ window.renderStudentSelfieCheckinV30 = async function(payload={}){
   const weekdaysV375=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   window.studentClassesForCheckinV375=classes;
   select.innerHTML='<option value="">Selecione sua turma</option>' + classes.map(c=>`
-    <option value="${c.id}" ${checkinLiberadoClasseV375(c)?"":"disabled"}>
+    <option value="${c.id}">
       ${escaparHtml(c.name)} • ${weekdaysV375[Number(c.weekday)]||"Dia"} ${String(c.start_time||"").slice(0,5)}
     </option>
   `).join("");
-  atualizarBloqueioCheckinV375(classes);
-  clearInterval(checkinScheduleTimerV375);
-  checkinScheduleTimerV375=setInterval(()=>atualizarBloqueioCheckinV375(window.studentClassesForCheckinV375||[]),30000);
+  atualizarBloqueioCheckinV375(classes);clearInterval(checkinScheduleTimerV375);checkinScheduleTimerV375=null;
+  let heatmap=document.getElementById("studentCheckinHeatmapV396");if(!heatmap){heatmap=document.createElement("section");heatmap.id="studentCheckinHeatmapV396";heatmap.className="student-checkin-heatmap";history.insertAdjacentElement("beforebegin",heatmap)}heatmap.innerHTML=renderCheckinHeatmapV396(dbCheckins);
 
   const today=hojeIso();
   const todayCheckin=dbCheckins.find(c=>String(c.checkin_date||c.checked_in_at||"").slice(0,10)===today);
@@ -3906,15 +3856,7 @@ window.renderStudentSelfieCheckinV30 = async function(payload={}){
     const meta=statusCheckinLabelV30(todayCheckin.validation_status);
     badge.textContent=meta.label;
     badge.className=`student-checkin-badge ${meta.className}`;
-  }else if(badge){
-    if((classes||[]).some(checkinLiberadoClasseV375)){
-      badge.textContent="PRONTO PARA CHECK-IN";
-      badge.className="student-checkin-badge";
-    }else{
-      badge.textContent="AGUARDANDO HORÁRIO DA AULA";
-      badge.className="student-checkin-badge locked";
-    }
-  }
+  }else if(badge){if(classes.length){badge.textContent="CHECK-IN LIBERADO";badge.className="student-checkin-badge"}else{badge.textContent="SEM TURMA VINCULADA";badge.className="student-checkin-badge locked"}}
 
   history.innerHTML=dbCheckins.length
     ? dbCheckins.map((c,index)=>{
@@ -4067,15 +4009,10 @@ document.getElementById("studentSelfieCheckinButton")?.addEventListener("click",
     return;
   }
   if(!classId){
-    if(message) message.textContent="Selecione uma turma já liberada pelo horário.";
+    if(message) message.textContent="Selecione a turma do treino.";
     return;
   }
-  const selectedClass=(window.studentClassesForCheckinV375||[]).find(c=>String(c.id)===String(classId));
-  if(!selectedClass || !checkinLiberadoClasseV375(selectedClass)){
-    if(message) message.textContent=`Check-in liberado somente no dia da aula, após ${String(selectedClass?.start_time||"").slice(0,5)}.`;
-    mostrarAlerta("O check-in ainda não foi liberado para esta aula.","error");
-    return;
-  }
+  const selectedClass=(window.studentClassesForCheckinV375||[]).find(c=>String(c.id)===String(classId));if(!selectedClass){if(message)message.textContent="Selecione uma turma válida.";return}
   if(!studentSelfieFileV30){
     if(message) message.textContent="Tire ou escolha uma selfie antes de enviar.";
     return;
@@ -6755,13 +6692,6 @@ document.addEventListener("click", async (event)=>{
     if(!studentId || !classId || !file){
       throw new Error("Turma e selfie são obrigatórias.");
     }
-
-    const {data:allowed,error:allowedError}=await client.rpc("can_student_checkin",{
-      p_class_id:classId,
-      p_student_id:studentId
-    });
-    if(allowedError) throw allowedError;
-    if(!allowed) throw new Error("Check-in bloqueado: aguarde o horário de início da sua aula.");
 
     const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Belem",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
     const part=t=>parts.find(p=>p.type===t)?.value||"";
